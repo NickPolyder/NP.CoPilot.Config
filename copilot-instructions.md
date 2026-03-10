@@ -19,7 +19,11 @@ I am a .NET developer. I follow Microsoft's default code conventions for C# and 
 
 ## Git Conventions
 
-- Ask the user to review the changes before committing. Use `ask_user` to confirm the commit message and the changes being committed.
+- **Commit workflow** (always follow this order):
+  1. Complete all code/doc changes for the task.
+  2. Use `ask_user` to tell me the work is done and ask me to verify the changes before commiting.
+  3. After I confirm, use `ask_user` to present the proposed commit message for my approval.
+  4. Only then create the commit.
 - **Never** amend commits unless I explicitly ask (use `ask_user` to confirm).
 - Prefer `git pull --rebase` over merge.
 - Write clear, conventional commit messages in imperative mood.
