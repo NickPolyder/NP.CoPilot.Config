@@ -19,7 +19,7 @@ I am a .NET developer. I follow Microsoft's default code conventions for C# and 
 
 ## Git Conventions
 
-- Always create git commits after making changes.
+- Ask the user to review the changes before committing. Use `ask_user` to confirm the commit message and the changes being committed.
 - **Never** amend commits unless I explicitly ask (use `ask_user` to confirm).
 - Prefer `git pull --rebase` over merge.
 - Write clear, conventional commit messages in imperative mood.
