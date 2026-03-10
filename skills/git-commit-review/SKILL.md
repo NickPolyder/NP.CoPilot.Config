@@ -193,6 +193,30 @@ Once the user approves:
 
 ---
 
+# Report generation
+
+After every review cycle (including re-reviews), persist the full consolidated review summary as a markdown report:
+
+1. **Path**: `.copilot/reports/reviews/{yyyy}/{MM}/code-review-{dd}-{hhmmss}.md` (relative to the repository root).
+   - `{yyyy}` — four-digit year
+   - `{MM}` — two-digit month
+   - `{dd}` — two-digit day
+   - `{hhmmss}` — hours, minutes, and seconds (24-hour format)
+   - Use the current local date/time when the review completes.
+2. **Content**: The report must contain the **complete consolidated review** exactly as presented to the user — all findings by severity, reviewer attributions, clean areas, and the user's chosen action (commit as-is, fix and re-review, abort).
+3. **One report per cycle** — if the review goes through multiple fix-and-re-review rounds, each round produces its own report file.
+4. **Create directories** as needed — ensure the `.copilot/reports/reviews/{yyyy}/{MM}/` folder exists before writing.
+5. **`.gitignore` reminder**: If `/.copilot/` is not already listed in the repository's `.gitignore`, inform the user that they should add it to prevent review reports from being committed.
+
+---
+
+# Related
+
+- For **ad-hoc code reviews** outside of the commit workflow (reviewing diffs, branches, or files on demand), use the **code-reviewer** agent instead.
+- This skill is specifically designed for the **pre-commit review workflow** — use it whenever you are about to commit code.
+
+---
+
 # Style and communication
 
 - Keep review summaries concise and actionable.

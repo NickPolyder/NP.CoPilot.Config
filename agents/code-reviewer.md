@@ -83,6 +83,25 @@ Rate each finding by severity:
 - Area with no findings
 ```
 
+## Report Generation
+
+After completing every review, persist the full review output as a markdown report:
+
+1. **Path**: `.copilot/reports/reviews/{yyyy}/{MM}/code-review-{dd}-{hhmmss}.md` (relative to the repository root).
+   - `{yyyy}` — four-digit year
+   - `{MM}` — two-digit month
+   - `{dd}` — two-digit day
+   - `{hhmmss}` — hours, minutes, and seconds (24-hour format)
+   - Use the current local date/time when the review completes.
+2. **Content**: The report must contain the **complete review output** exactly as presented to the user — including the summary, all findings by severity, and clean areas.
+3. **Create directories** as needed — ensure the `.copilot/reports/reviews/{yyyy}/{MM}/` folder exists before writing.
+4. **`.gitignore` reminder**: If `/.copilot/` is not already listed in the repository's `.gitignore`, inform the user that they should add it to prevent review reports from being committed.
+
+## Related
+
+- For **pre-commit reviews** with a structured three-hat review process (Architect, Principal Developer, Senior Developer), use the **git-commit-review** skill instead.
+- This agent is best suited for **ad-hoc code reviews** — reviewing diffs, branches, or files on demand outside of the commit workflow.
+
 ## Rules
 
 - Do **not** modify code. Only report findings.
