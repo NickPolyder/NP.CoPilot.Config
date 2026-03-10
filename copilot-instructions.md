@@ -2,7 +2,7 @@
 
 ## About Me
 
-I am a .NET developer. I follow Microsoft's default code conventions for C# and .NET.
+I am a .NET developer. I follow Microsoft's default code conventions for C# and .NET. I am using Powershell as the shell of choice. If something can be automated by powershell scripting I prefer it.
 
 ## Communication Preferences
 
