@@ -36,3 +36,4 @@ I am a .NET developer. I follow Microsoft's default code conventions for C# and 
 - Always run tests after making changes to verify nothing is broken.
 - Ask before deleting files or making irreversible changes.
 - Never commit secrets, credentials, or sensitive data.
+- Commands that modify the system or environment should be prefixed with a warning and require confirmation before execution.
