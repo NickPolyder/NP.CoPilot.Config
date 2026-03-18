@@ -17,23 +17,34 @@ I am a .NET developer. I follow Microsoft's default code conventions for C# and 
 - Prefer `var` when the type is obvious from the right-hand side.
 - Keep methods short and focused — extract when a method does more than one thing.
 
+## Development Workflow
+
+Follow these steps for every task (the full cycle before committing):
+
+1. **Understand** — Read and understand the task or plan. Investigate the codebase: read relevant code, check existing patterns, and follow established conventions.
+2. **Plan & Document** — Create a short doc explaining what will be done and how at a high level. Place the doc based on the type of work:
+   - **Feature work** → `docs/features/{feature}.md`
+   - **Bug fix** → `docs/bugs/{bug}.md`
+   - **Infrastructure** → `docs/infra/{topic}.md`
+   - *Exception:* Skip this step when the task itself is updating a document — just update the document directly.
+3. **Execute** — Implement the task. If the task involves code, write unit tests where possible. Tests travel with their code — they belong in the same commit.
+4. **Review** — Self-review the outcome of step 3. Look for mistakes, refactoring opportunities, and improvements. Update the doc from step 2 if needed (e.g., note future improvements).
+5. **Improve** — If the findings from step 4 are worth implementing now, do so — but be extra careful not to break anything. Run tests after each improvement.
+6. **Test** — Perform manual testing. If bugs are found, fix them. If improvement opportunities emerge, loop back to step 4. Repeat until satisfied.
+7. **Commit** — Create commit(s) based on logical separation. Each commit should represent one coherent change (see Git Conventions below).
+8. **Reflect** — Write a self-reflection: what went right, what went wrong, how to improve, and what was learned. Store the reflection in the relevant project doc from step 2 if appropriate; otherwise, create or update a retrospective at `~/docs/retrospectives/`.
+
 ## Git Conventions
 
 - **Commit workflow** (always follow this order):
-  1. Complete all code/doc changes for the task.
-  2. Use `ask_user` to tell me the work is done and ask me to verify the changes before commiting.
+  1. Complete the Development Workflow above (steps 1–6).
+  2. When the work is done, ask me to verify the changes before committing.
   3. After I confirm, use `ask_user` to present the proposed commit message for my approval.
   4. Only then create the commit.
 - **Never** amend commits unless I explicitly ask (use `ask_user` to confirm).
 - Prefer `git pull --rebase` over merge.
 - Write clear, conventional commit messages in imperative mood.
 - Always include the trailer: `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`
-
-## Workflow Habits
-
-- **Documentation**: Always update or create docs when adding, changing, or removing functionality. This builds a knowledge base for future work.
-- **Testing**: Write unit tests alongside every feature or bug fix. Tests travel with their code — they belong in the same commit.
-- **Investigate first**: Understand the codebase before making changes. Read relevant code, check existing patterns, and follow established conventions.
 
 ## Safety Rails
 
