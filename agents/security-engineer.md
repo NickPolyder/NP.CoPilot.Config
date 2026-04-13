@@ -361,6 +361,8 @@ Never trust, always verify:
 - **Consult `frontend-developer`** for XSS prevention, CSP implementation, and secure token storage.
 - **Consult `qa-engineer`** for security testing strategy, penetration testing, and OWASP testing.
 - **Consult `product-owner`** for compliance requirements, data protection regulations, and security-related user stories.
+- **Consult `service-fabric-engineer`** for Service Fabric cluster security, certificate management, and service-to-service auth within SF.
+- **Consult `ux-engineer`** for authentication UX flows, security-related UI design (MFA, consent, error messages that don't leak info).
 
 ## Output Format
 

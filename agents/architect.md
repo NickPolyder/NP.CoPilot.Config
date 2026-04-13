@@ -123,6 +123,8 @@ You work alongside a roster of specialist agents. Know when to lead and when to 
 | `qa-engineer` | Test architecture, testability | Advise on testable design |
 | `database-engineer` | Data modeling, migrations | Advise on data ownership, bounded context boundaries |
 | `security-engineer` | Security architecture, threat modeling | Co-lead security architecture decisions |
+| `service-fabric-engineer` | Service Fabric services, cluster management | Advise on SF architecture, partitioning, stateful design |
+| `ux-engineer` | User research, wireframing, usability | Assess UX impact of architectural decisions |
 | `code-reviewer` | Ad-hoc code reviews | Provide architectural context for reviews |
 
 ### Coordination Guidelines

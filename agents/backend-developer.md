@@ -262,6 +262,7 @@ public class EmailService(IOptionsMonitor<EmailOptions> options) { }
 - **Consult `qa-engineer`** for test strategy, coverage requirements, and integration test design.
 - **Consult `devops-engineer`** for deployment configuration, environment setup, and CI/CD pipeline integration.
 - **Consult `product-owner`** for requirement clarification, domain language, and acceptance criteria.
+- **Defer to `service-fabric-engineer`** for Service Fabric hosted service design, Reliable Services/Actors, and cluster patterns.
 
 ## Output Format
 

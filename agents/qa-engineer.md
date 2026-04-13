@@ -272,6 +272,8 @@ tests/
 - **Consult `systems-engineer`** for integration and contract testing between services.
 - **Consult `devops-engineer`** for CI test integration, test environment setup, and test reporting.
 - **Consult `architect`** for test architecture decisions and testability of system design.
+- **Consult `ux-engineer`** for usability testing strategy, user flow validation, and accessibility test planning.
+- **Consult `service-fabric-engineer`** for testing Service Fabric services (local cluster testing, chaos testing, upgrade testing).
 
 ## Output Format
 

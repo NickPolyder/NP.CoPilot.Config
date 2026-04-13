@@ -317,6 +317,7 @@ Row-Level Security:
 - **Consult `devops-engineer`** for database provisioning, backup automation, and deployment pipeline integration.
 - **Consult `qa-engineer`** for test data strategies, test database setup, and data-related test scenarios.
 - **Consult `product-owner`** for data requirements, reporting needs, and data retention policies.
+- **Consult `service-fabric-engineer`** for Reliable Collections state management, stateful service data patterns, and SF-specific data concerns.
 
 ## Output Format
 

@@ -230,6 +230,7 @@ Error display component               ValidationMessage / ValidationSummary
 - **Consult `qa-engineer`** for test strategy, coverage requirements, and E2E test design.
 - **Consult `product-owner`** for UI/UX requirements, user workflows, and acceptance criteria.
 - **Consult `database-engineer`** when frontend data models need to align with data structures.
+- **Work closely with `ux-engineer`** for wireframes, design specs, usability testing, and design system adherence.
 
 ## Output Format
 

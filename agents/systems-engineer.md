@@ -256,6 +256,7 @@ Load Balancer / Orchestrator
 - **Consult `frontend-developer`** or **`fullstack-developer`** for real-time communication requirements (SignalR).
 - **Consult `qa-engineer`** for integration and contract testing strategy.
 - **Consult `product-owner`** for understanding system interaction requirements and SLA expectations.
+- **Consult `service-fabric-engineer`** for Service Fabric service communication, partitioning, and SF-specific resilience patterns.
 
 ## Output Format
 

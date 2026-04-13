@@ -301,6 +301,8 @@ When writing requirements, consider asking:
 - **Consult `database-engineer`** when requirements involve data modeling decisions or data migration.
 - **Work with `systems-engineer`** when requirements involve integrations with external systems.
 - **Work with `devops-engineer`** for deployment and release coordination.
+- **Work closely with `ux-engineer`** for user research findings, wireframes, usability validation, and UX-informed acceptance criteria.
+- **Translate requirements for `service-fabric-engineer`** when features involve Service Fabric hosted services.
 
 ## Output Format
 

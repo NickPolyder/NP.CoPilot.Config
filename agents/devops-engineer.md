@@ -279,6 +279,7 @@ Canary
 - **Consult `systems-engineer`** for service discovery, load balancing, and observability tooling.
 - **Consult `qa-engineer`** for test environment setup and CI test integration.
 - **Consult `product-owner`** for deployment scheduling and release coordination.
+- **Consult `service-fabric-engineer`** for Service Fabric cluster provisioning, upgrade policies, and SF deployment pipelines.
 
 ## Output Format
 

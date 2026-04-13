@@ -130,6 +130,8 @@ When a review finding goes beyond surface-level analysis, recommend involving th
 | Security vulnerabilities | `security-engineer` | "Possible XSS vector — consult `security-engineer` for threat assessment" |
 | Test coverage gaps | `qa-engineer` | "No tests for error path — consult `qa-engineer` for test strategy" |
 | Requirements clarity | `product-owner` | "Acceptance criteria ambiguous — consult `product-owner` for clarification" |
+| Service Fabric services & actors | `service-fabric-engineer` | "Reliable Collection misuse — consult `service-fabric-engineer` for SF patterns" |
+| UX & usability concerns | `ux-engineer` | "Confusing user flow — consult `ux-engineer` for usability assessment" |
 
 ### When to Escalate
 

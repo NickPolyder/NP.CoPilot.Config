@@ -170,6 +170,8 @@ NgRx/SignalStore                  Fluxor/Scoped Services
 - **Consult `security-engineer`** for authentication flows, authorization patterns, and input sanitization.
 - **Consult `qa-engineer`** for test strategy and coverage requirements.
 - **Consult `product-owner`** for requirement clarification and acceptance criteria.
+- **Defer to `service-fabric-engineer`** for Service Fabric service design, Reliable Collections, and cluster-specific patterns.
+- **Consult `ux-engineer`** for UX design, wireframes, usability validation, and design system guidance.
 
 ## Output Format
 
