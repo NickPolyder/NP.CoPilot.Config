@@ -1,0 +1,5 @@
+# Copilot gitignore additions
+# Add these lines to your project's .gitignore
+
+# Local Copilot preferences (personal, not shared)
+.github/instructions/local-preferences.instructions.md

@@ -7,3 +7,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Local preferences (personal, not shared)
+.local.preferences.md
