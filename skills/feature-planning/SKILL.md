@@ -125,6 +125,12 @@ Output:
 - {Research question or "None — follows established patterns"}
 ```
 
+**Requirements and UX complete. Present both sections to the user:**
+
+> **Phases 1-2 complete (Requirements + UX). Review the scope and user flows above. Approve moving to architecture and implementation planning? (yes / no / adjust)**
+
+---
+
 ## Phase 3: Architecture Assessment (Architect perspective)
 
 Evaluate the architectural impact:
@@ -211,6 +217,12 @@ Output:
 2. {Phase 2: Backend services + Frontend components}
 3. {Phase 3: Integration + Polish}
 ```
+
+**Architecture and implementation plan complete. Present both sections to the user:**
+
+> **Phases 3-4 complete (Architecture + Implementation Plan). Review the component design and task breakdown. Approve moving to test strategy, security, and deployment planning? (yes / no / adjust)**
+
+---
 
 ## Phase 5: Test Strategy (QA Engineer perspective)
 

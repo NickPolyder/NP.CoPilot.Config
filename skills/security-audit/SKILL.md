@@ -191,7 +191,24 @@ Systematically check each category:
 - [ ] Unnecessary URL schemes disabled (file://, gopher://)
 - [ ] Network segmentation limits SSRF blast radius
 
-## Step 5: Code review for security
+## Step 5: Present findings for approval
+
+Before generating the full report and remediation plan, present a findings summary to the user:
+
+> **Security analysis complete (STRIDE + OWASP + code review). Found: {critical} critical, {high} high, {medium} medium, {low} low severity issues.**
+>
+> **Top findings:**
+> 1. {Most critical finding — one line}
+> 2. {Second most critical — one line}
+> 3. {Third — one line}
+>
+> **Generate full report with remediation recommendations? (yes / no / adjust scope)**
+
+This gate ensures the user sees the severity landscape before investing time in detailed remediation guidance.
+
+---
+
+## Step 6: Code review for security
 
 Examine the actual code for security issues:
 
@@ -204,7 +221,7 @@ Examine the actual code for security issues:
 7. **Logging** — what's logged, what's not, log injection prevention.
 8. **Configuration** — secrets handling, feature flags, environment separation.
 
-## Step 6: Generate the report
+## Step 7: Generate the report
 
 Produce a structured security assessment report:
 
