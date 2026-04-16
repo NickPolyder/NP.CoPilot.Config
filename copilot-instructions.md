@@ -80,3 +80,13 @@ This file is global — it loads before any repo-level config. The full preceden
 3. **Local** (gitignored per-user files) — personal overrides that don't belong in source control.
 
 Project config extends global; it should not contradict it. When a project defines specific tooling (e.g., Angular, PostgreSQL, Azure DevOps), agents and skills should respect those choices and skip irrelevant guidance.
+
+## Skill Coordination
+
+Skills and agents follow a strict invocation hierarchy to prevent recursive nesting:
+
+1. **User → Skill** — the user (or another skill's approval gate) invokes a skill.
+2. **Skill → Agent** — skills coordinate with specialist agents for domain expertise.
+3. **Agent → Tools** — agents use tools (edit, search, run commands) but do **not** invoke orchestrator skills.
+
+Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`) must never be invoked by an agent or nested inside another orchestrator. If an agent identifies work that would benefit from a skill, it should recommend the skill to the user rather than invoking it directly.
