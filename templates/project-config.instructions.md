@@ -6,6 +6,7 @@ Place it at `.github/instructions/project-config.instructions.md` so Copilot loa
 ## Technology Stack
 
 - **Framework:** [Angular | Blazor | React | None]
+- **Blazor Render Mode:** [Static SSR | Interactive Server | Interactive WebAssembly | Auto | N/A]
 - **Backend:** [ASP.NET Core | Node.js | None]
 - **Database:** [SQL Server | PostgreSQL | SQLite | CosmosDB | None]
 - **ORM:** [Entity Framework Core | Dapper | None]

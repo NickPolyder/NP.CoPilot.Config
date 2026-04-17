@@ -313,7 +313,7 @@ Once the user approves the review findings:
 
 After every review cycle (including re-reviews), persist the full consolidated review summary as a markdown report:
 
-1. **Path**: `.copilot/reports/reviews/{yyyy}/{MM}/code-review-{dd}-{hhmmss}.md` (relative to the repository root).
+1. **Path**: `.copilot/reports/reviews/{yyyy}/{MM}/commit-review-{dd}-{hhmmss}.md` (relative to the repository root).
    - `{yyyy}` — four-digit year
    - `{MM}` — two-digit month
    - `{dd}` — two-digit day
@@ -337,6 +337,7 @@ After every review cycle (including re-reviews), persist the full consolidated r
 
 # Style and communication
 
+- **This skill is an orchestrator.** Do not invoke other orchestrator skills (`prd-workflow`, `feature-planning`) from within this skill.
 - Keep review summaries concise and actionable.
 - When fixing findings, explain briefly what you changed and why.
 - If a reviewer finding is a false positive, note it in the summary rather than silently ignoring it.

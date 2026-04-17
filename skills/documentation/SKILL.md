@@ -73,6 +73,9 @@ docs/
 ├── features/                    (feature documentation)
 │   ├── README.md                (feature docs index)
 │   └── {feature}.md
+├── bugs/                        (bug fix documentation)
+│   ├── README.md                (bug docs index)
+│   └── {bug}.md
 ├── decisions/                   (architecture decision records)
 │   ├── README.md                (ADR index with status summary)
 │   └── {NNN}-{title}.md         (individual ADRs, numbered sequentially)
@@ -82,8 +85,8 @@ docs/
 ├── ux/                          (UX specifications)
 │   ├── README.md                (UX docs index)
 │   └── {feature-or-flow}.md
-└── infrastructure/              (infrastructure/deployment docs)
-    ├── README.md                (infrastructure docs index)
+└── infra/                       (infrastructure/deployment docs)
+    ├── README.md                (infra docs index)
     └── {topic}.md
 ```
 
@@ -94,14 +97,15 @@ If the project already has a `docs/` folder, follow its existing structure. If n
 | Change Type | Document Location | Agent to Consult |
 |---|---|---|
 | New feature or module | `docs/features/{feature}.md` | product-owner, relevant developer |
+| Bug fix | `docs/bugs/{bug}.md` | backend-developer or relevant developer |
 | API changes | `docs/api/{service-or-area}.md` | backend-developer |
 | Domain model changes | `docs/features/domain-model.md` | database-engineer, architect |
 | Architecture decision | `docs/decisions/{NNN}-{title}.md` | architect (use `architecture-decision-record` skill) |
 | UX specification | `docs/ux/{feature-or-flow}.md` | ux-engineer |
-| Deployment changes | `docs/infrastructure/deployment.md` | devops-engineer |
-| Service Fabric topology | `docs/infrastructure/service-fabric.md` | service-fabric-engineer |
-| Server/network config | `docs/infrastructure/` (appropriate file) | systems-engineer |
-| Security controls | `docs/infrastructure/security.md` | security-engineer |
+| Deployment changes | `docs/infra/deployment.md` | devops-engineer |
+| Service Fabric topology | `docs/infra/service-fabric.md` | service-fabric-engineer |
+| Server/network config | `docs/infra/` (appropriate file) | systems-engineer |
+| Security controls | `docs/infra/security.md` | security-engineer |
 | Test strategy | `docs/features/{feature}-test-strategy.md` | qa-engineer (use `test-strategy` skill) |
 
 ---
@@ -319,7 +323,7 @@ When modifying an existing feature:
 
 # Creating a new infrastructure doc
 
-1. Create `docs/infrastructure/{topic}.md`.
+1. Create `docs/infra/{topic}.md`.
 2. Consult the **devops-engineer** agent for pipeline/deployment details.
 3. Consult the **systems-engineer** agent for integration and networking aspects.
 4. Include:
@@ -329,8 +333,23 @@ When modifying an existing feature:
    - Environment variables and configuration (tables).
    - Network topology or architecture if relevant.
    - Troubleshooting tips.
-5. Add an entry to `docs/infrastructure/README.md`.
+5. Add an entry to `docs/infra/README.md`.
 6. Add an entry to `docs/README.md`.
+
+---
+
+# Creating a new bug doc
+
+1. Create `docs/bugs/{bug}.md`.
+2. Follow the standard document template above.
+3. Include:
+   - Summary of the bug (symptoms, impact, affected area).
+   - Root cause analysis.
+   - The fix applied and why.
+   - Test cases added to prevent regression.
+   - Any related issues or future improvements identified.
+4. Add an entry to `docs/bugs/README.md`.
+5. Add an entry to `docs/README.md`.
 
 ---
 

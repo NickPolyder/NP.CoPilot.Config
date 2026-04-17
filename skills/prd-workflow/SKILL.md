@@ -44,6 +44,8 @@ Do **not** use this skill for:
 - Pure exploration or research — use investigation tools instead.
 - Modifying existing design/task documents — edit them directly.
 
+> **Choosing between `prd-workflow` and `feature-planning`:** Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end. Use `feature-planning` when you need a **comprehensive plan document only** — no implementation.
+
 ---
 
 # Workflow
@@ -153,6 +155,13 @@ Approve moving to {next phase}? (yes / no / adjust)
 - **Backend/Frontend developer agents** — consult during implementation for pattern questions.
 - **QA engineer agent** — consult for test strategy decisions.
 - **Security engineer agent** — consult for security considerations in design.
+- **Documentation skill** — after implementation is complete, recommend using the `documentation` skill to update `docs/` with the implemented feature's documentation.
+
+---
+
+# Constraints
+
+- **This skill is an orchestrator.** Do not invoke other orchestrator skills (`feature-planning`, `git-commit-review`) from within this skill. If work would benefit from another orchestrator, recommend it to the user after this workflow completes.
 
 ---
 

@@ -193,16 +193,16 @@ Systematically check each category:
 
 ## Step 5: Present findings for approval
 
-Before generating the full report and remediation plan, present a findings summary to the user:
+Before proceeding to code review, present the threat analysis findings to the user:
 
-> **Security analysis complete (STRIDE + OWASP + code review). Found: {critical} critical, {high} high, {medium} medium, {low} low severity issues.**
+> **Threat analysis complete (STRIDE + OWASP). Found: {critical} critical, {high} high, {medium} medium, {low} low severity issues. Code review follows next.**
 >
 > **Top findings:**
 > 1. {Most critical finding — one line}
 > 2. {Second most critical — one line}
 > 3. {Third — one line}
 >
-> **Generate full report with remediation recommendations? (yes / no / adjust scope)**
+> **Proceed with code review and full report generation? (yes / no / adjust scope)**
 
 This gate ensures the user sees the severity landscape before investing time in detailed remediation guidance.
 

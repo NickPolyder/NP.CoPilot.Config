@@ -66,7 +66,7 @@ Skip tools that aren't relevant to the current project.
 
 - **Git status** — clean working tree? Uncommitted changes?
 - **Branch** — which branch are we on? Is it up to date with remote?
-- **Project config** — does `.github/instructions/project-config.instructions.md` exist? If yes, read it and summarize key settings.
+- **Project config** — does `.github/instructions/project-config.instructions.md` exist? If yes, read it and summarize key settings. If no, suggest running `install-project.ps1` from the NP.CoPilot.Config repo to scaffold project templates.
 - **Solution/project files** — can you find .sln, .csproj, package.json, or equivalent entry points?
 
 ## 3. Dependency Restore

@@ -48,6 +48,8 @@ Do **not** use this skill for:
 - Pure architecture decisions (use the `architecture-decision-record` skill).
 - Pure requirement breakdowns without technical planning (use the `requirement-breakdown` skill).
 
+> **Choosing between `feature-planning` and `prd-workflow`:** Use `feature-planning` when you need a **comprehensive plan document only** — no implementation. Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end.
+
 ---
 
 # Planning process
@@ -401,6 +403,7 @@ Save the feature plan to `docs/features/{feature-name}-plan.md` or present it to
 
 # Rules
 
+- **This skill is an orchestrator.** Do not invoke other orchestrator skills (`prd-workflow`, `git-commit-review`) from within this skill. If work would benefit from another orchestrator, recommend it to the user after this workflow completes.
 - Complete all 7 phases — skipping a phase leads to blind spots.
 - Ask clarifying questions in Phase 1 before proceeding — don't assume.
 - Every implementation task must have a responsible agent assigned.

@@ -50,7 +50,7 @@ Follow these steps for every task (the full cycle before committing):
 5. **Improve** — If the findings from step 4 are worth implementing now, do so — but be extra careful not to break anything. Run tests after each improvement.
 6. **Test** — Perform manual testing. If bugs are found, fix them. If improvement opportunities emerge, loop back to step 4. Repeat until satisfied.
 7. **Commit** — Create commit(s) based on logical separation. Each commit should represent one coherent change (see Git Conventions below).
-8. **Reflect** — Write a self-reflection: what went right, what went wrong, how to improve, and what was learned. Store the reflection in the relevant project doc from step 2 if appropriate; otherwise, create or update a retrospective at `~/docs/retrospectives/`.
+8. **Reflect** — Write a self-reflection: what went right, what went wrong, how to improve, and what was learned. Store the reflection in the relevant project doc from step 2 if appropriate; otherwise, create or update a retrospective at `docs/retrospectives/`.
 
 ## Git Conventions
 
