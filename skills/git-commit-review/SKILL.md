@@ -296,15 +296,16 @@ Do not loop more than **3 review cycles** without asking the user whether to con
 
 # Creating the commit
 
-Once the user approves:
+Once the user approves the review findings:
 
 1. Stage all relevant changes (`git add`).
-2. Write a clear, conventional commit message:
+2. **Ask the user to verify the changes manually** — present a summary of what will be committed (files changed, insertions, deletions) and explicitly ask the user to verify before proceeding. Do not continue until the user confirms.
+3. After the user confirms, **use `ask_user`** to present the proposed commit message for approval. The message must follow these rules:
    - First line: imperative mood summary (max 72 chars).
    - Blank line, then body explaining **what** and **why** (not how).
    - Always include the trailer: `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`
-3. Create the commit.
-4. **Never amend** a previous commit unless the user explicitly asks.
+4. After the user approves the commit message, create the commit.
+5. **Never amend** a previous commit unless the user explicitly asks (use `ask_user` to confirm).
 
 ---
 
