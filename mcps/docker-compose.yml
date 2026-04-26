@@ -1,0 +1,53 @@
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_PORT:-8080}:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_BASE_URL=http://${SEARXNG_HOSTNAME:-localhost}:${SEARXNG_PORT:-8080}/
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - mcp-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # NOTE: The SearXNG MCP bridge (isokoliuk/mcp-searxng) is a stdio-only MCP
+  # server. It cannot run as a persistent Docker service — it must be launched
+  # by the MCP client (Copilot CLI) as a subprocess. See docs/mcps.md for the
+  # correct MCP client configuration. Only SearXNG itself runs on the host;
+  # the bridge runs locally on your workstation.
+
+  playwright-mcp:
+    image: mcp/playwright:latest
+    container_name: playwright-mcp
+    restart: unless-stopped
+    ports:
+      - "${PLAYWRIGHT_MCP_PORT:-8931}:8931"
+    environment:
+      - PLAYWRIGHT_MCP_PORT=8931
+      - PLAYWRIGHT_MCP_HOST=0.0.0.0
+      - PLAYWRIGHT_MCP_HEADLESS=true
+    command: ["--port", "8931", "--host", "0.0.0.0", "--allowed-hosts", "*"]
+    shm_size: 512m
+    networks:
+      - mcp-network
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+networks:
+  mcp-network:
+    name: mcp-network
+    driver: bridge

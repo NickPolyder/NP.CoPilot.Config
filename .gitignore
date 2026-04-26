@@ -10,3 +10,6 @@ Thumbs.db
 
 # Local preferences (personal, not shared)
 .local.preferences.md
+
+# MCP deployment secrets
+mcps/.env

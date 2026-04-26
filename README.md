@@ -41,10 +41,20 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   │   └── SKILL.md                 STRIDE + OWASP security assessment
 │   └── test-strategy/
 │       └── SKILL.md                 Test pyramid, edge cases, coverage plan
+├── mcps/
+│   ├── docker-compose.yml           MCP server stack (SearXNG, Playwright)
+│   ├── searxng/
+│   │   └── settings.yml             SearXNG engine configuration
+│   ├── .env.example                 Environment variable template
+│   ├── deploy.ps1                   Deploy stack to remote host via SCP
+│   └── README.md                    Quick setup instructions
+├── docs/
+│   └── mcps.md                      MCP server reference documentation
 ├── templates/
 │   ├── project-config.instructions.md     Per-repo tech stack & build commands
 │   ├── local-preferences.instructions.md  Per-user overrides (gitignored)
 │   └── gitignore-additions.txt            Gitignore entries for local files
+├── mcp-config.json                  MCP client config (symlinked with -Mcp)
 ├── install.ps1                      Symlinks global config into ~/.copilot/
 └── install-project.ps1              Scaffolds templates into a target repo
 ```
@@ -57,6 +67,12 @@ Symlinks this repo's config into `~/.copilot/` so it loads for every project:
 
 ```powershell
 .\install.ps1
+```
+
+To include MCP server configuration (requires the MCP stack deployed — see [MCP Servers](#mcp-servers)):
+
+```powershell
+.\install.ps1 -Mcp
 ```
 
 To remove:
@@ -74,6 +90,14 @@ Scaffolds project-specific config into a repo's `.github/instructions/` director
 ```
 
 Then edit the generated files to match your project's tech stack.
+
+## MCP Servers
+
+Self-hosted MCP (Model Context Protocol) servers that extend Copilot CLI with web search and browser automation. The stack runs on a Raspberry Pi and includes SearXNG (search) and Playwright (headless browser).
+
+- **Quick start:** See [`mcps/README.md`](mcps/README.md)
+- **Full reference:** See [`docs/mcps.md`](docs/mcps.md)
+- **Deploy:** `.\mcps\deploy.ps1` (copies files to Pi and runs `docker compose up -d`)
 
 ## How It Works
 
@@ -96,6 +120,7 @@ Copilot CLI reads config from `~/.copilot/`. Rather than copying files there, `i
 | Instructions | `copilot-instructions.md` | `~/.copilot/copilot-instructions.md` |
 | Agents | `agents/` | `~/.copilot/agents/` |
 | Skills | `skills/` | `~/.copilot/skills/` |
+| MCP Config | `mcp-config.json` | `~/.copilot/mcp-config.json` *(opt-in with `-Mcp`)* |
 
 ## Overriding Per-Repo
 

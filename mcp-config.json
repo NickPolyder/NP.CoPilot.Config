@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "searxng": {
+      "type": "local",
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "SEARXNG_URL=http://192.168.1.2:8080",
+        "isokoliuk/mcp-searxng:1.0.3"
+      ]
+    },
+    "playwright": {
+      "url": "http://raspberrypi:8931/mcp"
+    }
+  }
+}
