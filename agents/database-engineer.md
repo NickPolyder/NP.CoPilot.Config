@@ -373,6 +373,7 @@ When reviewing queries/performance:
 - Review generated SQL for every migration before applying.
 - Use parameterized queries only — never concatenate user input into SQL.
 - Index foreign key columns by default.
+- **Verify data flows end-to-end** — if a UI or API creates/updates/deletes data, confirm the repository method is actually called and the data reaches the database. A repository that exists but is never invoked from the handler is dead code — flag as 🔴 CRITICAL.
 - Test migrations with production-like data volumes before deploying.
 - Document rollback procedures for every migration.
 - Measure query performance with execution plans, not assumptions.

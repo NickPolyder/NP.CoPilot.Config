@@ -330,3 +330,4 @@ When reviewing test coverage:
 - Integration tests must clean up after themselves.
 - E2E tests must not depend on specific test data that other tests might modify.
 - Coverage targets are guidelines, not goals — meaningful tests matter more than numbers.
+- **Test for fake success** — for every user-facing action (form submit, delete, update), verify the operation actually persists. Submit the form, then query the data layer to confirm the change landed. A test that only asserts the UI shows "success" without checking the side-effect is incomplete.

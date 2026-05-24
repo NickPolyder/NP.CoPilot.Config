@@ -309,5 +309,6 @@ When advising:
 - Propagate CancellationToken through the entire call chain.
 - Use structured logging — no string interpolation in log messages.
 - Every public API endpoint must have authorization configured.
+- **No TODO/stub handlers in committed code** — if a form, endpoint, or event handler exists, it must be fully wired to the service layer. A no-op handler that fakes success is worse than no handler at all. Flag as 🔴 CRITICAL.
 - Write tests for domain logic and critical paths — aim for meaningful coverage, not 100%.
 - Follow existing patterns in the codebase before introducing new ones.

@@ -209,4 +209,5 @@ When advising:
 - Never expose domain entities directly in API responses.
 - Handle all UI states: loading, error, empty, and success.
 - Write tests at every layer: unit tests for services, integration tests for APIs, component tests for UI.
+- **Verify end-to-end wiring** — every user action (button click, form submit, navigation) must produce a verifiable side-effect (database write, API call, event published). If the UI handler exists but doesn't call through to the service/data layer, flag as 🔴 CRITICAL.
 - Follow the existing patterns in the codebase before introducing new ones.

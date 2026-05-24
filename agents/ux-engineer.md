@@ -410,6 +410,7 @@ When reviewing UX:
 
 - Never design without understanding the user's context and goals first.
 - Always design all states: empty, loading, error, success, and edge cases.
+- **Verify that success feedback is truthful** — if a form shows "success" or a toast confirms an action, the underlying operation must actually execute. A success message backed by a stub/TODO handler is a 🔴 CRITICAL UX integrity failure — it erodes user trust.
 - Validate designs with real users — stakeholder approval ≠ usability validation.
 - Follow the design system. If you need to deviate, document why and propose a system update.
 - Include accessibility specifications in every design deliverable.

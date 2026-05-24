@@ -272,3 +272,4 @@ When advising:
 - Test with a screen reader at least once per feature.
 - Follow the existing design system/component library before creating new patterns.
 - Profile before optimizing — measure, don't guess.
+- **No stub or no-op event handlers in committed code** — if a button, form, or link has a handler, it must perform the actual operation. A click handler that shows a toast without calling the service is a 🔴 CRITICAL defect. Every user action must produce a verifiable side-effect.
