@@ -50,6 +50,7 @@ $target = Join-Path $HOME '.copilot'
 
 $links = @(
     @{ Name = 'copilot-instructions.md'; Type = 'File' }
+    @{ Name = 'instructions';            Type = 'Directory' }
     @{ Name = 'agents';                  Type = 'Directory' }
     @{ Name = 'skills';                  Type = 'Directory' }
 )
