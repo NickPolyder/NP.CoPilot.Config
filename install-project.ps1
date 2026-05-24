@@ -12,6 +12,10 @@
 .PARAMETER TargetPath
     Path to the target repository root. Defaults to current directory.
 
+.PARAMETER Template
+    Framework-specific template variant. Options: Generic, Angular, Blazor, ServiceFabric.
+    Default: Generic.
+
 .PARAMETER SkipGitignore
     If set, skips appending gitignore entries.
 
@@ -22,12 +26,25 @@
     .\install-project.ps1 -TargetPath C:\Repos\MyProject
 
 .EXAMPLE
+    .\install-project.ps1 -Template Angular -TargetPath C:\Repos\MyAngularApp
+
+.EXAMPLE
+    .\install-project.ps1 -Template Blazor
+
+.EXAMPLE
+    .\install-project.ps1 -Template ServiceFabric -TargetPath C:\Repos\MySFApp
+
+.EXAMPLE
     .\install-project.ps1
-    Scaffolds into the current directory.
+    Scaffolds generic template into the current directory.
 #>
 
 param(
     [string]$TargetPath = (Get-Location).Path,
+
+    [ValidateSet('Generic', 'Angular', 'Blazor', 'ServiceFabric')]
+    [string]$Template = 'Generic',
+
     [switch]$SkipGitignore,
     [switch]$Force
 )
@@ -64,30 +81,37 @@ if (-not (Test-Path $instructionsDir)) {
 }
 
 # Copy template files
+$projectConfigFile = switch ($Template) {
+    'Angular'        { 'project-config-angular.instructions.md' }
+    'Blazor'         { 'project-config-blazor.instructions.md' }
+    'ServiceFabric'  { 'project-config-service-fabric.instructions.md' }
+    default          { 'project-config.instructions.md' }
+}
+
 $templates = @(
-    'project-config.instructions.md'
-    'local-preferences.instructions.md'
+    @{ Source = $projectConfigFile; Target = 'project-config.instructions.md' }
+    @{ Source = 'local-preferences.instructions.md'; Target = 'local-preferences.instructions.md' }
 )
 
-foreach ($file in $templates) {
-    $sourcePath = Join-Path $templateDir $file
-    $targetFilePath = Join-Path $instructionsDir $file
+foreach ($item in $templates) {
+    $sourcePath = Join-Path $templateDir $item.Source
+    $targetFilePath = Join-Path $instructionsDir $item.Target
 
     if (-not (Test-Path $sourcePath)) {
-        Write-Status '⚠️' "Template not found, skipping: $file"
+        Write-Status '⚠️' "Template not found, skipping: $($item.Source)"
         continue
     }
 
     if ((Test-Path $targetFilePath) -and -not $Force) {
-        $response = Read-Host "  ⚠️  '$file' already exists. Overwrite? (y/N)"
+        $response = Read-Host "  ⚠️  '$($item.Target)' already exists. Overwrite? (y/N)"
         if ($response -ne 'y') {
-            Write-Status '⏭️' "Skipped: $file"
+            Write-Status '⏭️' "Skipped: $($item.Target)"
             continue
         }
     }
 
     Copy-Item -Path $sourcePath -Destination $targetFilePath -Force
-    Write-Status '✅' "$file → $targetFilePath"
+    Write-Status '✅' "$($item.Source) → $targetFilePath"
 }
 
 # Append gitignore entries
@@ -113,7 +137,7 @@ if (-not $SkipGitignore) {
     }
 }
 
-Write-Host "`n✅ Project templates installed.`n" -ForegroundColor Green
+Write-Host "`n✅ Project templates installed (template: $Template).`n" -ForegroundColor Green
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Edit .github/instructions/project-config.instructions.md with your project settings"
 Write-Host "  2. Edit .github/instructions/local-preferences.instructions.md with your personal preferences"

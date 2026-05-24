@@ -5,7 +5,15 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 ## Structure
 
 ```
-├── copilot-instructions.md          Global instructions (preferences, personality, workflow)
+├── copilot-instructions.md          Root instructions (quick reference, loads first)
+├── instructions/
+│   ├── personality.instructions.md  Identity, tone, communication style (always loaded)
+│   ├── workflow.instructions.md     Tiered dev workflow: Trivial/Standard/Full (always loaded)
+│   ├── git-conventions.instructions.md  Commit workflow and safety rails (always loaded)
+│   ├── session-awareness.instructions.md  Start/end session behavior (always loaded)
+│   ├── coordination.instructions.md      Skill hierarchy, agent handoff format (always loaded)
+│   ├── csharp-style.instructions.md      C# conventions (applyTo: *.cs)
+│   └── powershell-style.instructions.md  PowerShell conventions (applyTo: *.ps1)
 ├── agents/
 │   ├── architect.md                 Architecture review agent
 │   ├── backend-developer.md         .NET backend specialist
@@ -23,6 +31,8 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 ├── skills/
 │   ├── architecture-decision-record/
 │   │   └── SKILL.md                 Structured ADR creation
+│   ├── dependency-audit/
+│   │   └── SKILL.md                 Package vulnerability & update audit
 │   ├── documentation/
 │   │   └── SKILL.md                 Documentation maintenance workflow
 │   ├── feature-planning/
@@ -33,12 +43,20 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   │   └── SKILL.md                 Research → design → tasks → implement chain
 │   ├── preflight/
 │   │   └── SKILL.md                 Environment & project health check
+│   ├── refactor/
+│   │   └── SKILL.md                 Safety-first refactoring with test verification
 │   ├── requirement-breakdown/
 │   │   └── SKILL.md                 Epic/story breakdown with INVEST criteria
+│   ├── resume/
+│   │   └── SKILL.md                 Session context recovery
 │   ├── retrospective/
 │   │   └── SKILL.md                 Post-work reflection & follow-up actions
+│   ├── scaffold/
+│   │   └── SKILL.md                 Code generation for common patterns
 │   ├── security-audit/
 │   │   └── SKILL.md                 STRIDE + OWASP security assessment
+│   ├── test-gap-analysis/
+│   │   └── SKILL.md                 Retroactive test coverage audit
 │   └── test-strategy/
 │       └── SKILL.md                 Test pyramid, edge cases, coverage plan
 ├── mcps/
@@ -49,14 +67,19 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   ├── deploy.ps1                   Deploy stack to remote host via SCP
 │   └── README.md                    Quick setup instructions
 ├── docs/
+│   ├── agent-coordination.md        Agent handoff protocol (design reference)
+│   ├── features/                    Feature exploration docs
 │   └── mcps.md                      MCP server reference documentation
 ├── templates/
-│   ├── project-config.instructions.md     Per-repo tech stack & build commands
-│   ├── local-preferences.instructions.md  Per-user overrides (gitignored)
-│   └── gitignore-additions.txt            Gitignore entries for local files
+│   ├── project-config.instructions.md              Generic per-repo template
+│   ├── project-config-angular.instructions.md      Angular + .NET API template
+│   ├── project-config-blazor.instructions.md       Blazor + .NET template
+│   ├── project-config-service-fabric.instructions.md  Service Fabric template
+│   ├── local-preferences.instructions.md           Per-user overrides (gitignored)
+│   └── gitignore-additions.txt                     Gitignore entries for local files
 ├── mcp-config.json                  MCP client config (symlinked with -Mcp)
 ├── install.ps1                      Symlinks global config into ~/.copilot/
-└── install-project.ps1              Scaffolds templates into a target repo
+└── install-project.ps1              Scaffolds templates into a target repo (-Template Angular|Blazor|ServiceFabric)
 ```
 
 ## Installation
@@ -117,7 +140,8 @@ Copilot CLI reads config from `~/.copilot/`. Rather than copying files there, `i
 
 | Item | Symlink Source | Symlink Target |
 |---|---|---|
-| Instructions | `copilot-instructions.md` | `~/.copilot/copilot-instructions.md` |
+| Root Instructions | `copilot-instructions.md` | `~/.copilot/copilot-instructions.md` |
+| Instructions Folder | `instructions/` | `~/.copilot/instructions/` |
 | Agents | `agents/` | `~/.copilot/agents/` |
 | Skills | `skills/` | `~/.copilot/skills/` |
 | MCP Config | `mcp-config.json` | `~/.copilot/mcp-config.json` *(opt-in with `-Mcp`)* |
@@ -134,9 +158,14 @@ Repository-level config (`.github/copilot-instructions.md`, `.github/instruction
 | `feature-planning` | Plan a feature across all domains (UX, arch, security, deployment) |
 | `requirement-breakdown` | Break an epic into user stories with acceptance criteria |
 | `git-commit-review` | Pre-commit code review with 3-hat + specialist reviewers |
+| `scaffold` | Generate boilerplate for common patterns (service, aggregate, endpoint) |
+| `refactor` | Structured refactoring with test verification at each step |
 | `test-strategy` | Design test coverage for a feature or code change |
+| `test-gap-analysis` | Audit existing code for untested paths and weak assertions |
+| `dependency-audit` | Check for outdated/vulnerable packages and upgrade safely |
 | `security-audit` | STRIDE threat model + OWASP checklist assessment |
 | `architecture-decision-record` | Capture a significant architectural decision |
 | `documentation` | Create or update project documentation |
 | `preflight` | Verify environment and project health before starting work |
+| `resume` | Recover context from previous sessions — continue where you left off |
 | `retrospective` | Reflect on completed work — what went well, what to improve |
