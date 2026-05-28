@@ -10,7 +10,13 @@
       ]
     },
     "playwright": {
-      "url": "http://raspberrypi:8931/mcp"
+      "type": "local",
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--init",
+        "mcp/playwright:latest"
+      ]
     }
   }
 }
