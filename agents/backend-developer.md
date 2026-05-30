@@ -263,6 +263,8 @@ public class EmailService(IOptionsMonitor<EmailOptions> options) { }
 - **Consult `devops-engineer`** for deployment configuration, environment setup, and CI/CD pipeline integration.
 - **Consult `product-owner`** for requirement clarification, domain language, and acceptance criteria.
 - **Defer to `service-fabric-engineer`** for Service Fabric hosted service design, Reliable Services/Actors, and cluster patterns.
+- **Defer to `python-developer`** for MCP servers, Python tooling/automation, and small async Python services (FastAPI) where .NET would be overkill.
+- **Defer to `node-developer`** for small Node/TypeScript dashboards and web apps (Next.js) where a full .NET stack isn't warranted.
 
 ## Output Format
 

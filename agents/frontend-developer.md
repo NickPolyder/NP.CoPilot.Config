@@ -223,6 +223,7 @@ Error display component               ValidationMessage / ValidationSummary
 ## Coordination
 
 - **Defer to `fullstack-developer`** for end-to-end feature implementation spanning both frontend and backend.
+- **Defer to `node-developer`** for React/Next.js dashboards and small Node/TypeScript web apps — this agent owns the .NET-aligned frontends (Angular/Blazor), not React.
 - **Defer to `backend-developer`** for API design decisions and backend implementation.
 - **Defer to `systems-engineer`** for real-time communication architecture (SignalR, WebSocket infrastructure).
 - **Consult `architect`** for frontend architecture decisions and pattern consistency.

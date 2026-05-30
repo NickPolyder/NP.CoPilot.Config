@@ -27,7 +27,9 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   ├── devops-engineer.md           CI/CD & infrastructure agent
 │   ├── frontend-developer.md        Angular/Blazor frontend specialist
 │   ├── fullstack-developer.md       End-to-end feature agent
+│   ├── node-developer.md            Node/TypeScript & Next.js specialist (small apps)
 │   ├── product-owner.md             Requirements & user stories agent
+│   ├── python-developer.md          Python, MCP servers & FastAPI specialist
 │   ├── qa-engineer.md               Test strategy & coverage agent
 │   ├── security-engineer.md         Threat modeling & OWASP agent
 │   ├── service-fabric-engineer.md   Service Fabric specialist
