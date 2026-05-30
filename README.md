@@ -13,7 +13,12 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   ├── session-awareness.instructions.md  Start/end session behavior (always loaded)
 │   ├── coordination.instructions.md      Skill hierarchy, agent handoff format (always loaded)
 │   ├── csharp-style.instructions.md      C# conventions (applyTo: *.cs)
-│   └── powershell-style.instructions.md  PowerShell conventions (applyTo: *.ps1)
+│   ├── powershell-style.instructions.md  PowerShell conventions (applyTo: *.ps1)
+│   ├── python-style.instructions.md      Python conventions (applyTo: *.py)
+│   ├── typescript-style.instructions.md  TypeScript/Node conventions (applyTo: *.ts, *.js)
+│   ├── sql-style.instructions.md         SQL conventions (applyTo: *.sql)
+│   ├── markdown-style.instructions.md    Docs conventions (applyTo: docs/**/*.md)
+│   └── yaml-docker-style.instructions.md YAML/Docker conventions (applyTo: *.yml, Dockerfile)
 ├── agents/
 │   ├── architect.md                 Architecture review agent
 │   ├── backend-developer.md         .NET backend specialist
