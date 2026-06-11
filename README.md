@@ -52,6 +52,8 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   │   └── SKILL.md                 Environment & project health check
 │   ├── refactor/
 │   │   └── SKILL.md                 Safety-first refactoring with test verification
+│   ├── repo-bootstrap/
+│   │   └── SKILL.md                 Bootstrap a repo's agent contract + docs memory tree
 │   ├── requirement-breakdown/
 │   │   └── SKILL.md                 Epic/story breakdown with INVEST criteria
 │   ├── resume/
@@ -83,7 +85,8 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   ├── project-config-blazor.instructions.md       Blazor + .NET template
 │   ├── project-config-service-fabric.instructions.md  Service Fabric template
 │   ├── local-preferences.instructions.md           Per-user overrides (gitignored)
-│   └── gitignore-additions.txt                     Gitignore entries for local files
+│   ├── gitignore-additions.txt                     Gitignore entries for local files
+│   └── repo-bootstrap/                             Agent contract + docs memory templates (repo-bootstrap skill)
 ├── mcp-config.json                  MCP client config (symlinked with -Mcp)
 ├── install.ps1                      Symlinks global config into ~/.copilot/
 └── install-project.ps1              Scaffolds templates into a target repo (-Template Angular|Blazor|ServiceFabric)
@@ -167,6 +170,7 @@ Repository-level config (`.github/copilot-instructions.md`, `.github/instruction
 | `git-commit-review` | Pre-commit code review with 3-hat + specialist reviewers |
 | `scaffold` | Generate boilerplate for common patterns (service, aggregate, endpoint) |
 | `refactor` | Structured refactoring with test verification at each step |
+| `repo-bootstrap` | Bootstrap a repo for agent-driven work: agent contract + docs memory tree |
 | `test-strategy` | Design test coverage for a feature or code change |
 | `test-gap-analysis` | Audit existing code for untested paths and weak assertions |
 | `dependency-audit` | Check for outdated/vulnerable packages and upgrade safely |
