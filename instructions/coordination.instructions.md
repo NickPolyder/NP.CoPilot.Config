@@ -1,7 +1,7 @@
 # Agent & Skill Coordination
 
 > **Intent (anchor):** Define how global, project, and local instructions coordinate with skills, agents, and tools. This file is the single canonical source for precedence, the invocation hierarchy, and handoff rules.
-> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; use structured handoffs for delegated work.
+> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; route domain work to the matching custom specialist agent on a task-appropriate model; use structured handoffs for delegated work.
 > **Never:** Let an agent invoke an orchestrator skill or let orchestrator skills nest inside each other.
 > **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
 
@@ -24,6 +24,18 @@ Skills and agents follow a strict invocation hierarchy to prevent recursive nest
 3. **Agent → Tools** — agents use tools (edit, search, run commands) but do **not** invoke orchestrator skills.
 
 Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`) must never be invoked by an agent or nested inside another orchestrator. If an agent identifies work that would benefit from a skill, it should recommend the skill to the user rather than invoking it directly.
+
+## Agent Routing & Model Fit
+
+When work maps to a domain a specialist agent owns, **prefer dispatching to that custom agent** (e.g. `architect`, `backend-developer`, `qa-engineer`, `security-engineer`) over doing it inline on the orchestrator or using a generic subagent. The orchestrator stays on a strong model and coordinates; each specialist does focused work in its own context window and returns a summary, keeping the orchestrator context lean.
+
+Match the model to the task, not to the role:
+
+- **Judgment work** — architecture review, security/threat analysis, test strategy, design decisions → strong reasoning model (Opus-class).
+- **Mechanical work** — scaffolding, extraction, renames, boilerplate, file moves → cheap/fast model (Haiku/mini-class).
+- **Orchestrator** — keep on a strong model; push heavy or destructive exploration into subagents so the orchestrator's window stays clean for synthesis.
+
+Set persistent per-agent subagent model defaults with the `/subagents` command. For a one-off, state the model when delegating (e.g. "run the extraction on a Haiku subagent"). Never blanket-cheap judgment agents.
 
 ## Agent Handoff Format
 
@@ -63,4 +75,5 @@ When returning from a handoff:
 1. Apply precedence as Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
 2. Follow the invocation hierarchy: User → Skill → Agent → Tools.
 3. Use one structured handoff per concern and respect locked decisions.
+4. Route domain work to the matching custom specialist agent, on a model that fits the task (judgment → strong, mechanical → cheap).
 > If anything above conflicts with these, **these win**.

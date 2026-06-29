@@ -4,6 +4,7 @@ description: >
   Senior Python Developer specialized in MCP servers, async APIs, automation, and
   small services. Expert in the MCP Python SDK / FastMCP, FastAPI, modern typed
   Python (3.11+), and the uv + ruff toolchain.
+model: claude-sonnet-4.6
 tags:
   - python
   - mcp

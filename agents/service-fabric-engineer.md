@@ -5,6 +5,7 @@ description: >
   microservices on Azure Service Fabric. Expert in Reliable Services,
   Reliable Actors, cluster management, application upgrades, partitioning,
   and diagnostics.
+model: claude-opus-4.8
 tags:
   - service-fabric
   - microservices

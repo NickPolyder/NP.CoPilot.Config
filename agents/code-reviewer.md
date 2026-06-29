@@ -4,6 +4,7 @@ description: >
   Reviews code changes with an extremely high signal-to-noise ratio.
   Only surfaces issues that genuinely matter — bugs, security vulnerabilities,
   logic errors, and pattern violations. Never comments on style or formatting.
+model: gpt-5.5
 tags:
   - code-review
   - quality

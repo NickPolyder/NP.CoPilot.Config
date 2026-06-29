@@ -4,6 +4,7 @@ description: >
   Senior Frontend Developer specialized in latest Angular and front-end Blazor.
   Expert in component architecture, accessibility, performance optimization,
   responsive design, and modern frontend patterns.
+model: claude-sonnet-4.6
 tags:
   - frontend
   - angular

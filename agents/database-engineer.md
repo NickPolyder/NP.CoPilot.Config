@@ -4,6 +4,7 @@ description: >
   Senior Database/Data Engineer specialized in data modeling, Entity Framework
   Core, migrations, query optimization, and ensuring data integrity, performance,
   and reliability across the data layer.
+model: claude-opus-4.8
 tags:
   - database
   - data

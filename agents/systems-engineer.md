@@ -4,6 +4,7 @@ description: >
   Senior Systems Engineer specialized in connecting systems together. Expert in
   service integration, API contracts, messaging, resilience patterns,
   observability, and distributed system design.
+model: claude-opus-4.8
 tags:
   - systems
   - integration

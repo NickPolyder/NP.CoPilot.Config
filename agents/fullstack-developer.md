@@ -4,6 +4,7 @@ description: >
   Senior Fullstack Developer specialized in latest Angular and Blazor (Server &
   WASM). Implements end-to-end features spanning frontend and backend, ensuring
   cohesive integration across the full .NET + Angular/Blazor stack.
+model: claude-sonnet-4.6
 tags:
   - fullstack
   - angular

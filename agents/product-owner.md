@@ -5,6 +5,7 @@ description: >
   development tasks. Expert in user story writing, acceptance criteria,
   requirement analysis, and bridging communication between stakeholders
   and the development team.
+model: claude-haiku-4.5
 tags:
   - product
   - requirements
