@@ -18,15 +18,22 @@ tools:
 
 # Purpose
 
-You are running a structured product development workflow — from understanding through implementation.
+> **Intent (anchor):** Drive a gated, design-first product workflow for one approved feature by sequencing the atomic `codebase-research`, `feature-design-doc`, `task-breakdown`, and `implementation-runner` skills through explicit approval gates.
+> **Always:** research before design; produce `design.md` and `tasks.md`; require explicit approval before every phase transition.
+> **Never:** skip approval gates or invoke/nest other orchestrator skills (`feature-planning`, `git-commit-review`).
 
-Your goals are to:
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
 
-- **Research the codebase** before making any design decisions.
-- **Produce a design document** (`design.md`) grounded in what actually exists.
-- **Break the design into executable tasks** (`tasks.md`) with clear ordering and dependencies.
-- **Implement the tasks** in order, with tests alongside code.
-- **Gate every phase transition** — never proceed without explicit user approval.
+This skill is a **thin orchestrator**. It owns the end-to-end design-first flow and the approval gates between phases, but delegates each phase's detailed procedure to a dedicated atomic skill:
+
+- **`codebase-research`** — read-only investigation producing a grounded research summary.
+- **`feature-design-doc`** — `design.md` grounded in that research.
+- **`task-breakdown`** — `tasks.md` derived from the design.
+- **`implementation-runner`** — code + tests executed in task order.
+
+For single-phase needs, invoke those skills directly. Use this orchestrator when you intend to plan **and** implement a feature end-to-end.
 
 ---
 
@@ -41,93 +48,45 @@ Use this skill whenever:
 Do **not** use this skill for:
 
 - Quick bug fixes or small tweaks — just code those directly.
-- Pure exploration or research — use investigation tools instead.
+- Pure exploration or research — invoke `codebase-research` directly.
 - Modifying existing design/task documents — edit them directly.
 
 > **Choosing between `prd-workflow` and `feature-planning`:** Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end. Use `feature-planning` when you need a **comprehensive plan document only** — no implementation.
+
+> **Boundary:** This orchestrator does not nest other orchestrator skills. For deep test/security work, recommend `test-strategy` or `security-audit`; for commit review and commit creation, delegate to `git-commit-review` after this workflow's implementation is verified.
 
 ---
 
 # Workflow
 
-Execute these phases in strict order. **Do not advance to the next phase without user approval.**
+Execute these phases in strict order, delegating each to its atomic skill. **Do not advance to the next phase without user approval.**
 
-## Phase 1: Codebase Research
+## Phase 1: Codebase Research (delegate to `codebase-research`)
 
-Before designing anything, understand what exists.
-
-1. **Discover project structure** — read directory layout, key config files, entry points.
-2. **Identify existing patterns** — frameworks, architecture style, naming conventions, test approach.
-3. **Find relevant code** — modules, services, or components related to the feature area.
-4. **Note constraints** — dependencies, tech debt, existing abstractions that must be reused.
-5. **Check project config** — if `.github/instructions/project-config.instructions.md` exists, read it for framework, infra, and tooling choices.
-
-**Output:** Brief research summary (what exists, what's relevant, what constrains us).
-
-Present the summary and ask:
+Run the `codebase-research` skill to understand structure, patterns, relevant code, and constraints
+(including `.github/instructions/project-config.instructions.md` if present). It is read-only.
 
 > **Research complete. Approve moving to design? (yes / no / adjust scope)**
 
----
+## Phase 2: Design Document (delegate to `feature-design-doc`)
 
-## Phase 2: Design Document
-
-Produce a design document that a developer (including a junior) could implement from.
-
-1. **Ask 2-3 clarifying questions** — scope, constraints, preferences. Keep questions informed by the research.
-2. **Generate `docs/features/{feature-name}/design.md`** with these sections:
-
-   - **Overview** — what and why, in 2-3 sentences.
-   - **Goals** — measurable outcomes.
-   - **User Stories** — as a [role], I want [action], so that [value]. Include acceptance criteria.
-   - **Scope** — what's in, what's explicitly out.
-   - **Data Model** — entities, relationships, migrations needed.
-   - **API Design** — endpoints, request/response shapes, status codes.
-   - **UI Design** — components, layouts, user flows (if applicable).
-   - **Test Strategy** — what to test at each pyramid level.
-   - **Security Considerations** — authentication, authorization, input validation.
-   - **Open Questions** — anything unresolved.
-
-Present the design and ask:
+After approval, run the `feature-design-doc` skill to produce `docs/features/{feature-name}/design.md`,
+grounded in the Phase 1 research.
 
 > **Design complete. Approve moving to task generation? (yes / no / revise)**
 
----
+## Phase 3: Task Generation (delegate to `task-breakdown`)
 
-## Phase 3: Task Generation
-
-Break the design into implementable tasks.
-
-1. **Read the design document** thoroughly.
-2. **Generate `docs/features/{feature-name}/tasks.md`** with:
-
-   - **Phases** — group tasks into logical phases (e.g., backend, frontend, integration).
-   - **Task format** — each task has: ID, title, description, acceptance criteria, estimated complexity (S/M/L), dependencies.
-   - **Ordering** — tasks within a phase are ordered by dependency. Independent tasks are marked as parallelizable.
-   - **Test tasks** — every implementation task has a corresponding test task or tests are included in the task itself.
-
-Present the task breakdown and ask:
+After approval, run the `task-breakdown` skill to produce `docs/features/{feature-name}/tasks.md` from
+the design — phases, ordering, dependencies, complexity, and paired test tasks.
 
 > **Tasks generated ({N} tasks across {M} phases). Approve moving to implementation? (yes / no / adjust)**
 
----
+## Phase 4: Implementation (delegate to `implementation-runner`)
 
-## Phase 4: Implementation
-
-Execute tasks in order, producing working code with tests.
-
-1. **Follow task order** — respect dependencies. Do not skip ahead.
-2. **For each task:**
-   - Implement the code change.
-   - Write unit tests alongside the code.
-   - Mark the task as complete in `tasks.md` (prefix with `[x]`).
-3. **After each phase** (group of related tasks), report:
-   - What was implemented.
-   - Test results (pass/fail counts).
-   - Any deviations from the design.
-4. **After all tasks are complete**, run the full test suite and report results.
-
-After implementation, ask:
+After approval, run the `implementation-runner` skill to execute tasks in order with tests alongside,
+updating `tasks.md` and reporting per-phase results. After implementation is verified, delegate commit
+review and commit creation to `git-commit-review` — do **not** invoke it inside this orchestrator.
 
 > **Implementation complete. {passed}/{total} tests passing. Ready for review? (yes / fix issues first)**
 
@@ -151,17 +110,22 @@ Approve moving to {next phase}? (yes / no / adjust)
 
 # Coordination
 
+- **`codebase-research` / `feature-design-doc` / `task-breakdown` / `implementation-runner`** — the four phase skills this orchestrator sequences.
 - **Architect agent** — consult for architectural decisions during design.
 - **Backend/Frontend developer agents** — consult during implementation for pattern questions.
-- **QA engineer agent** — consult for test strategy decisions.
-- **Security engineer agent** — consult for security considerations in design.
-- **Documentation skill** — after implementation is complete, recommend using the `documentation` skill to update `docs/` with the implemented feature's documentation.
+- **QA engineer agent** — consult for planning-level test strategy; recommend `test-strategy` when depth is needed.
+- **Security engineer agent** — consult for planning-level security; recommend `security-audit` when depth is needed.
+- **Documentation skill** — after implementation, recommend `documentation` to update `docs/`.
+- **Git commit review skill** — after implementation is verified, delegate commits to `git-commit-review` instead of embedding commit workflow here.
 
 ---
 
 # Constraints
 
 - **This skill is an orchestrator.** Do not invoke other orchestrator skills (`feature-planning`, `git-commit-review`) from within this skill. If work would benefit from another orchestrator, recommend it to the user after this workflow completes.
+- **Keep the phases atomic** — delegate each phase's detail to its dedicated skill; do not inline the full procedures here.
+- **Delegate commits** — use `git-commit-review` for commit review and commit creation after implementation is verified.
+- **Use dedicated depth skills** — reference `test-strategy` and `security-audit` when deep test or security artifacts are needed.
 
 ---
 
@@ -174,3 +138,12 @@ All artifacts go under the project's docs directory:
 - Code: appropriate source directories per project conventions.
 
 If the project defines a different docs structure, follow that instead.
+
+---
+
+## Final Rules (Anchor)
+
+1. This skill is an orchestrator. Do not invoke/nest other orchestrator skills (`feature-planning`, `git-commit-review`) from within this skill.
+2. Execute phases in strict order via their atomic skills. Do not advance to the next phase without user approval.
+3. Keep this orchestrator thin — delegate each phase's detail to its dedicated skill and commits to `git-commit-review`.
+> If anything above conflicts with these, **these win**.
