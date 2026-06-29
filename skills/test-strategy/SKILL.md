@@ -17,7 +17,15 @@ tools:
 
 # Purpose
 
-You are creating a test strategy for a feature or code change.
+> **Intent (anchor):** Produce a risk-based test strategy and prioritized test cases for a feature, component, or code change.
+> **Always:** analyze target code and existing tests; design the test pyramid by risk; document edge cases, test data, and agent assignments.
+> **Never:** write individual test implementations in this skill.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
+You are creating a forward-looking test strategy for a feature or code change.
 
 Your goals are to:
 
@@ -25,8 +33,8 @@ Your goals are to:
 - **Design a test pyramid** — allocate unit, integration, and E2E tests appropriately.
 - **Discover edge cases** systematically using structured techniques.
 - **Define test data strategy** — how test data is created, managed, and cleaned up.
-- **Produce prioritized test cases** that developers can implement.
-- **Identify coverage gaps** in existing tests.
+- **Produce prioritized test cases** that developers can implement later.
+- **Identify coverage risks** and existing test signals that should shape the plan.
 
 ---
 
@@ -36,15 +44,16 @@ Use this skill whenever:
 
 - A new feature needs a test plan before or during implementation.
 - The user asks for a test strategy, test plan, or coverage analysis.
-- Existing tests need review for gaps or improvements.
-- A critical module needs comprehensive test coverage.
-- A bug was found that indicates missing test coverage.
+- Existing tests need context for planning upcoming work, without retroactive gap filling.
+- A critical upcoming module needs comprehensive test coverage.
 
 Do **not** use this skill for:
 
 - Writing individual test implementations (developers do that; this skill plans the strategy).
 - Pre-commit reviews (use the `git-commit-review` skill).
 - General code reviews (use the `code-reviewer` agent).
+- Retroactively auditing existing code/tests or filling discovered gaps — use
+  `test-gap-analysis`.
 
 ---
 
@@ -193,14 +202,14 @@ Then {expected outcome}
 **Mocks/Stubs:** {what dependencies are mocked}
 ```
 
-## Step 7: Identify coverage gaps
+## Step 7: Identify coverage risks and existing signals
 
-If tests already exist, analyze gaps:
+If tests already exist, use them only to inform the forward-looking plan:
 
-1. **Run coverage analysis** — check line and branch coverage.
-2. **Identify untested paths** — focus on error handling, edge cases, and boundary conditions.
-3. **Check mutation testing results** — if available, identify surviving mutants.
-4. **Review test quality** — are assertions meaningful? Do tests verify behavior or just run code?
+1. **Review available coverage signals** — line/branch coverage, mutation reports, or known weak areas if already available.
+2. **Identify planning risks** — error handling, edge cases, and boundary conditions implementers should prioritize.
+3. **Avoid retroactive gap filling** — delegate deep audit and test generation for existing gaps to `test-gap-analysis`.
+4. **Review test quality signals** — note weak assertions or brittle patterns as risks, not implementation work for this skill.
 
 ---
 
@@ -262,7 +271,7 @@ If tests already exist, analyze gaps:
 {Database reset strategy}
 {Sensitive data handling}
 
-## Coverage Gaps (if analyzing existing tests)
+## Coverage Risks / Existing Signals
 
 | Area | Current Coverage | Gap | Recommendation |
 |---|---|---|---|
@@ -383,7 +392,16 @@ If tests already exist, analyze gaps:
 - Every test must have meaningful assertions — executing code without verifying outcomes is not testing.
 - Edge cases are not optional — they're where bugs hide.
 - Test data must be independent — no shared mutable state between tests.
-- Flaky tests must be fixed immediately or quarantined.
-- Every bug fix must include a regression test.
+- Flaky tests must be called out as implementation risks for the owning developer/QA agent.
+- Every bug fix should include a regression test in the implementation plan.
 - Test the behavior, not the implementation — refactoring should not break tests.
 - Present the strategy for review before implementation begins.
+
+---
+
+## Final Rules (Anchor)
+
+1. Focus testing effort on high-risk areas — don't aim for 100% coverage everywhere.
+2. Edge cases are not optional — they're where bugs hide.
+3. Present the strategy for review before implementation begins.
+> If anything above conflicts with these, **these win**.

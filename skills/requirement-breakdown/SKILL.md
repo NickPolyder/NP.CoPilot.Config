@@ -16,7 +16,19 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Convert one high-level requirement into an epic, user stories, acceptance criteria, agent assignments, and dependencies.
+> **Always:** ask clarifying questions before decomposing ambiguous work; use INVEST and Given/When/Then; surface cross-cutting concerns.
+> **Never:** make architectural decisions or start implementation.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are breaking down a high-level requirement into actionable development work.
+
+This skill is a **backlog/story breakdown** delegate for `feature-planning` and
+`prd-workflow` when deeper story detail is needed. It does not create
+architecture, design, or implementation plans.
 
 Your goals are to:
 
@@ -36,12 +48,15 @@ Use this skill whenever:
 - The user asks to "break down", "plan out", or "scope" a feature.
 - A product requirement needs to be translated into development tasks.
 - You need to create a backlog of stories for a feature.
+- `feature-planning` or `prd-workflow` needs a delegated story-level breakdown.
 
 Do **not** use this skill for:
 
 - Bug reports (use the bug report template directly).
 - Simple tasks that don't need decomposition (e.g., "add a button").
 - Architecture decisions (use the `architecture-decision-record` skill instead).
+- Architecture/design implementation plans — use `feature-planning` or
+  `prd-workflow`; this skill stops at backlog/story breakdown.
 
 ---
 
@@ -361,3 +376,12 @@ S1 (API endpoint) ──→ S2 (PDF service)
 - Minimize dependencies between stories to enable parallel work.
 - Document assumptions explicitly — hidden assumptions are the most expensive mistakes.
 - Present the breakdown for review before considering it final.
+
+---
+
+## Final Rules (Anchor)
+
+1. Never break down a requirement you don't fully understand — ask questions first.
+2. Every story must have a clear "so that" value statement.
+3. Acceptance criteria must be specific and testable — no vague adjectives.
+> If anything above conflicts with these, **these win**.

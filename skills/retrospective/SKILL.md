@@ -16,6 +16,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Create a durable retrospective after completed work that captures outcomes, lessons, and follow-up actions.
+> **Always:** summarize what was built; identify concrete improvements; store the retrospective in the appropriate docs location.
+> **Never:** use a retrospective as a planning or implementation workflow.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are conducting a retrospective on recently completed work.
 
 Your goals are to:
@@ -23,7 +31,7 @@ Your goals are to:
 - **Summarize what was built** — scope, artifacts, key decisions.
 - **Capture what went well** — patterns, tools, or approaches worth repeating.
 - **Identify what to improve** — friction points, mistakes, time sinks.
-- **Propose follow-up actions** — concrete next steps, tech debt items, enhancement ideas.
+- **Propose follow-up actions** — backlog candidates such as tech debt items, enhancement ideas, or process improvements; do not start implementation automatically.
 - **Produce a durable artifact** that the team can reference.
 
 ---
@@ -81,7 +89,8 @@ List 3-5 concrete friction points. Focus on:
 
 ### Follow-Up Actions
 
-List concrete, actionable items:
+List concrete, actionable backlog candidates. These are recommendations for later
+triage, not automatic implementation work:
 
 | Action | Priority | Type |
 |--------|----------|------|
@@ -124,3 +133,12 @@ Present a concise summary to the user after generating the document:
 - **Architect agent** — consult if architectural lessons emerged.
 - **QA engineer agent** — consult if test strategy lessons emerged.
 - **Product owner agent** — consult if requirement/scope lessons emerged.
+
+---
+
+## Final Rules (Anchor)
+
+1. Use this skill only after a feature, bug fix, or significant task has been completed.
+2. Do not use this skill for mid-work status updates.
+3. Store feature retrospectives under `docs/features/{feature}/retrospective.md`, bug retrospectives under `docs/bugs/{bug}/retrospective.md`, and general retrospectives under `docs/retrospectives/`.
+> If anything above conflicts with these, **these win**.

@@ -7,6 +7,8 @@ applyTo:
 
 # PowerShell Style
 
+> **Intent (anchor):** Apply PowerShell script style rules only to files matched by `applyTo`; project-specific script conventions win when more specific.
+
 - Use `$ErrorActionPreference = 'Stop'` at the top of scripts.
 - Use `[CmdletBinding()]` and `param()` blocks for reusable scripts.
 - Prefer `-WhatIf` / `ShouldProcess` support for destructive operations.
@@ -16,3 +18,7 @@ applyTo:
 - Use splatting for commands with many parameters.
 - Prefer pipeline-friendly functions where applicable.
 - Test scripts are idempotent — safe to re-run without side effects.
+
+## Final Rules (Anchor)
+
+Apply these rules only to PowerShell files: fail fast (`$ErrorActionPreference = 'Stop'`), make scripts idempotent, and use `ShouldProcess`/`-WhatIf` for destructive operations.

@@ -7,6 +7,8 @@ applyTo:
 
 # Python Style
 
+> **Intent (anchor):** Apply Python style rules only to Python assets matched by `applyTo`; project-specific Python conventions win when more specific.
+
 - Follow [PEP 8](https://peps.python.org/pep-0008/) and [PEP 257](https://peps.python.org/pep-0257/) (docstrings).
 - Target a supported Python version (3.11+) and prefer modern syntax over legacy idioms.
 - Use type hints on all public functions, methods, and module-level variables; check with a static type checker (`mypy` or `pyright`).
@@ -21,3 +23,7 @@ applyTo:
 - Propagate `async`/`await` consistently; don't block the event loop with sync I/O.
 - Pin dependencies and manage environments via `pyproject.toml` (uv/Poetry/pip-tools) — avoid loose `requirements.txt` where possible.
 - Write tests with `pytest`; keep them isolated, deterministic, and fast.
+
+## Final Rules (Anchor)
+
+Apply these rules only to Python assets: type public APIs, format/lint with the project toolchain (ruff), manage resources safely, and test with pytest when present.

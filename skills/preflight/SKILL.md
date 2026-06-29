@@ -16,6 +16,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Validate the local toolchain, project configuration, build, and test baseline before development starts.
+> **Always:** check only relevant tools; report restore/build/test results; end with a clear GO or NO-GO verdict.
+> **Never:** treat a failing baseline as safe to proceed.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are running a preflight check to verify the environment is ready for development.
 
 Your goals are to:
@@ -127,3 +135,12 @@ Use these status indicators:
 If any check fails, end with:
 
 > **Verdict: ❌ NO-GO** — {N} blocking issue(s). Fix the items marked ❌ above before proceeding.
+
+---
+
+## Final Rules (Anchor)
+
+1. Skip tools that aren't relevant to the current project.
+2. Report success or failure with error details.
+3. If any check fails, end with a NO-GO verdict and actionable fix instructions.
+> If anything above conflicts with these, **these win**.

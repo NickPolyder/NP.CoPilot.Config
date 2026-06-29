@@ -17,7 +17,19 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Assess one scoped feature, service, or codebase area for application security risks and produce a STRIDE/OWASP report.
+> **Always:** define scope and trust boundaries first; rate findings with standard severity; communicate critical findings immediately.
+> **Never:** expose secrets or audit an undefined "everything" scope.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are conducting a systematic security assessment.
+
+This skill is the **deep security delegate** when `git-commit-review`'s security
+hat finds issues needing STRIDE/OWASP depth. Dependency version and CVE
+inventory remains owned by `dependency-audit`.
 
 Your goals are to:
 
@@ -37,6 +49,7 @@ Use this skill whenever:
 - The user asks for a security review, audit, or assessment.
 - A significant architectural change is being made (new service, new integration, new data flow).
 - A regular periodic security review is due.
+- The `git-commit-review` security hat identifies concerns that need a deeper STRIDE/OWASP assessment.
 - A security incident has occurred and the codebase needs review.
 
 Do **not** use this skill for:
@@ -44,6 +57,7 @@ Do **not** use this skill for:
 - Simple code reviews (use the `code-reviewer` agent instead).
 - Pre-commit reviews (use the `git-commit-review` skill instead).
 - Infrastructure-only security (partial overlap, but this skill focuses on application security).
+- Dependency version, license, and CVE inventory — use `dependency-audit`.
 
 ---
 
@@ -155,11 +169,11 @@ Systematically check each category:
 - [ ] Default credentials removed/changed
 - [ ] Error pages don't expose stack traces or internal details
 - [ ] Unnecessary features and endpoints disabled
-- [ ] Dependencies up to date (no known CVEs)
+- [ ] Dependency posture reviewed only from existing scanner/report signals; run `dependency-audit` for CVE inventory
 
 ### A06: Vulnerable Components
 - [ ] Dependency scanning enabled (Dependabot, Snyk)
-- [ ] No known CVEs in current dependencies
+- [ ] Known dependency CVEs reviewed through `dependency-audit`; this audit does not own CVE discovery
 - [ ] Minimal dependencies (each is justified)
 - [ ] Dependencies from trusted sources only
 - [ ] Lock files committed (package-lock.json, etc.)
@@ -388,3 +402,12 @@ password reset endpoint and token storage.
 - Never expose actual secrets, credentials, or sensitive data in the report.
 - Critical findings must be communicated immediately — don't wait for the full report.
 - Follow existing security patterns in the codebase when recommending fixes.
+
+---
+
+## Final Rules (Anchor)
+
+1. Always define scope before starting the audit — never audit "everything" without boundaries.
+2. Never expose actual secrets, credentials, or sensitive data in the report.
+3. Critical findings must be communicated immediately — don't wait for the full report.
+> If anything above conflicts with these, **these win**.

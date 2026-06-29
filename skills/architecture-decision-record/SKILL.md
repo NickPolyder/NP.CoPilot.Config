@@ -16,6 +16,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Create one Architecture Decision Record that explains the context, options, decision, and consequences for a significant architectural choice.
+> **Always:** evaluate at least two options; document positive and negative consequences; store the ADR under `docs/decisions/` with sequential numbering.
+> **Never:** use an ADR for trivial implementation choices or mutate an accepted ADR instead of superseding it.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are creating an Architecture Decision Record (ADR).
 
 Your goals are to:
@@ -408,3 +416,12 @@ operational burden.
 - Use the consistent file naming convention (`{NNNN}-{kebab-case}.md`).
 - Consult relevant specialist agents before finalizing — don't make decisions in isolation.
 - ADRs are immutable once accepted — to change a decision, create a new ADR that supersedes it.
+
+---
+
+## Final Rules (Anchor)
+
+1. Every ADR must have a clear decision statement — not just a discussion.
+2. Always present at least 2 options, even if one is "do nothing" or "keep current approach".
+3. ADRs are immutable once accepted — to change a decision, create a new ADR that supersedes it.
+> If anything above conflicts with these, **these win**.

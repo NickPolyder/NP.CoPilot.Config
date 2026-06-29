@@ -20,6 +20,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Bootstrap one repository with a tailored Copilot agent contract and durable docs working-memory skeleton.
+> **Always:** analyze the repo before interviewing; tailor templates with verified commands; get approval before writing or overwriting files.
+> **Never:** copy raw templates verbatim, commit generated files, or invoke/nest orchestrator skills.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are bootstrapping a repository so that any Copilot agent working in it has a
 **clear contract** and a **durable, file-based working memory** — the same
 structure that makes agent-driven repos effective:
@@ -30,6 +38,10 @@ structure that makes agent-driven repos effective:
 - A **`docs/` memory tree** the agent reads before working and updates as it
   goes: `PLAN.md` (canonical design), `TASKS.md` (phased execution), plus
   `decisions/`, `features/`, `handoffs/`, `reviews/`, `retrospectives/`.
+
+This is **bootstrap only**: it seeds the agent/docs configuration baseline. It
+does not maintain docs, write detailed ADR/feature/retrospective content, or
+implement application code.
 
 Your goals:
 
@@ -201,8 +213,9 @@ Consult specialists for content quality — they advise; this skill writes:
   skill produces the agent *contract* + docs *memory*. They are complementary;
   recommend running the installer if project-config is missing.
 - **ADRs / features / retros** are seeded as templates + indexes only. Detailed
-  content comes from `architecture-decision-record`, `feature-planning` /
-  `prd-workflow`, and `retrospective`.
+  content belongs in separate runs of `architecture-decision-record`,
+  `feature-planning` / `prd-workflow`, and `retrospective`; recommend those
+  skills rather than embedding their workflows here.
 
 ---
 
@@ -221,3 +234,12 @@ Consult specialists for content quality — they advise; this skill writes:
 - **Not an orchestrator** — recommend `prd-workflow` / `feature-planning` /
   `git-commit-review`; never invoke or nest them.
 - **Don't commit** — leave the user to review and commit.
+
+---
+
+## Final Rules (Anchor)
+
+1. Never overwrite without explicit approval — surface conflicts in the approval gate and ask per file.
+2. Tailor every file — no `{{PLACEHOLDER}}` token may survive into a generated file.
+3. Not an orchestrator — recommend `prd-workflow` / `feature-planning` / `git-commit-review`; never invoke or nest them.
+> If anything above conflicts with these, **these win**.

@@ -16,7 +16,15 @@ tools:
 
 # Purpose
 
-You are scaffolding new code structures that follow the project's established architecture.
+> **Intent (anchor):** Generate new code boilerplate that matches the project's existing architecture, conventions, and layer boundaries.
+> **Always:** discover conventions first; confirm files before writing; include relevant tests and wiring.
+> **Never:** overwrite existing files or use scaffolding as a full feature workflow.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
+You are scaffolding new **application code** structures that follow the project's established architecture.
 
 Your goals are to:
 
@@ -41,6 +49,8 @@ Do **not** use this skill for:
 - Modifying existing code — that's regular implementation or the `refactor` skill.
 - Generating a full feature (design + tasks + implementation) — use `prd-workflow`.
 - One-off code snippets — just write them directly.
+- Agent/docs configuration, repository operating manuals, or docs memory
+  skeletons — use `repo-bootstrap` instead.
 
 ---
 
@@ -154,4 +164,14 @@ Files:
 - **Never scaffold over existing files** — if a file exists at the target path, stop and ask.
 - **Match existing style** — use the same formatting, naming, and patterns as neighboring code.
 - **Don't over-scaffold** — only generate what's needed. An aggregate doesn't always need a REST endpoint.
+- **Application code only** — this skill generates source/test boilerplate, not repo-level Copilot config or docs working-memory structure.
 - **This skill is not an orchestrator** — it generates code but doesn't plan features or run review workflows.
+
+---
+
+## Final Rules (Anchor)
+
+1. Never scaffold over existing files — if a file exists at the target path, stop and ask.
+2. Match existing style — use the same formatting, naming, and patterns as neighboring code.
+3. Don't over-scaffold — only generate what's needed.
+> If anything above conflicts with these, **these win**.

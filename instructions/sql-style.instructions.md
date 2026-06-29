@@ -5,7 +5,7 @@ applyTo:
 
 # SQL Style
 
-> Engine-agnostic conventions. Prefer the dialect features of your target engine (T-SQL, PostgreSQL, etc.) where they improve clarity or performance.
+> **Intent (anchor):** Apply engine-agnostic SQL style rules only to SQL files matched by `applyTo`; project dialect rules (T-SQL, PostgreSQL, etc.) win when more specific.
 
 - Uppercase SQL keywords (`SELECT`, `FROM`, `JOIN`); lowercase or consistent-case identifiers.
 - Never use `SELECT *` in application or migration code — list columns explicitly.
@@ -20,3 +20,7 @@ applyTo:
 - Name constraints and indexes explicitly (`PK_`, `FK_`, `IX_`) rather than relying on engine defaults.
 - Prefer surrogate keys for identity, but enforce natural uniqueness with constraints.
 - Keep business logic in the application layer; reserve stored procedures for set-based data operations.
+
+## Final Rules (Anchor)
+
+Apply these rules only to SQL files: list columns explicitly, parameterize inputs, prefer set-based operations, and keep shipped migrations immutable.

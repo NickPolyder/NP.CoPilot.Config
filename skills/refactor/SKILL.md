@@ -16,6 +16,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Change code structure safely while preserving observable behavior.
+> **Always:** establish a passing baseline; make one atomic refactoring step at a time; build and test after every step.
+> **Never:** combine refactoring with behavior changes or continue from a broken baseline.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are executing a disciplined refactoring process with safety guarantees.
 
 Your goals are to:
@@ -23,7 +31,7 @@ Your goals are to:
 - **Preserve behavior** — refactoring changes structure, not behavior.
 - **Verify continuously** — tests must pass after every atomic step.
 - **Work incrementally** — small, reversible changes, not big-bang rewrites.
-- **Produce clean commits** — each commit is a single refactoring step that compiles and passes tests.
+- **Prepare clean commit-review handoff** — when refactoring is verified, recommend `git-commit-review` rather than owning commit strategy.
 
 ---
 
@@ -51,7 +59,7 @@ Do **not** use this skill for:
 Before touching anything:
 
 1. **Run the full test suite** — record pass/fail counts. This is your safety net.
-2. **If tests are failing** — STOP. Do not refactor against a broken baseline. Report the failures and ask the user how to proceed.
+2. **If tests are failing** — HARD STOP. Do not refactor against a broken baseline. Report the failures and do not proceed until the baseline is fixed outside this refactoring.
 3. **Identify the refactoring scope** — which files, classes, or modules are affected?
 4. **Check for coverage** — are the areas you're refactoring covered by tests? If not, flag this as a risk.
 
@@ -67,7 +75,7 @@ Present:
 Proceed with refactoring? (yes / no / write tests first)
 ```
 
-If coverage is low, recommend writing characterization tests first (tests that capture current behavior, even if it's not ideal).
+If coverage is low, recommend writing characterization tests first (tests that capture current behavior, even if it's not ideal). A failing baseline is a hard stop: do not plan or execute refactoring until tests/build are green or the user changes scope to a separate fix.
 
 ## Phase 2: Plan Steps
 
@@ -112,12 +120,9 @@ After all steps complete:
 Ready to commit? (yes / review changes first)
 ```
 
-## Phase 4: Commit
+## Phase 4: Commit Review Recommendation
 
-Commit strategy depends on the refactoring size:
-
-- **Small refactoring (1–3 steps):** One commit with a clear message.
-- **Large refactoring (4+ steps):** Consider multiple commits, one per logical group of steps. Each commit must independently compile and pass tests.
+When refactoring is complete and verified, recommend the `git-commit-review` skill for commit review and commit creation. Provide it the executed refactoring steps, modified files, verification results, and any follow-up risks. Do not embed a separate commit strategy here.
 
 ---
 
@@ -152,5 +157,14 @@ Common refactoring operations and their safety considerations:
 - **Tests must pass after every step.** No exceptions. A failing intermediate state means the step was wrong.
 - **Never combine refactoring with behavior changes** in the same commit. If you discover a bug during refactoring, commit the refactoring first, then fix the bug in a separate commit.
 - **Don't refactor code you don't understand** — read it first, understand the intent, then restructure.
-- **This skill is not an orchestrator** — it doesn't invoke `git-commit-review` or other orchestrator skills. It follows the Standard tier workflow for commits.
+- **This skill is not an orchestrator** — recommend `git-commit-review` for commits; do not invoke or nest orchestrator skills from here.
 - **Respect the scope** — don't expand the refactoring beyond what was agreed. If you see adjacent code that needs work, note it as a follow-up.
+
+---
+
+## Final Rules (Anchor)
+
+1. Tests must pass after every step. No exceptions.
+2. Never combine refactoring with behavior changes in the same commit.
+3. Respect the scope — don't expand the refactoring beyond what was agreed.
+> If anything above conflicts with these, **these win**.

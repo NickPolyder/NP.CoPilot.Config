@@ -1,5 +1,10 @@
 # Agent & Skill Coordination
 
+> **Intent (anchor):** Define how global, project, and local instructions coordinate with skills, agents, and tools. This file is the single canonical source for precedence, the invocation hierarchy, and handoff rules.
+> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; use structured handoffs for delegated work.
+> **Never:** Let an agent invoke an orchestrator skill or let orchestrator skills nest inside each other.
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
+
 ## Configuration Precedence
 
 These instructions are global — they load before any repo-level config. The full precedence order:
@@ -52,3 +57,10 @@ When returning from a handoff:
 - **Blocking** = can't proceed without response. **Advisory** = input welcome but non-blocking.
 - One handoff per concern — don't bundle unrelated asks.
 - Respect locked decisions — don't redesign what another agent already decided.
+
+## Final Rules (Anchor)
+
+1. Apply precedence as Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+2. Follow the invocation hierarchy: User → Skill → Agent → Tools.
+3. Use one structured handoff per concern and respect locked decisions.
+> If anything above conflicts with these, **these win**.

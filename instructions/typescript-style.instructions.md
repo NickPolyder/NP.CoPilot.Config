@@ -12,7 +12,7 @@ applyTo:
 
 # TypeScript & Node.js Style
 
-> Framework-agnostic conventions. Framework-specific rules (Angular, React, etc.) belong in project-level config.
+> **Intent (anchor):** Apply framework-agnostic TypeScript/Node.js style rules only to JS/TS assets matched by `applyTo`; framework-specific project config (Angular, React, etc.) wins when more specific.
 
 ## TypeScript
 
@@ -46,3 +46,7 @@ applyTo:
 
 - Write tests with the project's runner (Vitest, Jest, or `node:test`); keep them isolated and deterministic.
 - Prefer testing behavior through public APIs over implementation details.
+
+## Final Rules (Anchor)
+
+Apply these rules only to JS/TS assets: keep TypeScript strict, prefer ESM, handle async failures, validate environment config, and test through public APIs.

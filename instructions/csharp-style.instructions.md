@@ -8,6 +8,8 @@ applyTo:
 
 # C# Code Style
 
+> **Intent (anchor):** Apply C#/.NET style rules only to files matched by `applyTo`; project-specific C# conventions win when more specific.
+
 - Follow the [Microsoft C# coding conventions](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions).
 - Use file-scoped namespaces.
 - Prefer `var` when the type is obvious from the right-hand side.
@@ -18,3 +20,7 @@ applyTo:
 - Use source generators where applicable (JSON serialization, logging, regex).
 - Propagate `CancellationToken` through async call chains.
 - Use structured logging — no string interpolation in log messages.
+
+## Final Rules (Anchor)
+
+Apply these rules only to files matched by `applyTo`; prefer the existing project convention when it is more specific.

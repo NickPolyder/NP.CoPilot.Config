@@ -10,6 +10,8 @@ applyTo:
 
 # YAML & Docker Style
 
+> **Intent (anchor):** Apply YAML, Dockerfile, and Docker Compose style rules only to files matched by `applyTo`; project-specific platform rules win when more specific.
+
 ## YAML
 
 - Use 2-space indentation; never tabs.
@@ -37,3 +39,7 @@ applyTo:
 - Pass secrets/config via environment or `secrets:` — never bake them into the file.
 - Name volumes and networks explicitly; prefer named volumes over host binds for portability.
 - Keep service definitions minimal and composable; use override files for env-specific changes.
+
+## Final Rules (Anchor)
+
+Apply these rules only to YAML/Docker assets: never commit secrets, pin images, validate config, define health checks, and avoid root runtime containers.

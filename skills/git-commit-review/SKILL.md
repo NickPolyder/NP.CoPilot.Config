@@ -16,6 +16,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Review one logical diff and create one safe, approved, atomic git commit.
+> **Always:** split unrelated changes; run the required reviewer hats; require user verification and approved commit message before committing.
+> **Never:** invoke/nest other orchestrator skills or commit unresolved critical/high findings unless the user explicitly chooses to commit as-is.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are enforcing a disciplined commit workflow.
 
 Your goals are to:
@@ -156,6 +164,8 @@ Prompt the sub-agent with:
 # Specialist reviewer hats
 
 When the context-aware analysis (see above) identifies specialist domains in the diff, run additional reviewer sub-agents **in parallel** with the three core hats. Each specialist hat has its own prompt and focus.
+
+Specialist hats are lightweight, diff-scoped checks for commit safety. If the 🔒 Security hat finds issues that need STRIDE/OWASP depth, recommend `security-audit`; if the 🧪 QA hat finds broad coverage planning gaps, recommend `test-strategy`.
 
 ## 🔒 Security Specialist
 
@@ -330,8 +340,8 @@ After every review cycle (including re-reviews), persist the full consolidated r
 
 - For **ad-hoc code reviews** outside of the commit workflow (reviewing diffs, branches, or files on demand), use the **code-reviewer** agent instead.
 - This skill is specifically designed for the **pre-commit review workflow** — use it whenever you are about to commit code.
-- The **security-audit** skill provides a deeper, structured security assessment (STRIDE + OWASP) — use it for dedicated security reviews rather than the 🔒 Security hat.
-- The **test-strategy** skill can help identify test coverage gaps more thoroughly than the 🧪 QA hat — use it when the QA specialist flags significant coverage concerns.
+- The **security-audit** skill provides a deeper, structured security assessment (STRIDE + OWASP) — recommend it for dedicated security reviews rather than expanding the 🔒 Security hat.
+- The **test-strategy** skill can help identify test coverage gaps more thoroughly than the 🧪 QA hat — recommend it when the QA specialist flags significant coverage concerns.
 
 ---
 
@@ -343,3 +353,12 @@ After every review cycle (including re-reviews), persist the full consolidated r
 - If a reviewer finding is a false positive, note it in the summary rather than silently ignoring it.
 - If the diff is empty or trivially small (e.g., a single-line typo), ask the user whether they want to skip the review cycle.
 - When specialist hats are included, briefly explain **why** they were selected (e.g., "Added 🔒 Security hat because the diff modifies authentication middleware").
+
+---
+
+## Final Rules (Anchor)
+
+1. This skill is an orchestrator. Do not invoke/nest other orchestrator skills (`prd-workflow`, `feature-planning`) from within this skill.
+2. Never commit code that has unresolved critical or high-severity findings.
+3. Never amend a previous commit unless the user explicitly asks.
+> If anything above conflicts with these, **these win**.

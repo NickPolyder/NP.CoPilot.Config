@@ -16,14 +16,23 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Create or update project documentation in `docs/` so it stays synchronized with code, decisions, APIs, and user-visible behavior.
+> **Always:** follow the existing docs structure; update indexes when adding documents; consult the relevant specialist for domain accuracy.
+> **Never:** duplicate specialist workflows or override markdown-style instructions.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are helping maintain project documentation in the `docs/` folder.
 
 Your goals are to:
 
 - Keep documentation in sync with code changes — every feature addition, modification, or removal should be reflected in docs.
-- Follow the established structure and writing style of the project.
+- Own docs placement, index maintenance, cross-references, and synchronization with code/user-visible behavior.
+- Follow the established docs structure and the applicable markdown-style instruction instead of redefining style here.
 - Ensure documentation is comprehensive and actionable.
-- **Consult specialist agents** for domain-specific accuracy (see Agent Consultation below).
+- **Consult specialist agents** for domain-specific accuracy and recommend specialist skills for deep ADR, test, or security work (see Agent Consultation below).
 
 ---
 
@@ -35,7 +44,7 @@ Use this skill whenever:
 - The user asks to document something.
 - You create a new feature, endpoint, page, or entity.
 - Infrastructure or deployment changes are made.
-- An architecture decision is recorded (coordinate with the `architecture-decision-record` skill).
+- An architecture decision is recorded; recommend `architecture-decision-record` for ADR content and use this skill for placement, index, and sync.
 - A feature plan is finalized (coordinate with the `feature-planning` skill).
 - UX specifications or wireframes need to be documented.
 
@@ -65,7 +74,7 @@ Different documentation types benefit from specialist agent input. Consult the a
 
 # Documentation structure
 
-Most projects should follow a structure like:
+This skill owns where docs live, which indexes are updated, and how documentation stays synchronized with code and user-visible behavior. Most projects should follow a structure like:
 
 ```
 docs/
@@ -186,49 +195,9 @@ Use this template for API endpoint documentation in `docs/api/`:
 | 404 | {not found} |
 ```
 
-## Architecture Decision Record (ADR) template
+## Architecture Decision Record (ADR) guidance
 
-Use this template for ADRs in `docs/decisions/`. Prefer using the `architecture-decision-record` skill which provides a guided workflow.
-
-```markdown
-# {NNN}. {Decision Title}
-
-**Date:** {YYYY-MM-DD}
-**Status:** {Proposed | Accepted | Deprecated | Superseded by [NNN]}
-**Deciders:** {agents or roles involved}
-
-## Context
-
-{What is the issue? What forces are at play? Include technical and business context.}
-
-## Options Considered
-
-### Option 1: {Name}
-
-{Description.}
-
-| Pros | Cons |
-|---|---|
-| {pro} | {con} |
-
-### Option 2: {Name}
-
-{Description.}
-
-| Pros | Cons |
-|---|---|
-| {pro} | {con} |
-
-## Decision
-
-{Which option was chosen and why.}
-
-## Consequences
-
-- {Positive consequence}
-- {Negative consequence or trade-off}
-- {Follow-up actions needed}
-```
+Do not duplicate the ADR workflow here. Recommend the `architecture-decision-record` skill for ADR content, then use this skill to place the ADR under `docs/decisions/`, update indexes, and keep cross-references in sync.
 
 ## UX specification template
 
@@ -276,15 +245,9 @@ Use this template for UX documentation in `docs/ux/`:
 
 # Writing style
 
-- **Audience**: Developers working on or deploying this project.
-- **Voice**: Active, direct. "You can add an ingredient" not "Ingredients may be added".
-- **Structure**: High-level overview first, then implementation specifics.
-- **Step-by-step**: Use numbered lists for workflows and procedures.
-- **Tables**: Use for structured reference data (fields, values, config settings).
-- **Code blocks**: Include for configuration, commands, and technical details.
-- **Cross-references**: Link between related docs and reference related ADRs.
-- **Specific**: Reference actual page URLs, field names, enum values, and file paths.
-- **Explain why**: Not just "how" but "why" a design choice was made.
+Follow the repository's markdown-style instruction (global `instructions/markdown-style.instructions.md`, or project/local overrides when more specific). This skill does not redefine markdown style; it owns docs placement, index updates, cross-references, and synchronization with code/user-visible behavior.
+
+When a project has existing docs conventions, follow them unless they contradict a more specific local instruction.
 
 ---
 
@@ -297,7 +260,7 @@ When modifying an existing feature:
 3. If new sections are needed, add them following the existing structure.
 4. Update any tables or reference data that changed.
 5. Update the index (`docs/README.md`) if a new document was added.
-6. Check if an existing ADR is affected — if so, update its status or create a superseding ADR.
+6. Check if an existing ADR is affected — if so, recommend `architecture-decision-record` for superseding ADR content, then update indexes and cross-references.
 7. Consult the relevant specialist agent (see Agent Consultation) if the changes affect their domain.
 
 ---
@@ -359,11 +322,11 @@ This skill works alongside other skills in the workflow:
 
 | Skill | Relationship |
 |---|---|
-| `architecture-decision-record` | ADRs created by that skill should be stored in `docs/decisions/`. This skill ensures the ADR index is maintained. |
-| `feature-planning` | Feature plans produced by that skill can be used as the basis for feature documentation. |
+| `architecture-decision-record` | Recommend for ADR content. This skill owns ADR placement, index updates, and cross-reference sync. |
+| `feature-planning` | Feature plans can be used as the basis for feature documentation. |
 | `requirement-breakdown` | Requirement breakdowns inform what needs to be documented — each epic/story may need feature docs. |
-| `test-strategy` | Test strategies can be documented alongside their features or in dedicated test docs. |
-| `security-audit` | Security assessment findings may require documentation updates (security controls, threat model docs). |
+| `test-strategy` | Recommend for deep test planning; this skill documents the resulting strategy in the right location. |
+| `security-audit` | Recommend for deep security assessment; this skill documents resulting controls, threat models, and links. |
 
 ---
 
@@ -372,10 +335,19 @@ This skill works alongside other skills in the workflow:
 1. ☐ Relevant doc updated or created in `docs/`
 2. ☐ Index (`docs/README.md`) updated if a new doc was added
 3. ☐ Sub-folder index updated if a new doc was added
-4. ☐ Writing style matches existing docs (active voice, tables for data, code blocks)
+4. ☐ Writing style follows the applicable markdown-style instruction and existing docs conventions
 5. ☐ Cross-references added where relevant (related docs, ADRs, API references)
 6. ☐ All user-visible changes (UI, API, config) are documented
 7. ☐ Specialist agent consulted for domain-specific accuracy
-8. ☐ ADR created or updated if an architecture decision was involved
+8. ☐ `architecture-decision-record` recommended or used if an architecture decision was involved
 9. ☐ UX specification created if user-facing flows changed
 10. ☐ API documentation updated if endpoints changed
+
+---
+
+## Final Rules (Anchor)
+
+1. Always update `docs/` when adding, changing, or removing functionality.
+2. If the project already has a `docs/` folder, follow its existing structure.
+3. Update the index (`docs/README.md`) if a new document was added.
+> If anything above conflicts with these, **these win**.

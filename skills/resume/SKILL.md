@@ -16,7 +16,19 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Recover recent repository and session context so work can resume from an accurate next step.
+> **Always:** gather git, docs, session history, and memory signals; synthesize concise status; identify the most likely next action.
+> **Never:** fabricate context or expose another user's session data.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are recovering context from previous work sessions so the user can continue seamlessly.
+
+This skill is **informational only**. It pairs with the session-awareness
+instruction to recover context, but it does not run an implementation workflow or
+modify files.
 
 Your goals are to:
 
@@ -32,7 +44,7 @@ Your goals are to:
 Use this skill whenever:
 
 - The user says "continue", "resume", "pick up where I left off", or "what was I working on?"
-- Starting a session and there's evidence of in-progress work (uncommitted changes, open branches, active task docs).
+- The session-awareness instruction finds in-progress work and the user explicitly chooses to continue or recover it.
 - The user returns after a break and needs to re-establish context.
 
 Do **not** use this skill for:
@@ -110,7 +122,7 @@ Continue with {recommended next action}? (yes / different task / show more conte
 
 Based on the user's choice:
 
-- **Continue** — proceed directly with the recommended next action. Load the relevant plan/task doc if one exists.
+- **Continue** — hand off to the appropriate workflow, skill, or direct task after the user confirms. Load the relevant plan/task doc if one exists, but do not implement inside `resume`.
 - **Different task** — acknowledge the context but pivot to what the user wants.
 - **Show more context** — provide deeper detail from session history, including specific decisions, code snippets discussed, or full task lists.
 
@@ -142,3 +154,12 @@ Adjust detail based on how long since the last session:
 - **Be concise** — the user wants to get back to work quickly, not read an essay.
 - **Respect privacy** — don't surface information from other users' sessions if the session store contains multi-user data.
 - **This skill is not an orchestrator** — it establishes context but doesn't drive implementation workflows.
+
+---
+
+## Final Rules (Anchor)
+
+1. Don't guess — if session history is empty or unclear, say so.
+2. Be concise — the user wants to get back to work quickly, not read an essay.
+3. Respect privacy — don't surface information from other users' sessions.
+> If anything above conflicts with these, **these win**.

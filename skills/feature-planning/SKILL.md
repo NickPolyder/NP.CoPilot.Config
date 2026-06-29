@@ -17,6 +17,14 @@ tools:
 
 # Purpose
 
+> **Intent (anchor):** Produce a comprehensive, implementation-ready feature plan document without changing code.
+> **Always:** complete requirements, UX, architecture, implementation, test, security, and deployment planning; use approval gates; assign responsible agents.
+> **Never:** implement the feature or invoke/nest other orchestrator skills.
+
+> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
+> Project may extend but must not contradict Global. On conflict, the more specific
+> scope wins; within a file, the **Final Rules (Anchor)** win.
+
 You are conducting a comprehensive feature planning process.
 
 Your goals are to:
@@ -50,6 +58,8 @@ Do **not** use this skill for:
 
 > **Choosing between `feature-planning` and `prd-workflow`:** Use `feature-planning` when you need a **comprehensive plan document only** — no implementation. Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end.
 
+> **Boundary:** This skill may summarize requirements, test, security, and ADR needs, but it recommends `requirement-breakdown`, `test-strategy`, `security-audit`, or `architecture-decision-record` when those areas need their full dedicated workflows.
+
 ---
 
 # Planning process
@@ -64,7 +74,7 @@ Analyze the feature from a product perspective:
 4. **What does success look like?** (Measurable outcomes)
 5. **What's in/out of scope?** (Boundaries)
 
-Ask clarifying questions for any ambiguity before proceeding.
+Ask clarifying questions for any ambiguity before proceeding. If the work needs full story-level backlog detail, recommend `requirement-breakdown` rather than embedding the full breakdown here.
 
 Output:
 
@@ -142,7 +152,7 @@ Evaluate the architectural impact:
 3. **Pattern alignment** — does this follow or deviate from existing patterns?
 4. **Data flow** — how does data move through the system?
 5. **Integration points** — any external system interactions?
-6. **Technical decisions** — any architectural choices to make? (create ADRs if significant)
+6. **Technical decisions** — any architectural choices to make? Recommend `architecture-decision-record` if significant; do not create ADRs inline.
 
 Output:
 
@@ -165,7 +175,7 @@ Output:
 {Does this follow existing patterns or need new ones?}
 
 ### Architectural Decisions Needed
-- {Decision 1: create ADR if significant}
+- {Decision 1: recommend `architecture-decision-record` if significant}
 - {"None — follows established patterns"}
 
 ### Data Flow
@@ -228,7 +238,7 @@ Output:
 
 ## Phase 5: Test Strategy (QA Engineer perspective)
 
-Define the testing approach:
+Define a planning-level testing approach. If deep coverage strategy or test case design is needed, recommend `test-strategy` rather than embedding that workflow here:
 
 1. **Unit tests** — what logic needs unit testing?
 2. **Integration tests** — what API/service interactions to test?
@@ -259,7 +269,7 @@ Output:
 
 ## Phase 6: Security Review (Security Engineer perspective)
 
-Identify security considerations:
+Identify planning-level security considerations. If STRIDE/OWASP depth is needed, recommend `security-audit` rather than embedding that workflow here:
 
 1. **Authentication** — does this feature need auth?
 2. **Authorization** — who can access what?
@@ -379,11 +389,11 @@ Save the feature plan to `docs/features/{feature-name}-plan.md` or present it to
 
 # Related skills
 
-- **`requirement-breakdown`** — for deeper story-level breakdown of the requirements.
-- **`architecture-decision-record`** — for significant architectural decisions identified during planning.
-- **`security-audit`** — for deeper security assessment if needed.
-- **`test-strategy`** — for deeper test planning if needed.
-- **`documentation`** — for documenting the feature after implementation.
+- **`requirement-breakdown`** — recommend for deeper story-level breakdown of the requirements.
+- **`architecture-decision-record`** — recommend for significant architectural decisions identified during planning.
+- **`security-audit`** — recommend for deeper security assessment if needed.
+- **`test-strategy`** — recommend for deeper test planning if needed.
+- **`documentation`** — recommend for documenting the feature after implementation.
 
 ---
 
@@ -408,6 +418,15 @@ Save the feature plan to `docs/features/{feature-name}-plan.md` or present it to
 - Ask clarifying questions in Phase 1 before proceeding — don't assume.
 - Every implementation task must have a responsible agent assigned.
 - Security is never "not applicable" — at minimum, confirm existing patterns cover this feature.
-- If a significant architectural decision is needed, create an ADR using the `architecture-decision-record` skill.
+- If a significant architectural decision is needed, recommend the `architecture-decision-record` skill; do not run it inside this orchestrator.
 - Present the consolidated plan to the user before considering planning complete.
 - Keep the plan actionable — developers should be able to start working from it.
+
+---
+
+## Final Rules (Anchor)
+
+1. This skill is an orchestrator. Do not invoke/nest other orchestrator skills (`prd-workflow`, `git-commit-review`) from within this skill.
+2. Complete all 7 phases — skipping a phase leads to blind spots.
+3. Present the consolidated plan to the user before considering planning complete.
+> If anything above conflicts with these, **these win**.
