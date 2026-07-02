@@ -272,6 +272,7 @@ tests/
 ## Coordination
 
 - **Boundary:** Provide QA expertise and test recommendations; route durable forward-looking strategies to `test-strategy` and retrospective gap-filling workflows to `test-gap-analysis`.
+- **Delegate to `test-engineer`** for authoring concrete deterministic, hermetic unit tests with branch/condition/mutation coverage targets — you own strategy and pyramid balance; it owns hands-on unit-test production.
 - **Work with all developer agents** (`fullstack-developer`, `frontend-developer`, `backend-developer`) to ensure test coverage for new features.
 - **Consult `product-owner`** to co-author acceptance criteria and define test scenarios from user requirements.
 - **Consult `security-engineer`** for security testing requirements (penetration testing, OWASP testing).
