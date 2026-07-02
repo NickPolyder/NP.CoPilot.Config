@@ -1,7 +1,7 @@
 # Agent & Skill Coordination
 
 > **Intent (anchor):** Define how global, project, and local instructions coordinate with skills, agents, and tools. This file is the single canonical source for precedence, the invocation hierarchy, and handoff rules.
-> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; route domain work to the matching custom specialist agent on a task-appropriate model; use structured handoffs for delegated work.
+> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; route domain work to the matching custom specialist agent on a task-appropriate model; delegate unit-test work to `test-engineer`; use structured handoffs for delegated work.
 > **Never:** Let an agent invoke an orchestrator skill or let orchestrator skills nest inside each other.
 > **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
 
@@ -36,6 +36,46 @@ Match the model to the task, not to the role:
 - **Orchestrator** — keep on a strong model; push heavy or destructive exploration into subagents so the orchestrator's window stays clean for synthesis.
 
 Set persistent per-agent subagent model defaults with the `/subagents` command. For a one-off, state the model when delegating (e.g. "run the extraction on a Haiku subagent"). Never blanket-cheap judgment agents.
+
+## Specialist Agent Delegation
+
+Domain work belongs to the specialist that owns it. As orchestrator, you **coordinate and synthesize** — you do not do specialist work inline when a matching agent exists. Dispatch to the owning agent, let it work in its own context window, and integrate the result. This keeps the orchestrator's window lean and the output expert-quality.
+
+**Delegate by domain:**
+
+| When the task involves… | Delegate to |
+|---|---|
+| Architecture decisions, layer boundaries, dependency direction, patterns, SOLID/DDD trade-offs | `architect` |
+| .NET backend — Web API, EF Core, DDD, CQRS, messaging | `backend-developer` |
+| Angular / front-end Blazor — components, accessibility, responsive UI | `frontend-developer` |
+| End-to-end features spanning .NET backend **and** Angular/Blazor frontend | `fullstack-developer` |
+| Node.js / TypeScript / Next.js dashboards and small web apps | `node-developer` |
+| Python — MCP servers, FastAPI, async services, automation | `python-developer` |
+| Data modeling, migrations, query optimization, data integrity | `database-engineer` |
+| Azure Service Fabric — Reliable Services/Actors, clusters, upgrades, partitioning | `service-fabric-engineer` |
+| Service integration, API contracts, messaging, resilience, observability, distributed design | `systems-engineer` |
+| CI/CD, IaC, containers, cloud infra, monitoring, automation scripting | `devops-engineer` |
+| Security — threat modeling, vulnerability analysis, authn/authz, secure coding | `security-engineer` |
+| Test strategy, coverage analysis, pyramid balance, edge-case discovery | `qa-engineer` |
+| Deterministic unit tests, test plans, mutation/branch/condition coverage | `test-engineer` |
+| Code review — bugs, logic errors, security, pattern violations | `code-reviewer` |
+| Requirements → user stories, acceptance criteria, backlog shaping | `product-owner` |
+| UX — research, wireframes, prototypes, usability, design systems, IA | `ux-engineer` |
+
+**Multi-domain work:** chain the specialists rather than absorbing their work. A typical feature flows `product-owner` → `architect` → the relevant developer agent → `test-engineer` → `qa-engineer` → `security-engineer` → `code-reviewer`. Use `fullstack-developer` when a change genuinely spans both tiers; otherwise split across `frontend-developer` and `backend-developer`.
+
+**Escape hatch (stays on the orchestrator):** trivial single-file lookups, reading files, tiny mechanical edits, answering questions from context, and the coordination/synthesis of specialist output. When unsure whether a task is big enough to delegate, err toward delegating — a specialist on a fitting model beats inline generalist work.
+
+## Test Work Delegation
+
+Unit-test authoring is owned by the `test-engineer` agent. As orchestrator, coordinate it — do not produce unit tests, unit-test plans, or unit-test reviews inline.
+
+- **Delegate to `test-engineer`** whenever the user asks to: write tests, write a test plan, verify/review tests, improve coverage, or interpret CI test feedback.
+- **After code changes** (new file, modified file, refactor, feature, or bug fix) in the **Standard** or **Full** tier, delegate to `test-engineer` — hand off the changed code and request an updated test plan plus updated unit tests, so tests travel with the code. *(Trivial-tier changes and pure docs/config changes are exempt.)*
+- **Broader test scope stays with the strategist.** Route test *strategy* across the pyramid (integration/E2E/performance, risk-based planning) to `qa-engineer`; route durable strategy or retrospective gap-filling to the `test-strategy` / `test-gap-*` skills. `test-engineer` owns concrete deterministic unit tests.
+- **Boundary:** the orchestrator coordinates test work; it does not write, review, or generate unit tests itself. When delegating, say so plainly (e.g. "Delegating to Test Engineer…") and forward the request with full context.
+
+This keeps the hierarchy intact: the orchestrator (or an orchestrator skill) dispatches to `test-engineer`; agents never command one another or trigger workflows upward.
 
 ## Agent Handoff Format
 
@@ -75,5 +115,6 @@ When returning from a handoff:
 1. Apply precedence as Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
 2. Follow the invocation hierarchy: User → Skill → Agent → Tools.
 3. Use one structured handoff per concern and respect locked decisions.
-4. Route domain work to the matching custom specialist agent, on a model that fits the task (judgment → strong, mechanical → cheap).
+4. Route domain work to the matching custom specialist agent per the Specialist Agent Delegation table, on a model that fits the task (judgment → strong, mechanical → cheap).
+5. Delegate unit-test authoring, plans, verification, and coverage work to `test-engineer`; after Standard/Full-tier code changes, hand off the changes for an updated test plan and tests.
 > If anything above conflicts with these, **these win**.
