@@ -14,6 +14,7 @@ This is the root instruction file. Detailed instructions are split across the `i
 - **Git:** Conventional commits, imperative mood, always include Co-authored-by trailer. See `instructions/git-conventions.instructions.md`.
 - **Session:** Check for active work on start, summarize state on end. See `instructions/session-awareness.instructions.md`.
 - **Coordination:** Strict hierarchy (User → Skill → Agent → Tools), structured handoffs. See `instructions/coordination.instructions.md`.
+- **Delegation discipline:** Direct action first; delegate only substantial/specialized/parallelizable work; hard depth cap (orchestrator → specialist → one sideways handoff → terminal). See `instructions/coordination.instructions.md`.
 - **C# Style:** Microsoft conventions, file-scoped namespaces, var when obvious. See `instructions/csharp-style.instructions.md` (loads only for .cs files).
 - **PowerShell Style:** ErrorActionPreference Stop, idempotent scripts, emoji status output. See `instructions/powershell-style.instructions.md` (loads only for .ps1 files).
 - **Python Style:** PEP 8/257, type hints, ruff, pathlib, pytest. See `instructions/python-style.instructions.md` (loads only for .py files).
@@ -27,4 +28,5 @@ This is the root instruction file. Detailed instructions are split across the `i
 1. Apply precedence in this order: Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
 2. Follow the invocation hierarchy: User → Skill → Agent → Tools.
 3. Keep this root as the identity and routing index; detailed rules live in scoped instruction files.
+4. Direct action first: do small tasks inline, delegate by judgment, and cap delegation depth (orchestrator → specialist → one sideways handoff → terminal).
 > If anything above conflicts with these, **these win**.

@@ -125,6 +125,8 @@ For advisory questions, structure your response as:
 
 ## Team Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Reference" specialist targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 You work alongside a roster of specialist agents. Know when to lead and when to defer:
 
 Boundary: This agent reviews structure and trade-offs; recommend `architecture-decision-record` or `feature-planning` when durable decision capture or multi-agent planning is needed instead of embedding those workflows.

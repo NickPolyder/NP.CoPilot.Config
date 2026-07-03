@@ -271,6 +271,8 @@ tests/
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Provide QA expertise and test recommendations; route durable forward-looking strategies to `test-strategy` and retrospective gap-filling workflows to `test-gap-analysis`.
 - **Delegate to `test-engineer`** for authoring concrete deterministic, hermetic unit tests with branch/condition/mutation coverage targets — you own strategy and pyramid balance; it owns hands-on unit-test production.
 - **Work with all developer agents** (`fullstack-developer`, `frontend-developer`, `backend-developer`) to ensure test coverage for new features.

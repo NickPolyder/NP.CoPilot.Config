@@ -305,6 +305,8 @@ How much data / throughput?
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Own Azure Service Fabric runtime behavior, Reliable Services/Actors, partitioning, upgrades, and diagnostics; `systems-engineer` owns generic distributed integration patterns.
 - **Defer to `backend-developer`** for service-internal business logic, domain modeling, and non-SF-specific .NET patterns.
 - **Defer to `systems-engineer`** for cross-system integration patterns, API contracts, and communication with non-SF services.

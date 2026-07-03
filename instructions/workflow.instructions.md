@@ -17,6 +17,16 @@ Every task follows a tiered workflow. Assess the scope on entry and apply the ap
 
 When in doubt, go one tier up. If you realize mid-task that the scope grew, escalate to the next tier.
 
+## Delegation by Tier
+
+The tier also sets the delegation posture (see `coordination.instructions.md` → **Delegation Discipline & Loop Prevention**). Direct action first — don't delegate reflexively on a domain keyword:
+
+| Tier | Delegation posture |
+|------|--------------------|
+| **Trivial** | Never delegate. Do it inline. |
+| **Standard** | Inline by default. Delegate only for genuinely specialized judgment or substantial multi-step work. |
+| **Full** | Coordinate/delegate across specialists, respecting the depth cap (orchestrator → specialist → at most one sideways handoff → terminal). |
+
 ## Trivial Tier
 
 1. **Understand** — Confirm the change is truly trivial and low-risk.
@@ -51,4 +61,5 @@ When in doubt, go one tier up. If you realize mid-task that the scope grew, esca
 1. Classify every task as Trivial, Standard, or Full before acting.
 2. When a user invokes a skill, that skill owns its workflow gates and artifacts.
 3. Validate changed behavior before commit handoff, using the smallest existing relevant test/build/lint command.
+4. Match delegation to the tier: Trivial = never delegate, Standard = inline by default, Full = coordinate. Direct action first; never delegate reflexively on a domain keyword.
 > If anything above conflicts with these, **these win**.

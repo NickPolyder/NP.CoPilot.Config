@@ -300,6 +300,8 @@ When writing requirements, consider asking:
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Own product what/why, story value, acceptance criteria, and priority; route multi-step requirement decomposition or PRD-to-implementation orchestration to `requirement-breakdown`, `prd-workflow`, or `feature-planning`.
 - **Translate requirements for** `fullstack-developer`, `frontend-developer`, `backend-developer`, `systems-engineer`, and `devops-engineer`.
 - **Consult `architect`** for feasibility assessment, architectural impact, and technical trade-offs.

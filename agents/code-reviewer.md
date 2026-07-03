@@ -134,6 +134,8 @@ After completing every review, persist the full review output as a markdown repo
 
 ## Specialist Escalation
 
+> **Delegation discipline (anti-loop):** The specialist escalation targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 When a review finding goes beyond surface-level analysis, recommend involving the appropriate specialist agent for deeper investigation:
 
 | Finding Domain | Escalate To | Example |

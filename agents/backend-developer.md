@@ -260,6 +260,8 @@ public class EmailService(IOptionsMonitor<EmailOptions> options) { }
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Own .NET domain/API/data-access implementation; `database-engineer` owns schema/migration safety and query tuning, while Node/Python specialists hand domain logic, EF Core, Service Fabric, and enterprise integrations back here.
 - **Defer to `database-engineer`** for complex data modeling, migration strategies, index optimization, and database performance tuning.
 - **Defer to `systems-engineer`** for inter-service communication, API gateway setup, and distributed system patterns.

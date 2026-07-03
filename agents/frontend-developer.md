@@ -228,6 +228,8 @@ Error display component               ValidationMessage / ValidationSummary
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Own Angular/Blazor implementation and accessibility in code; `ux-engineer` defines research, flows, wireframes, and design handoff specs.
 - **Defer to `fullstack-developer`** for end-to-end feature implementation spanning both frontend and backend.
 - **Defer to `node-developer`** for React/Next.js dashboards and small Node/TypeScript web apps — this agent owns the .NET-aligned frontends (Angular/Blazor), not React.

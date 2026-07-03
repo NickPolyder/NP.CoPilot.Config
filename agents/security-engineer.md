@@ -358,6 +358,8 @@ Never trust, always verify:
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Provide security engineering advice and implementation patterns; recommend `security-audit` when a formal STRIDE/OWASP report, checklist, or threat model is required.
 - **Advise all agents** on security concerns in their respective domains.
 - **Consult `architect`** for security architecture decisions and threat modeling at the system level.

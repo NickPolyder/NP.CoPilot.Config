@@ -316,6 +316,8 @@ Row-Level Security:
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Own schema design, migration safety, constraints, indexes, and query tuning; `backend-developer` owns application-facing repository/domain implementation.
 - **Defer to `backend-developer`** for application-level data access patterns, repository implementations, and domain logic.
 - **Defer to `systems-engineer`** for data replication across services and event-driven data synchronization.

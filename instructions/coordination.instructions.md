@@ -1,8 +1,8 @@
 # Agent & Skill Coordination
 
 > **Intent (anchor):** Define how global, project, and local instructions coordinate with skills, agents, and tools. This file is the single canonical source for precedence, the invocation hierarchy, and handoff rules.
-> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; route domain work to the matching custom specialist agent on a task-appropriate model; delegate unit-test work to `test-engineer`; use structured handoffs for delegated work.
-> **Never:** Let an agent invoke an orchestrator skill or let orchestrator skills nest inside each other.
+> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; take direct action on small tasks and delegate only substantial, specialized, or parallelizable work to the matching specialist on a task-appropriate model; use structured handoffs.
+> **Never:** Let an agent invoke an orchestrator skill, let orchestrator skills nest, delegate reflexively on a domain keyword, or delegate beyond the depth cap (orchestrator → specialist → at most one sideways handoff → terminal).
 > **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
 
 ## Configuration Precedence
@@ -27,7 +27,9 @@ Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`) mu
 
 ## Agent Routing & Model Fit
 
-When work maps to a domain a specialist agent owns, **prefer dispatching to that custom agent** (e.g. `architect`, `backend-developer`, `qa-engineer`, `security-engineer`) over doing it inline on the orchestrator or using a generic subagent. The orchestrator stays on a strong model and coordinates; each specialist does focused work in its own context window and returns a summary, keeping the orchestrator context lean.
+**Direct action first.** For anything you can finish in a few tool calls — reading files, small edits, simple lookups, answering from context — just do it. Delegation is for **substantial, specialized, or parallelizable** work, not a reflex triggered by a domain keyword.
+
+When work is substantial *and* maps to a domain a specialist owns, dispatch to that custom agent (e.g. `architect`, `backend-developer`, `qa-engineer`, `security-engineer`) rather than doing heavy specialist work inline on the orchestrator. The orchestrator stays on a strong model and coordinates; each specialist does focused work in its own context window and returns a summary, keeping the orchestrator context lean.
 
 Match the model to the task, not to the role:
 
@@ -39,7 +41,7 @@ Set persistent per-agent subagent model defaults with the `/subagents` command. 
 
 ## Specialist Agent Delegation
 
-Domain work belongs to the specialist that owns it. As orchestrator, you **coordinate and synthesize** — you do not do specialist work inline when a matching agent exists. Dispatch to the owning agent, let it work in its own context window, and integrate the result. This keeps the orchestrator's window lean and the output expert-quality.
+Substantial domain work belongs to the specialist that owns it. As orchestrator, you **coordinate and synthesize** — for work that is large, specialized, or parallelizable, dispatch to the owning agent, let it work in its own context window, and integrate the result. Small, mechanical, or read-only tasks stay inline (see **Delegation Discipline & Loop Prevention** below). This keeps the orchestrator's window lean and the output expert-quality.
 
 **Delegate by domain:**
 
@@ -64,16 +66,39 @@ Domain work belongs to the specialist that owns it. As orchestrator, you **coord
 
 **Multi-domain work:** chain the specialists rather than absorbing their work. A typical feature flows `product-owner` → `architect` → the relevant developer agent → `test-engineer` → `qa-engineer` → `security-engineer` → `code-reviewer`. Use `fullstack-developer` when a change genuinely spans both tiers; otherwise split across `frontend-developer` and `backend-developer`.
 
-**Escape hatch (stays on the orchestrator):** trivial single-file lookups, reading files, tiny mechanical edits, answering questions from context, and the coordination/synthesis of specialist output. When unsure whether a task is big enough to delegate, err toward delegating — a specialist on a fitting model beats inline generalist work.
+**Stays on the orchestrator (do it inline):** single-file lookups, reading files, mechanical edits, answering questions from context, Trivial-tier changes, and the coordination/synthesis of specialist output. When unsure whether a task is big enough to delegate, **default to doing it inline** unless it is genuinely substantial, needs specialized judgment, or is parallelizable — reflexive over-delegation (and the loops it causes) is the more common failure than under-delegation.
+
+## Delegation Discipline & Loop Prevention
+
+Delegation must terminate. The depth cap and tier gate below exist specifically to stop the "see a domain word → delegate → the sub-agent re-reads the same mandate → re-delegates → loop" failure.
+
+**Delegation depth cap (hard):**
+
+- **Depth 0 → 1:** the orchestrator delegates a substantial task to a specialist. Normal.
+- **Depth 1 → 2:** a specialist that genuinely hits *another* domain may make **at most ONE** sideways handoff to that specialist.
+- **Depth 2 is terminal:** an agent that received work via a sideways handoff **completes it with tools and never delegates again**.
+- **Never** hand off to an agent already in the current chain, and **never** exceed one sideways handoff. Additional domain needs are surfaced as *recommendations in the return summary* for the orchestrator to route on a later turn.
+
+**A delegated agent is the doer.** Once you receive delegated work, your job is to *do it with tools* — not to route it onward. The "Defer to / Consult" lists in agent definitions are **advisory**: they tell you whose input to surface as a recommendation, not a trigger to spawn another agent.
+
+**Tier gate (from the Development Workflow):**
+
+| Tier | Delegation posture |
+|------|--------------------|
+| **Trivial** | Never delegate. Do it inline. |
+| **Standard** | Inline by default. Delegate only for genuinely specialized judgment or substantial multi-step work. |
+| **Full** | Coordinate/delegate across specialists as designed. |
+
+This reconciles with the CLI's built-in guidance: **direct action first** — any task completable in a few tool calls is done inline; delegation is reserved for substantial, specialized, or parallelizable work.
 
 ## Test Work Delegation
 
-Unit-test authoring is owned by the `test-engineer` agent. As orchestrator, coordinate it — do not produce unit tests, unit-test plans, or unit-test reviews inline.
+Substantial unit-test authoring is owned by the `test-engineer` agent. As orchestrator, coordinate it for Standard/Full-tier test work — hand off rather than producing large test suites, plans, or reviews inline. Trivial, inline, or single-assertion test tweaks that travel with a small change may stay inline.
 
 - **Delegate to `test-engineer`** whenever the user asks to: write tests, write a test plan, verify/review tests, improve coverage, or interpret CI test feedback.
 - **After code changes** (new file, modified file, refactor, feature, or bug fix) in the **Standard** or **Full** tier, delegate to `test-engineer` — hand off the changed code and request an updated test plan plus updated unit tests, so tests travel with the code. *(Trivial-tier changes and pure docs/config changes are exempt.)*
 - **Broader test scope stays with the strategist.** Route test *strategy* across the pyramid (integration/E2E/performance, risk-based planning) to `qa-engineer`; route durable strategy or retrospective gap-filling to the `test-strategy` / `test-gap-*` skills. `test-engineer` owns concrete deterministic unit tests.
-- **Boundary:** the orchestrator coordinates test work; it does not write, review, or generate unit tests itself. When delegating, say so plainly (e.g. "Delegating to Test Engineer…") and forward the request with full context.
+- **Boundary:** for substantial test work the orchestrator coordinates rather than writing large suites inline; small test tweaks that accompany a Trivial change may stay inline. When delegating, say so plainly (e.g. "Delegating to Test Engineer…") and forward the request with full context.
 
 This keeps the hierarchy intact: the orchestrator (or an orchestrator skill) dispatches to `test-engineer`; agents never command one another or trigger workflows upward.
 
@@ -114,7 +139,8 @@ When returning from a handoff:
 
 1. Apply precedence as Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
 2. Follow the invocation hierarchy: User → Skill → Agent → Tools.
-3. Use one structured handoff per concern and respect locked decisions.
-4. Route domain work to the matching custom specialist agent per the Specialist Agent Delegation table, on a model that fits the task (judgment → strong, mechanical → cheap).
-5. Delegate unit-test authoring, plans, verification, and coverage work to `test-engineer`; after Standard/Full-tier code changes, hand off the changes for an updated test plan and tests.
+3. **Direct action first:** do small, mechanical, or read-only tasks inline; delegate only substantial, specialized, or parallelizable work. Default to inline when unsure.
+4. **Cap delegation depth:** orchestrator → specialist → at most one sideways handoff → terminal. A delegated agent does the work with tools and never re-delegates within the chain.
+5. Route substantial domain work to the matching specialist per the Specialist Agent Delegation table, tier-gated (Trivial = never, Standard = inline default, Full = coordinate), on a model that fits the task (judgment → strong, mechanical → cheap).
+6. Delegate substantial unit-test work to `test-engineer`; after Standard/Full-tier code changes, hand off for an updated test plan and tests. Use one structured handoff per concern and respect locked decisions.
 > If anything above conflicts with these, **these win**.

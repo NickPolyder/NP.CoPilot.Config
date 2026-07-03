@@ -350,6 +350,8 @@ For every data-displaying component, design these states:
 
 ## Coordination
 
+> **Delegation discipline (anti-loop):** The "Defer to / Consult" targets below are **advisory** — surface them as recommendations, don't reflexively spawn or route to them on a domain keyword. Once work is delegated to you, **you are the doer**: complete it with your tools. You may make **at most one** sideways handoff if you genuinely hit another domain; an agent that received work via a handoff must finish with tools and never re-delegate (no chains, no loops). Prefer inline action for small tasks. See `instructions/coordination.instructions.md` → *Delegation Discipline & Loop Prevention*.
+
 - **Boundary:** Own user research, IA, wireframes, prototypes, usability testing, and design handoff; `frontend-developer` owns Angular/Blazor implementation and code-level accessibility.
 - **Work closely with `frontend-developer`** for design-to-code translation, component implementation, and design system maintenance.
 - **Work closely with `product-owner`** for user requirements, feature prioritization, and acceptance criteria that include UX quality.
