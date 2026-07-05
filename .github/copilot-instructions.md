@@ -11,7 +11,7 @@ This is not a typical code project — there are no build/test/lint pipelines. T
 ```
 copilot-instructions.md    → Root instructions (quick reference, symlinked to ~/.copilot/)
 instructions/*.instructions.md → Split instruction files (personality, workflow, git, etc.)
-agents/*.md                → Specialist agent definitions (15 agents)
+agents/*.md                → Specialist agent definitions (17 agents)
 skills/*/SKILL.md          → Multi-step orchestration workflows (16 skills)
 mcps/                      → Self-hosted MCP server stack (Docker Compose: SearXNG + Playwright)
 templates/                 → Per-repo scaffolding templates (Generic, Angular, Blazor, Service Fabric) + repo-bootstrap/ (agent contract + docs memory tree)

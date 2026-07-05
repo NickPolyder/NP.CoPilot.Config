@@ -63,6 +63,7 @@ Substantial domain work belongs to the specialist that owns it. As orchestrator,
 | Code review — bugs, logic errors, security, pattern violations | `code-reviewer` |
 | Requirements → user stories, acceptance criteria, backlog shaping | `product-owner` |
 | UX — research, wireframes, prototypes, usability, design systems, IA | `ux-engineer` |
+| Documentation writing craft — audience, structure, clarity, editing, examples | `technical-writer` |
 
 **Multi-domain work:** chain the specialists rather than absorbing their work. A typical feature flows `product-owner` → `architect` → the relevant developer agent → `test-engineer` → `qa-engineer` → `security-engineer` → `code-reviewer`. Use `fullstack-developer` when a change genuinely spans both tiers; otherwise split across `frontend-developer` and `backend-developer`.
 

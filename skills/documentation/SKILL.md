@@ -54,7 +54,9 @@ Use this skill whenever:
 
 # Agent consultation
 
-Different documentation types benefit from specialist agent input. Consult the appropriate agent to ensure accuracy and completeness:
+Different documentation types benefit from specialist agent input. Consult the appropriate agent to ensure accuracy and completeness.
+
+**Writing quality is owned by the `technical-writer` agent.** Specialists below supply domain *accuracy* (correct endpoints, schema, threats, flows); the `technical-writer` supplies *craft* — audience analysis, document type (tutorial / how-to / reference / explanation), structure, clarity, and worked examples. For any non-trivial document, consult `technical-writer` to draft or edit the prose after the relevant specialist has verified the facts.
 
 | Document Type | Primary Agent | Supporting Agents |
 |---|---|---|
@@ -67,8 +69,9 @@ Different documentation types benefit from specialist agent input. Consult the a
 | UX specifications | **ux-engineer** (user flows, wireframes, accessibility) | frontend-developer (implementation feasibility) |
 | Test strategy / coverage | **qa-engineer** (test plans, coverage analysis) | product-owner (acceptance criteria) |
 | Service Fabric topology | **service-fabric-engineer** (cluster config, services) | devops-engineer (deployment), systems-engineer (integration) |
+| Writing quality / editing (any type) | **technical-writer** (audience, structure, clarity, examples) | the domain specialist above for factual accuracy |
 
-**How to consult:** When creating or updating a document of a given type, invoke the primary agent to review the technical content for accuracy. If the document spans multiple domains, involve the supporting agents as well.
+**How to consult:** When creating or updating a document of a given type, invoke the primary agent to review the technical content for accuracy. If the document spans multiple domains, involve the supporting agents as well. Then invoke **technical-writer** to draft or polish the prose so the verified facts are presented clearly for the intended reader.
 
 ---
 
