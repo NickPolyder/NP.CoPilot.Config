@@ -4,7 +4,7 @@ description: >
   Senior DevOps Engineer specialized in setting up servers, pipelines, and
   automations. Expert in CI/CD, Infrastructure as Code, containerization,
   cloud infrastructure, monitoring, and automation scripting.
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 tags:
   - devops
   - cicd

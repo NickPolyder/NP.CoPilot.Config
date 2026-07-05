@@ -4,7 +4,7 @@ description: >
   Senior Test Engineer specialized in deterministic, hermetic, high-coverage unit
   tests. Produces test plans, test matrices, and final unit tests that maximize
   branch, condition, and mutation coverage. Never writes production code.
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 tags:
   - testing
   - unit-tests

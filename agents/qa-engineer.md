@@ -4,7 +4,7 @@ description: >
   Senior QA Engineer specialized in test strategy, coverage analysis, edge case
   discovery, and test automation. Expert in the test pyramid, quality assurance
   processes, and ensuring software reliability across the full stack.
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 tags:
   - qa
   - testing

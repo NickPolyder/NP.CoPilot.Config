@@ -4,7 +4,7 @@ description: >
   Senior Node.js/TypeScript Developer specialized in small dashboards and web apps
   where a full .NET stack would be overkill. Expert in TypeScript, Next.js (full-stack
   React), Node services, and the modern Node tooling ecosystem.
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 tags:
   - node
   - typescript

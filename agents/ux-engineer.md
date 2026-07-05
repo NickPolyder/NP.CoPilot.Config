@@ -5,7 +5,7 @@ description: >
   usability testing, design systems, and information architecture. Ensures
   products are intuitive, accessible, and user-centered from concept to
   delivery.
-model: claude-haiku-4.5
+model: claude-sonnet-5
 tags:
   - ux
   - design
