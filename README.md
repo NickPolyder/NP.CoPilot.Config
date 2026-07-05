@@ -77,6 +77,7 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   └── README.md                    Quick setup instructions
 ├── docs/
 │   ├── agent-coordination.md        Agent handoff protocol (design reference)
+│   ├── model-selection.md           Which AI model to use for which work, and why
 │   ├── features/                    Feature exploration docs
 │   └── mcps.md                      MCP server reference documentation
 ├── templates/
