@@ -10,7 +10,12 @@
       ]
     },
     "playwright": {
-      "url": "http://localhost:8931/mcp"
+      "type": "local",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }
