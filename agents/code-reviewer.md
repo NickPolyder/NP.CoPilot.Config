@@ -120,7 +120,8 @@ After completing every review, persist the full review output as a markdown repo
 ## Related
 
 - **Boundary:** This agent is for ad-hoc review only; route commit-readiness or pre-commit review to `git-commit-review`, and recommend `security-audit` or `test-gap-analysis` for deep formal workflows.
-- For **pre-commit reviews** with a structured three-hat review process (Architect, Principal Developer, Senior Developer), use the **git-commit-review** skill instead.
+- For **pre-commit reviews** of a staged atomic candidate, use the lightweight **git-commit-review** skill instead.
+- For an explicitly requested exhaustive three-hat review, use **full-code-review** instead.
 - This agent is best suited for **ad-hoc code reviews** — reviewing diffs, branches, or files on demand outside of the commit workflow.
 
 ## Rules

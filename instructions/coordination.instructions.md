@@ -23,7 +23,7 @@ Skills and agents follow a strict invocation hierarchy to prevent recursive nest
 2. **Skill → Agent** — skills coordinate with specialist agents for domain expertise.
 3. **Agent → Tools** — agents use tools (edit, search, run commands) but do **not** invoke orchestrator skills.
 
-Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`) must never be invoked by an agent or nested inside another orchestrator. If an agent identifies work that would benefit from a skill, it should recommend the skill to the user rather than invoking it directly.
+Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`, `full-code-review`) must never be invoked by an agent or nested inside another orchestrator. If an agent identifies work that would benefit from a skill, it should recommend the skill to the user rather than invoking it directly.
 
 ## Agent Routing & Model Fit
 

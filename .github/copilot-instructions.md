@@ -39,7 +39,7 @@ mcps/deploy.ps1            → Deploys MCP Docker stack (Remote/Local/WSL modes)
 
 - Each skill is a multi-step orchestration workflow with approval gates
 - Skills coordinate with agents for domain expertise
-- Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`) must never nest inside each other
+- Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`, `full-code-review`) must never nest inside each other
 
 ### Invocation Hierarchy (strict)
 

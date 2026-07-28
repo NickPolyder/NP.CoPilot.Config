@@ -45,7 +45,9 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   ├── feature-planning/
 │   │   └── SKILL.md                 Multi-agent feature planning with approval gates
 │   ├── git-commit-review/
-│   │   └── SKILL.md                 Structured commit + 3-hat review workflow
+│   │   └── SKILL.md                 Lightweight staged pre-commit review workflow
+│   ├── full-code-review/
+│   │   └── SKILL.md                 Explicit exhaustive multi-hat review workflow
 │   ├── prd-workflow/
 │   │   └── SKILL.md                 Research → design → tasks → implement chain
 │   ├── preflight/
@@ -168,7 +170,8 @@ Repository-level config (`.github/copilot-instructions.md`, `.github/instruction
 | `prd-workflow` | Build something from scratch: research → design → tasks → implement |
 | `feature-planning` | Plan a feature across all domains (UX, arch, security, deployment) |
 | `requirement-breakdown` | Break an epic into user stories with acceptance criteria |
-| `git-commit-review` | Pre-commit code review with 3-hat + specialist reviewers |
+| `git-commit-review` | Fast pre-commit review of one staged atomic candidate |
+| `full-code-review` | Explicit exhaustive review for release candidates and high-risk changes |
 | `scaffold` | Generate boilerplate for common patterns (service, aggregate, endpoint) |
 | `refactor` | Structured refactoring with test verification at each step |
 | `repo-bootstrap` | Bootstrap a repo for agent-driven work: agent contract + docs memory tree |
