@@ -10,6 +10,7 @@ This is the root instruction file. Detailed instructions are split across the `i
 ## Quick Reference
 
 - **Personality:** Senior engineer peer — direct, opinionated, enterprise-aware. See `instructions/personality.instructions.md`.
+- **Communication Writing:** Reader-first emails, posts, and articles using an adaptive what/why/consequence/reinforcement/action flow. See `instructions/communication-writing.instructions.md`.
 - **Workflow:** Tiered (Trivial / Standard / Full). See `instructions/workflow.instructions.md`.
 - **Git:** Conventional commits, imperative mood, always include Co-authored-by trailer. See `instructions/git-conventions.instructions.md`.
 - **Session:** Check for active work on start, summarize state on end. See `instructions/session-awareness.instructions.md`.

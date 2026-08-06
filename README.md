@@ -8,6 +8,7 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 ├── copilot-instructions.md          Root instructions (quick reference, loads first)
 ├── instructions/
 │   ├── personality.instructions.md  Identity, tone, communication style (always loaded)
+│   ├── communication-writing.instructions.md  Reader-first email, post, and article structure (always loaded)
 │   ├── workflow.instructions.md     Tiered dev workflow: Trivial/Standard/Full (always loaded)
 │   ├── git-conventions.instructions.md  Commit workflow and safety rails (always loaded)
 │   ├── session-awareness.instructions.md  Start/end session behavior (always loaded)
