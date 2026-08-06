@@ -13,3 +13,4 @@ Thumbs.db
 
 # MCP deployment secrets
 mcps/.env
+/.copilot/
