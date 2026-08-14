@@ -1,20 +1,23 @@
 # Communication Writing
 
-> **Intent (anchor):** Keep emails, workplace posts, public posts, and articles immediately relevant, credible, and easy to act on.
+> **Intent (anchor):** Keep outbound communications immediately relevant, credible, and easy to act on.
 > **Always:** help the reader grasp what matters and why within the opening; use an adaptive what -> why -> consequence -> reinforcement -> action flow.
 > **Never:** manufacture urgency, invent evidence, or pad a simple message to expose every stage mechanically.
 > **Precedence:** Global (`~/.copilot/`) < Project (`.github/...`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
 
-Apply this instruction when drafting or revising:
+Apply this instruction when drafting or revising content for another person or
+audience, including:
 
 - Email.
-- Workplace posts, including Teams, Slack, and internal announcements.
+- Workplace messages and posts, including Teams, Slack, and internal announcements.
+- Threaded discussions and replies, including Azure DevOps work item comments,
+  pull request discussions, and issue comments.
 - Public or social posts.
 - Articles and other long-form editorial writing.
 
-Do not apply it mechanically to ordinary chat answers, code, commit messages, or
-technical documentation unless the user is explicitly writing one of the
-communication types above.
+Do not apply it mechanically to ordinary CLI chat answers, code, commit
+messages, or technical documentation unless the user is explicitly drafting one
+of the communication types above.
 
 ## Start With the Reader
 
@@ -117,6 +120,20 @@ API certificate expires Friday
 Production calls will fail if the certificate is not renewed.
 Monitoring confirms that the replacement is not deployed.
 Service owners: complete the renewal by Thursday.
+```
+
+### Threads and Work Item Comments
+
+Lead with the decision, status, or requested action. Include only the context
+needed for the recipient to understand the impact, then state the next owner or
+response needed. Reply directly to the point being discussed; use bullets when
+they make multiple decisions or actions easier to scan.
+
+```text
+[Decision, status, or request.]
+
+[Essential supporting context or evidence.]
+[Owner and next action, if applicable.]
 ```
 
 ### Article
