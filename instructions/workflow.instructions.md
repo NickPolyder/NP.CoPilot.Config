@@ -1,11 +1,11 @@
 # Development Workflow
 
 > **Intent (anchor):** Define the default tiered development workflow when no more specific skill or project workflow is active.
-> **Always:** classify task scope first; validate changed behavior; defer to explicitly invoked skills for their owned workflow gates.
+> **Always:** classify task scope first; validate changed behavior proportionally; defer ownership, blockers, and delivery evidence to the work lifecycle policy.
 > **Never:** let the default workflow bypass a skill's approval gates or commit-review requirements.
 > **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
 
-Every task follows a tiered workflow. Assess the scope on entry and apply the appropriate tier. The user can override the classification at any time (e.g., "treat this as trivial" or "use the full workflow").
+Every task follows a tiered workflow. Assess the scope on entry and apply the appropriate tier. The user can override the classification at any time (e.g., "treat this as trivial" or "use the full workflow"). Follow `work-lifecycle.instructions.md` for atomic ownership, blockers, revision evidence, and capability-gated repository controls.
 
 ## Tier Classification
 
@@ -39,7 +39,7 @@ The tier also sets the delegation posture (see `coordination.instructions.md` �
 2. **Execute** — Implement the task. If the task involves code, write unit tests where possible. Tests travel with their code — they belong in the same commit.
 3. **Review** — Self-review the outcome. Look for mistakes, refactoring opportunities, and improvements.
 4. **Test** — Run existing tests to verify nothing is broken. If bugs are found, fix them.
-5. **Commit** — Create commit(s) based on logical separation (see Git Conventions).
+5. **Deliver** — Prepare the atomic outcome for the repository's configured delivery path (see Git Conventions and Work Lifecycle).
 
 ## Full Tier
 
@@ -53,13 +53,13 @@ The tier also sets the delegation posture (see `coordination.instructions.md` �
 4. **Review** — Self-review the outcome of step 3. Look for mistakes, refactoring opportunities, and improvements. Update the doc from step 2 if needed (e.g., note future improvements).
 5. **Improve** — If the findings from step 4 are worth implementing now, do so — but be extra careful not to break anything. Run tests after each improvement.
 6. **Test** — Perform manual testing. If bugs are found, fix them. If improvement opportunities emerge, loop back to step 4. Repeat until satisfied.
-7. **Commit** — Create commit(s) based on logical separation. Each commit should represent one coherent change (see Git Conventions).
+7. **Deliver** — Prepare atomic commit candidate(s) and follow the repository's configured delivery path (see Git Conventions and Work Lifecycle).
 8. **Reflect** — Write a self-reflection: what went right, what went wrong, how to improve, and what was learned. Store the reflection in the relevant project doc from step 2 if appropriate; otherwise, create or update a retrospective at `docs/retrospectives/`.
 
 ## Final Rules (Anchor)
 
 1. Classify every task as Trivial, Standard, or Full before acting.
 2. When a user invokes a skill, that skill owns its workflow gates and artifacts.
-3. Validate changed behavior before commit handoff, using the smallest existing relevant test/build/lint command.
+3. Validate changed behavior before delivery handoff, using the smallest existing relevant test/build/lint command.
 4. Match delegation to the tier: Trivial = never delegate, Standard = inline by default, Full = coordinate. Direct action first; never delegate reflexively on a domain keyword.
 > If anything above conflicts with these, **these win**.

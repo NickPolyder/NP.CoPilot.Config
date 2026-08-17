@@ -6,6 +6,10 @@
 
 {{ONE_LINE_REPO_SUMMARY}}
 
+## Repository mission
+
+{{REPOSITORY_MISSION — the user, domain outcome, and non-negotiable constraints for this repository}}
+
 ## Agent role in this repo
 
 You are the **{{PRIMARY_AGENT_ROLE}}**. Your job is to {{PRIMARY_OBJECTIVE}},
@@ -45,6 +49,21 @@ build:   {{BUILD_CMD}}
 test:    {{TEST_CMD}}
 lint:    {{LINT_CMD}}
 ```
+
+## Delivery capabilities
+
+Project delivery facts override global defaults. Complete only capabilities supported by repository evidence.
+
+| Capability | Enabled | Repository-specific rule |
+|---|---:|---|
+| Issue tracking | {{ISSUE_TRACKING_ENABLED}} | {{ISSUE_TRACKING_RULE}} |
+| Isolated worktrees | {{ISOLATED_WORKTREES_ENABLED}} | {{ISOLATED_WORKTREES_RULE}} |
+| Remote delivery | {{REMOTE_DELIVERY_ENABLED}} | {{REMOTE_DELIVERY_RULE}} |
+| Protected branches | {{PROTECTED_BRANCHES_ENABLED}} | {{PROTECTED_BRANCHES_RULE}} |
+| Integration queue | {{INTEGRATION_QUEUE_ENABLED}} | {{INTEGRATION_QUEUE_RULE}} |
+| Deployment evidence | {{DEPLOYMENT_EVIDENCE_ENABLED}} | {{DEPLOYMENT_EVIDENCE_RULE}} |
+
+Follow the global work lifecycle and delivery policies; this table declares only repository-specific capabilities and evidence.
 
 ## Commits
 

@@ -20,9 +20,7 @@ tools:
 > **Always:** require explicit approval of which gaps to fill; follow existing test conventions; run generated tests and report results.
 > **Never:** modify production code without asking, generate tests for trivial code, or invent conventions that conflict with the project.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are filling approved test gaps with concrete, runnable tests.
 
@@ -107,7 +105,7 @@ The final output includes:
 - **Consult `qa-engineer`** — for test strategy questions, fixture design, and coverage philosophy.
 - **Consult `backend-developer`** — for understanding domain logic intent when generating tests.
 - **Consult `security-engineer`** — when gaps are found in security-sensitive code paths.
-- **Recommend `refactor`** — if existing tests need structural improvements before new tests can be added cleanly; do not invoke it directly from this skill.
+- **Recommend `refactor`** — if existing tests need structural improvements before new tests can be added cleanly.
 
 ---
 
@@ -117,7 +115,6 @@ The final output includes:
 - **Don't generate tests for trivial code** — getters, DTOs, and auto-generated code don't need tests.
 - **Match existing test style** — use the same framework, naming, fixtures, and assertion library as the project.
 - **Don't modify production code without asking** — this skill adds/improves tests. If a bug is found, report it and ask before fixing.
-- **This skill is atomic and not an orchestrator** — it doesn't invoke other orchestrator skills.
 - **Preserve the project safety net** — run the smallest existing test command that verifies the generated tests, then escalate only if needed.
 
 ---

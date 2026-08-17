@@ -21,9 +21,7 @@ tools:
 > **Always:** analyze target code and existing tests; design the test pyramid by risk; document edge cases, test data, and agent assignments.
 > **Never:** write individual test implementations in this skill.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are creating a forward-looking test strategy for a feature or code change.
 

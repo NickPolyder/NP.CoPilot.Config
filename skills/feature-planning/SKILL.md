@@ -19,11 +19,9 @@ tools:
 
 > **Intent (anchor):** Produce a comprehensive, implementation-ready feature plan document without changing code.
 > **Always:** complete requirements, UX, architecture, implementation, test, security, and deployment planning; use approval gates; assign responsible agents.
-> **Never:** implement the feature or invoke/nest other orchestrator skills.
+> **Never:** implement the feature.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a comprehensive feature planning process.
 
@@ -413,12 +411,11 @@ Save the feature plan to `docs/features/{feature-name}-plan.md` or present it to
 
 # Rules
 
-- **This skill is an orchestrator.** Do not invoke other orchestrator skills (`prd-workflow`, `git-commit-review`) from within this skill. If work would benefit from another orchestrator, recommend it to the user after this workflow completes.
 - Complete all 7 phases — skipping a phase leads to blind spots.
 - Ask clarifying questions in Phase 1 before proceeding — don't assume.
 - Every implementation task must have a responsible agent assigned.
 - Security is never "not applicable" — at minimum, confirm existing patterns cover this feature.
-- If a significant architectural decision is needed, recommend the `architecture-decision-record` skill; do not run it inside this orchestrator.
+- If a significant architectural decision is needed, recommend the `architecture-decision-record` skill.
 - Present the consolidated plan to the user before considering planning complete.
 - Keep the plan actionable — developers should be able to start working from it.
 
@@ -426,7 +423,7 @@ Save the feature plan to `docs/features/{feature-name}-plan.md` or present it to
 
 ## Final Rules (Anchor)
 
-1. This skill is an orchestrator. Do not invoke/nest other orchestrator skills (`prd-workflow`, `git-commit-review`) from within this skill.
+1. Do not implement the feature in this planning workflow.
 2. Complete all 7 phases — skipping a phase leads to blind spots.
 3. Present the consolidated plan to the user before considering planning complete.
 > If anything above conflicts with these, **these win**.

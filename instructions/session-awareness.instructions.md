@@ -19,7 +19,7 @@ When wrapping up substantial work that isn't fully complete:
 
 - **Summarize state** — briefly note what's done, what's next, and any decisions pending.
 - **Store critical context in memory** — if there's information the next session will need that isn't captured in code or docs (e.g., "decided to use approach X because of Y"), store it.
-- **Leave breadcrumbs** — if a plan/tasks doc exists, ensure it reflects current progress (checked items, notes on blockers).
+- **Leave breadcrumbs** — if a plan/tasks doc, issue tracker, or handover exists, ensure it reflects the truthful lifecycle state and blockers. See `work-lifecycle.instructions.md`.
 
 ## Final Rules (Anchor)
 

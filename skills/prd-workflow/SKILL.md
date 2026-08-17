@@ -20,11 +20,9 @@ tools:
 
 > **Intent (anchor):** Drive a gated, design-first product workflow for one approved feature by sequencing the atomic `codebase-research`, `feature-design-doc`, `task-breakdown`, and `implementation-runner` skills through explicit approval gates.
 > **Always:** research before design; produce `design.md` and `tasks.md`; require explicit approval before every phase transition.
-> **Never:** skip approval gates or invoke/nest other orchestrator skills (`feature-planning`, `git-commit-review`).
+> **Never:** skip approval gates.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 This skill is a **thin orchestrator**. It owns the end-to-end design-first flow and the approval gates between phases, but delegates each phase's detailed procedure to a dedicated atomic skill:
 
@@ -53,7 +51,7 @@ Do **not** use this skill for:
 
 > **Choosing between `prd-workflow` and `feature-planning`:** Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end. Use `feature-planning` when you need a **comprehensive plan document only** — no implementation.
 
-> **Boundary:** This orchestrator does not nest other orchestrator skills. For deep test/security work, recommend `test-strategy` or `security-audit`; for commit review and commit creation, delegate to `git-commit-review` after this workflow's implementation is verified.
+> **Boundary:** This workflow sequences only its four phase skills. For deep test/security work, recommend `test-strategy` or `security-audit`; for commit review and commit creation, delegate to `git-commit-review` after this workflow's implementation is verified.
 
 ---
 
@@ -85,8 +83,8 @@ the design — phases, ordering, dependencies, complexity, and paired test tasks
 ## Phase 4: Implementation (delegate to `implementation-runner`)
 
 After approval, run the `implementation-runner` skill to execute tasks in order with tests alongside,
-updating `tasks.md` and reporting per-phase results. After implementation is verified, delegate commit
-review and commit creation to `git-commit-review` — do **not** invoke it inside this orchestrator.
+updating `tasks.md` and reporting per-phase results. After implementation is verified, hand off commit
+review and commit creation to `git-commit-review`.
 
 > **Implementation complete. {passed}/{total} tests passing. Ready for review? (yes / fix issues first)**
 
@@ -122,7 +120,6 @@ Approve moving to {next phase}? (yes / no / adjust)
 
 # Constraints
 
-- **This skill is an orchestrator.** Do not invoke other orchestrator skills (`feature-planning`, `git-commit-review`) from within this skill. If work would benefit from another orchestrator, recommend it to the user after this workflow completes.
 - **Keep the phases atomic** — delegate each phase's detail to its dedicated skill; do not inline the full procedures here.
 - **Delegate commits** — use `git-commit-review` for commit review and commit creation after implementation is verified.
 - **Use dedicated depth skills** — reference `test-strategy` and `security-audit` when deep test or security artifacts are needed.
@@ -143,7 +140,7 @@ If the project defines a different docs structure, follow that instead.
 
 ## Final Rules (Anchor)
 
-1. This skill is an orchestrator. Do not invoke/nest other orchestrator skills (`feature-planning`, `git-commit-review`) from within this skill.
+1. Keep this workflow to its four defined phases; recommend other dedicated workflows after it completes.
 2. Execute phases in strict order via their atomic skills. Do not advance to the next phase without user approval.
 3. Keep this orchestrator thin — delegate each phase's detail to its dedicated skill and commits to `git-commit-review`.
 > If anything above conflicts with these, **these win**.

@@ -36,6 +36,19 @@ lint:     dotnet format --verify-no-changes
 - **ADO Integration:** OFF
 - **Memory Bank:** OFF
 
+## Agent Delivery Capabilities
+
+Declare only capabilities that repository evidence supports. Disabled or blank capabilities add no workflow requirement.
+
+| Capability | Enabled | Repository-specific rule |
+|---|---:|---|
+| Issue tracking | No | |
+| Isolated worktrees | No | |
+| Remote delivery | No | |
+| Protected branches | No | |
+| Integration queue | No | |
+| Deployment evidence | No | |
+
 ## Agent Guidance
 
 When agents encounter technology choices in this file, they should:

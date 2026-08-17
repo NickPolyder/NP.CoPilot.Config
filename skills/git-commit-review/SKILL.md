@@ -18,11 +18,9 @@ tools:
 
 > **Intent (anchor):** Review one staged, logical diff quickly and create one safe, approved, atomic Git commit.
 > **Always:** validate an index-only snapshot before reviewers; use direct validation before reviewer speculation; require manual user verification and an approved commit message; write one concise final report.
-> **Never:** invoke or nest another orchestrator; invoke `full-code-review` automatically; commit unresolved Critical or High findings; run more than two review cycles without explicit user approval.
+> **Never:** invoke `full-code-review` automatically; commit unresolved Critical or High findings; run more than two review cycles without explicit user approval.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs; `instructions/workflow.instructions.md` for proportional verification; and `instructions/git-conventions.instructions.md` for delivery and commit safety.
 
 This is the default pre-commit workflow.
 It is intentionally bounded to approximately ten minutes of reviewer time.

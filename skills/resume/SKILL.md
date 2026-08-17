@@ -20,9 +20,7 @@ tools:
 > **Always:** gather git, docs, session history, and memory signals; synthesize concise status; identify the most likely next action.
 > **Never:** fabricate context or expose another user's session data.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Follow `instructions/session-awareness.instructions.md` for session continuity.
 
 You are recovering context from previous work sessions so the user can continue seamlessly.
 
@@ -153,7 +151,6 @@ Adjust detail based on how long since the last session:
 - **Don't guess** — if session history is empty or unclear, say so. Don't fabricate context.
 - **Be concise** — the user wants to get back to work quickly, not read an essay.
 - **Respect privacy** — don't surface information from other users' sessions if the session store contains multi-user data.
-- **This skill is not an orchestrator** — it establishes context but doesn't drive implementation workflows.
 
 ---
 

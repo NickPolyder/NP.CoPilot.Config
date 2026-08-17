@@ -18,11 +18,9 @@ tools:
 
 > **Intent (anchor):** Produce a read-only, grounded research summary of an existing codebase before any design work starts.
 > **Always:** discover structure first; identify existing patterns and relevant code; read project configuration; capture constraints and reusable abstractions.
-> **Never:** edit files, design the feature, generate implementation tasks, or invoke/nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
+> **Never:** edit files, design the feature, or generate implementation tasks.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are investigating what already exists so later design work is grounded in the actual project rather than assumptions.
 
@@ -93,14 +91,13 @@ No files should be edited or created by this skill.
 - **Backend/Frontend developer agents** — consult for domain-specific code paths and framework conventions.
 - **QA engineer agent** — consult for existing test strategy and test coverage signals.
 - **Security engineer agent** — consult when existing authentication, authorization, or input validation constraints affect the feature area.
-- **Next atomic skill** — after approval, recommend `feature-design-doc`; do not invoke it automatically.
+- **Next step** — after approval, recommend `feature-design-doc`.
 
 ---
 
 # Constraints
 
 - **Read-only only** — do not create, edit, move, or delete files.
-- **This skill is atomic and is not an orchestrator.** Do not invoke or nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
 - **No design decisions yet** — document what exists and what constrains the work; leave solution design to `feature-design-doc`.
 - **Keep the approval gate** — present the research summary and ask before moving to design.
 - **Respect configuration precedence** — project and local instructions may refine global conventions but must not contradict them.
@@ -111,5 +108,5 @@ No files should be edited or created by this skill.
 
 1. This skill is read-only; never edit or create files.
 2. The output must cover structure, patterns, relevant code, constraints, and project configuration.
-3. Do not invoke/nest orchestrator skills or proceed into design; recommend `feature-design-doc` only after approval.
+3. Do not proceed into design; recommend `feature-design-doc` only after approval.
 > If anything above conflicts with these, **these win**.

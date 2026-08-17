@@ -59,6 +59,17 @@ watch:         dotnet watch run --project src/{BlazorProject}
 - **Memory Bank:** OFF
 - **Prerendering:** [ON | OFF]
 
+## Agent Delivery Capabilities
+
+| Capability | Enabled | Repository-specific rule |
+|---|---:|---|
+| Issue tracking | No | Configure only after repository evidence confirms this capability. |
+| Isolated worktrees | No | Configure only after repository evidence confirms this capability. |
+| Remote delivery | No | Configure the verified pull request, direct-push, or human-handoff path. |
+| Protected branches | No | Configure required checks and reviewers from host policy. |
+| Integration queue | No | Configure only after repository evidence confirms this capability. |
+| Deployment evidence | No | Configure CI/deployment evidence from the repository. |
+
 ## Agent Guidance
 
 When agents encounter technology choices in this file, they should:

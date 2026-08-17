@@ -17,11 +17,9 @@ tools:
 
 > **Intent (anchor):** Perform an exhaustive, multi-reviewer analysis only when the user explicitly requests it.
 > **Always:** define the review scope; use three distinct core review hats; include all severity levels; produce a detailed report.
-> **Never:** run automatically during normal pre-commit work; invoke or nest another orchestrator; edit the reviewed worktree; create a commit.
+> **Never:** run automatically during normal pre-commit work; edit the reviewed worktree; or create a commit.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 This is an analysis workflow, not a commit workflow.
 After it completes, the user may explicitly invoke `git-commit-review` to create an atomic commit.
@@ -134,4 +132,4 @@ If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 2. Use Architect, Principal Developer, and Senior Developer hats plus no more than three relevant specialists.
 3. Keep all reviewers read-only and never allow concurrent edits to the worktree.
 4. Include all severity levels and persist a detailed report.
-5. Do not create commits or invoke `git-commit-review`.
+5. Do not create commits.

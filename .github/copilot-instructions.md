@@ -9,10 +9,10 @@ This is not a typical code project — there are no build/test/lint pipelines. T
 ## Architecture
 
 ```
-copilot-instructions.md    → Root instructions (quick reference, symlinked to ~/.copilot/)
-instructions/*.instructions.md → Split instruction files (personality, workflow, git, etc.)
+copilot-instructions.md    → Root operating contract (symlinked to ~/.copilot/)
+instructions/*.instructions.md → Canonical policies (coordination, workflow, lifecycle, delivery, style)
 agents/*.md                → Specialist agent definitions (17 agents)
-skills/*/SKILL.md          → Multi-step orchestration workflows (16 skills)
+skills/*/SKILL.md          → Focused workflows (25 skills)
 mcps/                      → Self-hosted MCP server stack (Docker Compose: SearXNG + Playwright)
 templates/                 → Per-repo scaffolding templates (Generic, Angular, Blazor, Service Fabric) + repo-bootstrap/ (agent contract + docs memory tree)
 mcp-config.json            → MCP client config pointing at SearXNG + Playwright endpoints

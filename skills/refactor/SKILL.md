@@ -20,9 +20,7 @@ tools:
 > **Always:** establish a passing baseline; make one atomic refactoring step at a time; build and test after every step.
 > **Never:** combine refactoring with behavior changes or continue from a broken baseline.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are executing a disciplined refactoring process with safety guarantees.
 
@@ -157,7 +155,7 @@ Common refactoring operations and their safety considerations:
 - **Tests must pass after every step.** No exceptions. A failing intermediate state means the step was wrong.
 - **Never combine refactoring with behavior changes** in the same commit. If you discover a bug during refactoring, commit the refactoring first, then fix the bug in a separate commit.
 - **Don't refactor code you don't understand** — read it first, understand the intent, then restructure.
-- **This skill is not an orchestrator** — recommend `git-commit-review` for commits; do not invoke or nest orchestrator skills from here.
+- **Commit review is a handoff** — recommend `git-commit-review` for commits; this workflow does not define commit strategy.
 - **Respect the scope** — don't expand the refactoring beyond what was agreed. If you see adjacent code that needs work, note it as a follow-up.
 
 ---

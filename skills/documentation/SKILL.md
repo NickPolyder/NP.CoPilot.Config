@@ -20,9 +20,7 @@ tools:
 > **Always:** follow the existing docs structure; update indexes when adding documents; consult the relevant specialist for domain accuracy.
 > **Never:** duplicate specialist workflows or override markdown-style instructions.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are helping maintain project documentation in the `docs/` folder.
 

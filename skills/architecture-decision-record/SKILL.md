@@ -20,9 +20,7 @@ tools:
 > **Always:** evaluate at least two options; document positive and negative consequences; store the ADR under `docs/decisions/` with sequential numbering.
 > **Never:** use an ADR for trivial implementation choices or mutate an accepted ADR instead of superseding it.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are creating an Architecture Decision Record (ADR).
 

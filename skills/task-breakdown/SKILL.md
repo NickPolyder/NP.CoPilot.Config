@@ -17,11 +17,9 @@ tools:
 
 > **Intent (anchor):** Convert an approved feature design into an ordered, dependency-aware `tasks.md` that implementation can execute safely.
 > **Always:** read the design thoroughly; group work into phases; order by dependency; mark independent work as parallelizable; include paired test work.
-> **Never:** implement code, silently redesign the feature, skip dependencies, or invoke/nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
+> **Never:** implement code, silently redesign the feature, or skip dependencies.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are translating an approved design into executable work that can be implemented in dependency order.
 
@@ -48,7 +46,7 @@ Do **not** use this skill for:
 - Codebase research — use `codebase-research`.
 - Writing or revising the feature design — use `feature-design-doc`.
 - Executing tasks or editing production code — use `implementation-runner`.
-- End-to-end orchestration — recommend `prd-workflow` instead of nesting it.
+- End-to-end orchestration — recommend `prd-workflow`.
 
 ---
 
@@ -94,13 +92,12 @@ The `tasks.md` must include:
 - **Backend/Frontend developer agents** — consult for implementation sequencing and realistic complexity estimates.
 - **QA engineer agent** — consult for paired test tasks and acceptance criteria coverage.
 - **Security engineer agent** — consult when tasks affect authentication, authorization, input validation, secrets, or data protection.
-- **Next atomic skill** — after approval, recommend `implementation-runner`; do not invoke it automatically.
+- **Next step** — after approval, recommend `implementation-runner`.
 
 ---
 
 # Constraints
 
-- **This skill is atomic and is not an orchestrator.** Do not invoke or nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
 - **Tasks only** — do not implement code, create migrations, or change production files as part of task generation.
 - **Design is the source of truth** — do not silently change scope; put mismatches or unresolved issues in the task breakdown for approval.
 - **Keep the approval gate** — present the generated tasks and ask before moving to implementation.
@@ -112,5 +109,5 @@ The `tasks.md` must include:
 
 1. Generate `docs/features/{feature-name}/tasks.md` with phases, task details, dependency ordering, parallelizable markers, and test work.
 2. Do not implement code or change feature scope while generating tasks.
-3. Do not invoke/nest orchestrator skills or proceed into implementation without explicit approval.
+3. Do not proceed into implementation without explicit approval.
 > If anything above conflicts with these, **these win**.

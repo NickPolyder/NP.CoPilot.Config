@@ -5,12 +5,13 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 ## Structure
 
 ```
-├── copilot-instructions.md          Root instructions (quick reference, loads first)
+├── copilot-instructions.md          Root operating contract (loads first)
 ├── instructions/
 │   ├── personality.instructions.md  Identity, tone, communication style (always loaded)
 │   ├── communication-writing.instructions.md  Reader-first email, post, and article structure (always loaded)
 │   ├── workflow.instructions.md     Tiered dev workflow: Trivial/Standard/Full (always loaded)
-│   ├── git-conventions.instructions.md  Commit workflow and safety rails (always loaded)
+│   ├── work-lifecycle.instructions.md  Atomic outcomes, blockers, and capability-gated delivery (always loaded)
+│   ├── git-conventions.instructions.md  Delivery and commit safety (always loaded)
 │   ├── session-awareness.instructions.md  Start/end session behavior (always loaded)
 │   ├── coordination.instructions.md      Skill hierarchy, agent handoff format (always loaded)
 │   ├── csharp-style.instructions.md      C# conventions (applyTo: *.cs)
@@ -147,6 +148,24 @@ Self-hosted MCP (Model Context Protocol) servers that extend Copilot CLI with we
 | **Local** | `.github/instructions/local-preferences.instructions.md` | Personal overrides, gitignored |
 
 Global loads first. Project config extends it. Local preferences layer on top.
+
+### Operating Model
+
+The global configuration governs **how** work is performed: verified atomic outcomes, proportionate workflow, user control, and repository-policy compliance.
+Each repository defines **why** it exists—its mission, users, domain constraints, and delivery capabilities—in project-level instructions.
+
+Cross-cutting policy has one canonical owner:
+
+| Concern | Owner |
+|---|---|
+| Precedence, delegation, handoffs | `instructions/coordination.instructions.md` |
+| Work tiers and proportional verification | `instructions/workflow.instructions.md` |
+| Ownership, blockers, outcome verification, optional capabilities | `instructions/work-lifecycle.instructions.md` |
+| Delivery path, protected branches, commit approvals | `instructions/git-conventions.instructions.md` |
+| Session continuity | `instructions/session-awareness.instructions.md` |
+
+Repositories opt into issue tracking, isolated worktrees, protected branches, integration queues, and deployment evidence through the `Agent Delivery Capabilities` table in their project configuration.
+Absent or disabled capabilities add no process requirements.
 
 ### Symlinks
 

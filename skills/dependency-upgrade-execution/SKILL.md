@@ -20,9 +20,7 @@ tools:
 > **Always:** require explicit approval before editing manifests; upgrade patch, minor, then major versions; verify restore, build, and tests after each batch.
 > **Never:** upgrade blindly, start without an approved scope, stack upgrades on a broken build, mix with feature work, or create commits directly.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are executing an approved dependency upgrade plan. This skill edits manifests only after an explicit approval gate and verifies restore, build, and tests after each batch.
 
@@ -125,7 +123,7 @@ Do not define or create commits here. After approved upgrade batches build and t
 - **Consult `backend-developer`** — for .NET-specific migration patterns when major packages change.
 - **Consult `frontend-developer`** — for Angular/npm ecosystem upgrade patterns.
 - **Consult `devops-engineer`** — if dependency updates affect Docker images or CI pipelines.
-- **Delegate commits to `git-commit-review`** — provide verified package changes, lock file changes, verification results, and skipped follow-ups; never invoke it from this skill.
+- **Delegate commits to `git-commit-review`** — provide verified package changes, lock file changes, verification results, and skipped follow-ups.
 
 ---
 
@@ -137,8 +135,6 @@ Do not define or create commits here. After approved upgrade batches build and t
 - **Respect lock files** — commit updated lock files alongside package reference changes.
 - **Don't mix dependency upgrades with feature work** — keep dependency changes separate from feature work.
 - **Delegate commits** — hand verified upgrade batches to `git-commit-review`; this skill does not own commit strategy.
-- **Atomic skill** — execute approved upgrades and prepare the hand-off only.
-- **Not an orchestrator** — consult specialist agents only for domain expertise and never invoke another skill.
 
 ---
 

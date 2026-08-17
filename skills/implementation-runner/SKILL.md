@@ -18,11 +18,9 @@ tools:
 
 > **Intent (anchor):** Execute an approved `tasks.md` in dependency order, producing working code with tests and updated task status.
 > **Always:** follow task order; respect dependencies; write tests alongside code; update completed tasks; report after each phase and final verification.
-> **Never:** skip ahead, ignore failing tests, change approved scope silently, or invoke/nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
+> **Never:** skip ahead, ignore failing tests, or change approved scope silently.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are executing an approved task breakdown, keeping implementation, tests, and task status synchronized.
 
@@ -49,7 +47,7 @@ Do **not** use this skill for:
 - Initial research — use `codebase-research`.
 - Writing a design document — use `feature-design-doc`.
 - Creating the task breakdown — use `task-breakdown`.
-- Commit review or commit creation — prepare a handoff and recommend `git-commit-review`; do not invoke it.
+- Commit review or commit creation — prepare a handoff and recommend `git-commit-review`.
 
 ---
 
@@ -67,7 +65,7 @@ Execute tasks in order, producing working code with tests.
    - Test results (pass/fail counts).
    - Any deviations from the design.
 4. **After all tasks are complete**, run the full test suite and report results.
-5. **Commit handoff** — after implementation is verified, delegate commit review and commit creation to `git-commit-review`; do not invoke it inside this atomic skill.
+5. **Commit handoff** — after implementation is verified, delegate commit review and commit creation to `git-commit-review`.
 
 After implementation, ask:
 
@@ -94,13 +92,12 @@ If the project defines a different docs or source structure, follow that instead
 - **QA engineer agent** — consult for test coverage, edge cases, and verification strategy.
 - **Security engineer agent** — consult when implementation touches authentication, authorization, input validation, secrets, or sensitive data.
 - **Documentation skill** — after implementation is complete, recommend using the `documentation` skill to update `docs/` with the implemented feature's documentation.
-- **Git commit review skill** — after implementation is verified, prepare a handoff and recommend `git-commit-review` for commit review and commit creation; do not invoke it automatically.
+- **Git commit review skill** — after implementation is verified, prepare a handoff and recommend `git-commit-review` for commit review and commit creation.
 
 ---
 
 # Constraints
 
-- **This skill is atomic and is not an orchestrator.** Do not invoke or nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
 - **Approved tasks only** — execute the approved `tasks.md`; do not silently add scope.
 - **Respect dependencies** — follow task order and do not skip ahead.
 - **Tests are required** — write tests alongside implementation and run the smallest relevant verification, escalating as needed.
@@ -113,5 +110,5 @@ If the project defines a different docs or source structure, follow that instead
 
 1. Follow the approved task order, respect dependencies, and keep `tasks.md` status current.
 2. Write tests alongside code and verify each phase before continuing.
-3. Do not invoke/nest orchestrator skills; after verification, hand off commit review and commit creation to `git-commit-review` without invoking it.
+3. After verification, hand off commit review and commit creation to `git-commit-review`.
 > If anything above conflicts with these, **these win**.

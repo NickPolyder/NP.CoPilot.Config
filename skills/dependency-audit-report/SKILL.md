@@ -20,9 +20,7 @@ tools:
 > **Always:** discover manifests first; categorize risk before recommending upgrades; include vulnerability exposure and minimum fix version when responding to advisories.
 > **Never:** edit manifests, update lock files, run package upgrades, or mix dependency audit work with feature work.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a read-only dependency health audit. This skill produces an audit report and prioritized upgrade plan; it never edits manifests or lock files.
 
@@ -143,8 +141,6 @@ Do not edit dependency manifests or lock files in this skill.
 - **Never upgrade blindly** — always check for breaking changes before recommending a major version.
 - **Respect lock files** — inspect them for freshness and risk, but do not update them.
 - **Don't mix dependency audits with feature work** — keep dependency findings separate from feature work.
-- **Atomic skill** — produce the report and hand-off only; do not execute upgrades.
-- **Not an orchestrator** — consult specialist agents only for domain expertise.
 
 ---
 

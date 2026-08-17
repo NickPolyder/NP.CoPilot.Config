@@ -20,9 +20,7 @@ tools:
 > **Always:** scope the target; prioritize gaps by risk; present concrete test recommendations and stop at the generation hand-off.
 > **Never:** write, edit, or delete tests or production code, or claim static analysis proves complete coverage.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a read-only audit of existing code for dangerous untested paths.
 
@@ -188,7 +186,6 @@ The final output includes:
 - **Read-only only** — never create, edit, or delete tests, production code, fixtures, or project files.
 - **End at the hand-off** — produce the report and recommend `test-gap-fill` for approved generation.
 - **Don't audit trivial code as a priority** — getters, DTOs, and auto-generated code rarely justify focused gap analysis.
-- **This skill is atomic and not an orchestrator** — it doesn't invoke other orchestrator skills.
 - **Be honest about coverage limits** — static analysis can't find all gaps. Note areas where runtime profiling or mutation testing would give better insight.
 
 ---

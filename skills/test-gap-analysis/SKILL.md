@@ -21,9 +21,7 @@ tools:
 > **Always:** run the read-only audit before generating anything; require explicit approval of which gaps to fill; keep audit and fill as separate atomic steps.
 > **Never:** generate tests before the gap report is approved, or modify production code without asking.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 This skill is a **thin coordinator**. It owns the retroactive coverage flow and the gate between auditing and generating tests, but delegates the detailed procedures to two atomic skills:
 
@@ -87,7 +85,7 @@ real bugs the new tests expose. It does not modify production code without askin
 - **Consult `qa-engineer`** — for test strategy questions, fixture design, and coverage philosophy.
 - **Consult `backend-developer`** — for understanding domain logic intent when generating tests.
 - **Consult `security-engineer`** — when gaps are found in security-sensitive code paths.
-- **Recommend `refactor`** — if existing tests need structural cleanup before new tests fit cleanly; do not invoke it from this skill.
+- **Recommend `refactor`** — if existing tests need structural cleanup before new tests fit cleanly.
 
 ---
 
@@ -97,7 +95,6 @@ real bugs the new tests expose. It does not modify production code without askin
 - **Approval gate is mandatory** — never start test generation without explicit user approval.
 - **Keep the steps atomic** — do not blend audit and generation logic here; delegate to the two skills.
 - **Don't modify production code** — this flow adds/improves tests; if a bug is found, report it and ask before fixing.
-- **This skill is not an orchestrator** — it does not invoke other orchestrator skills.
 
 ---
 

@@ -20,9 +20,7 @@ tools:
 > **Always:** discover conventions first; confirm files before writing; include relevant tests and wiring.
 > **Never:** overwrite existing files or use scaffolding as a full feature workflow.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are scaffolding new **application code** structures that follow the project's established architecture.
 
@@ -165,7 +163,6 @@ Files:
 - **Match existing style** — use the same formatting, naming, and patterns as neighboring code.
 - **Don't over-scaffold** — only generate what's needed. An aggregate doesn't always need a REST endpoint.
 - **Application code only** — this skill generates source/test boilerplate, not repo-level Copilot config or docs working-memory structure.
-- **This skill is not an orchestrator** — it generates code but doesn't plan features or run review workflows.
 
 ---
 

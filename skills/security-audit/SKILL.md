@@ -21,9 +21,7 @@ tools:
 > **Always:** define scope and trust boundaries first; rate findings with standard severity; communicate critical findings immediately.
 > **Never:** expose secrets or audit an undefined "everything" scope.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a systematic security assessment.
 

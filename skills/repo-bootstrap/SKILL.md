@@ -22,19 +22,17 @@ tools:
 
 > **Intent (anchor):** Bootstrap one repository with a tailored Copilot agent contract and durable docs working-memory skeleton.
 > **Always:** analyze the repo before interviewing; tailor templates with verified commands; get approval before writing or overwriting files.
-> **Never:** copy raw templates verbatim, commit generated files, or invoke/nest orchestrator skills.
+> **Never:** copy raw templates verbatim or commit generated files.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are bootstrapping a repository so that any Copilot agent working in it has a
 **clear contract** and a **durable, file-based working memory** — the same
 structure that makes agent-driven repos effective:
 
-- A tight **`.github/copilot-instructions.md`** contract: agent role, hard
-  rules, explicit "Don'ts", style, build/test commands, commit + handover
-  conventions.
+- A tight **`.github/copilot-instructions.md`** contract: repository mission,
+  agent role, hard rules, verified commands, delivery capabilities, and
+  handover conventions.
 - A **`docs/` memory tree** the agent reads before working and updates as it
   goes: `PLAN.md` (canonical design), `TASKS.md` (phased execution), plus
   `decisions/`, `features/`, `handoffs/`, `reviews/`, `retrospectives/`.
@@ -70,12 +68,9 @@ Do **not** use this skill for:
 - Maintaining existing docs as code changes — use `documentation`.
 - Planning/implementing a single feature — use `feature-planning` / `prd-workflow`.
 
-> **This skill is not an orchestrator.** It obeys the strict hierarchy
-> (User → Skill → Agent → Tools). It may consult specialist agents for content
-> quality, but it must never invoke or nest orchestrator skills
-> (`prd-workflow`, `feature-planning`, `git-commit-review`). When detailed ADRs,
-> feature plans, or retros are needed, it *recommends* the relevant skill rather
-> than running it.
+> **Boundary:** This skill seeds repository configuration only. For detailed ADRs,
+> feature plans, or retrospectives, recommend the relevant workflow rather than
+> producing those artifacts.
 
 ---
 
@@ -126,20 +121,25 @@ contract — never guess them.
 Ask only what you couldn't reliably infer. Prefer multiple-choice, one question
 at a time. Cover:
 
-1. **Agent role & primary objective** — what is the agent here *for*? (e.g.
+1. **Repository mission** — what outcome, users, and non-negotiable constraints define this repository?
+2. **Agent role & primary objective** — what is the agent here *for*? (e.g.
    "implementing agent delivering per PLAN/TASKS", "maintenance agent", "library
    author").
-2. **Hard rules (4–8)** — the non-negotiable constraints unique to this repo.
+3. **Hard rules (4–8)** — the non-negotiable constraints unique to this repo.
    Seed suggestions from analysis (e.g. "runtime data lives outside X", "never
    touch generated folder Y").
-3. **Don'ts** — the mistakes most likely to happen here.
-4. **Build/test/lint commands** — confirm the detected commands (or correct
+4. **Don'ts** — the mistakes most likely to happen here.
+5. **Build/test/lint commands** — confirm the detected commands (or correct
    them).
-5. **Commit grouping & handover mechanism** — phase prefixes? where do session
+6. **Delivery capabilities** — confirm issue tracking, isolated worktrees,
+   remote delivery, protected branches, integration queue, and deployment
+   evidence from repository configuration and host rules; default unknown
+   capabilities to disabled.
+7. **Commit grouping & handover mechanism** — phase prefixes? where do session
    handovers go?
-6. **PLAN seed** — the problem, the high-level approach, the major components.
-7. **TASKS seed** — the first few phases and their dependencies.
-8. **Decided-up-front items** — locked decisions to record so they aren't
+8. **PLAN seed** — the problem, the high-level approach, the major components.
+9. **TASKS seed** — the first few phases and their dependencies.
+10. **Decided-up-front items** — locked decisions to record so they aren't
    re-litigated.
 
 ## Phase 3: Confirm scope (approval gate)
@@ -159,7 +159,8 @@ Present the full plan and get explicit approval before writing anything:
 - {list any conflicts found}
 
 **Tailored from:**
-- Role: {…}   Hard rules: {…}   Build/test: {…}
+- Mission: {…}   Role: {…}   Hard rules: {…}   Build/test: {…}
+- Delivery capabilities: {tracked work / worktrees / protected branches / CI evidence}
 
 **Also recommended (run separately):**
 - install-project.ps1 → .github/instructions/project-config (if missing)
@@ -225,14 +226,13 @@ Consult specialists for content quality — they advise; this skill writes:
   approval gate and ask per file.
 - **Tailor every file** — no `{{PLACEHOLDER}}` token may survive into a
   generated file.
-- **Extend, never contradict, the global config** — reference
-  `~/.copilot/instructions/` rather than restating it.
-- **Keep the contract tight** — 4–8 hard rules, a focused Don'ts list; design
-  detail belongs in `PLAN.md`.
+- **Extend, never contradict, the global config** — state the repository
+  mission and capabilities, then reference `~/.copilot/instructions/` for
+  global workflow, lifecycle, coordination, and delivery policy.
+- **Keep the contract tight** — state repository facts and local exceptions,
+  not duplicated global policy; design detail belongs in `PLAN.md`.
 - **Verified commands only** — build/test/lint commands must come from the repo,
   not assumptions.
-- **Not an orchestrator** — recommend `prd-workflow` / `feature-planning` /
-  `git-commit-review`; never invoke or nest them.
 - **Don't commit** — leave the user to review and commit.
 
 ---
@@ -241,5 +241,5 @@ Consult specialists for content quality — they advise; this skill writes:
 
 1. Never overwrite without explicit approval — surface conflicts in the approval gate and ask per file.
 2. Tailor every file — no `{{PLACEHOLDER}}` token may survive into a generated file.
-3. Not an orchestrator — recommend `prd-workflow` / `feature-planning` / `git-commit-review`; never invoke or nest them.
+3. Do not commit generated files; leave review and delivery to the repository's configured process.
 > If anything above conflicts with these, **these win**.

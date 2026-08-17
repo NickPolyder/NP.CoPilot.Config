@@ -21,9 +21,7 @@ tools:
 > **Always:** run the audit (read-only) before any change; require explicit approval before upgrading; keep audit and upgrade as separate atomic steps.
 > **Never:** upgrade blindly, skip the approval gate, or mix dependency upgrades with feature work.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 This skill is a **thin coordinator**. It owns the end-to-end dependency-hygiene flow and the gate between audit and upgrade, but delegates the detailed procedures to two atomic skills:
 

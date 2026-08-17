@@ -20,9 +20,7 @@ tools:
 > **Always:** summarize what was built; identify concrete improvements; store the retrospective in the appropriate docs location.
 > **Never:** use a retrospective as a planning or implementation workflow.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a retrospective on recently completed work.
 

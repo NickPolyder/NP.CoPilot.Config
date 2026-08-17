@@ -20,9 +20,7 @@ tools:
 > **Always:** ask clarifying questions before decomposing ambiguous work; use INVEST and Given/When/Then; surface cross-cutting concerns.
 > **Never:** make architectural decisions or start implementation.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are breaking down a high-level requirement into actionable development work.
 

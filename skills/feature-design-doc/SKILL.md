@@ -18,11 +18,9 @@ tools:
 
 > **Intent (anchor):** Generate a feature `design.md` that a developer, including a junior developer, could implement from.
 > **Always:** ground the design in prior codebase research; ask 2-3 informed clarifying questions; include every required design section; gate before task generation.
-> **Never:** invent patterns that contradict the codebase, generate implementation tasks, write production code, or invoke/nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
+> **Never:** invent patterns that contradict the codebase, generate implementation tasks, or write production code.
 
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-> Project may extend but must not contradict Global. On conflict, the more specific
-> scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are producing a design document that translates approved research and feature intent into a clear implementation blueprint.
 
@@ -106,13 +104,12 @@ The design must include:
 - **Backend/Frontend developer agents** — consult for API, data model, UI, and implementation feasibility questions.
 - **QA engineer agent** — consult for planning-level test strategy decisions; recommend `test-strategy` when depth is needed.
 - **Security engineer agent** — consult for planning-level security considerations; recommend `security-audit` when depth is needed.
-- **Next atomic skill** — after approval, recommend `task-breakdown`; do not invoke it automatically.
+- **Next step** — after approval, recommend `task-breakdown`.
 
 ---
 
 # Constraints
 
-- **This skill is atomic and is not an orchestrator.** Do not invoke or nest orchestrator skills (`feature-planning`, `prd-workflow`, `git-commit-review`).
 - **Design only** — do not generate `tasks.md`, implement code, or define commit strategy.
 - **Research-grounded** — if research is missing or insufficient, ask for it or recommend `codebase-research` before writing the design.
 - **Keep the approval gate** — present the design and ask before moving to task generation.
@@ -124,5 +121,5 @@ The design must include:
 
 1. Generate `docs/features/{feature-name}/design.md` with every required section.
 2. Ground the design in prior research and project conventions; do not invent contradictory patterns.
-3. Do not invoke/nest orchestrator skills or proceed into task generation without explicit approval.
+3. Do not proceed into task generation without explicit approval.
 > If anything above conflicts with these, **these win**.
