@@ -4,15 +4,6 @@ description: >
   Audits project dependencies for outdated versions, known vulnerabilities,
   and license risks. Proposes a safe, incremental upgrade path with test
   verification at each step.
-tags:
-  - dependencies
-  - security
-  - maintenance
-  - nuget
-  - npm
-visibility: user
-tools:
-  [agent, edit/editFiles]
 ---
 
 # Purpose

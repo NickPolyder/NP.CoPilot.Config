@@ -4,14 +4,6 @@ description: >
   Validates the development environment and project health before starting work.
   Checks toolchain availability, project configuration, build status, and test
   baseline. Produces a go/no-go assessment.
-tags:
-  - environment
-  - validation
-  - preflight
-  - setup
-visibility: user
-tools:
-  [agent]
 ---
 
 # Purpose

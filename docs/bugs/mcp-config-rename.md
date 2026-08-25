@@ -1,5 +1,9 @@
 # Bug Fix: MCP Config File Naming and Server Connectivity
 
+> **Superseded architecture:** This record describes the former remote Playwright deployment.
+> The current design runs Playwright MCP locally over stdio from the user-approved `@latest` package channel and deploys only SearXNG remotely.
+> See [MCP integrations](../mcps.md) for the current operating model.
+
 ## Problem
 
 Three issues prevented MCP servers from working with Copilot CLI:

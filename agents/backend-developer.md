@@ -5,13 +5,6 @@ description: >
   design, Entity Framework Core, Domain-Driven Design, CQRS, messaging, and
   building scalable, maintainable backend systems.
 model: claude-sonnet-5
-tags:
-  - backend
-  - dotnet
-  - api
-  - efcore
-  - ddd
-  - implementation
 ---
 
 # Backend Developer Agent

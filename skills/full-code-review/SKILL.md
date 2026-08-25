@@ -4,13 +4,6 @@ description: >
   Explicitly invoked, exhaustive review of a diff, branch, or codebase area
   using three core review hats, up to three domain specialists, all severity
   levels, and a detailed persisted report.
-tags:
-  - code-review
-  - workflow
-  - quality
-visibility: user
-tools:
-  [agent, code-review, edit/editFiles, todo]
 ---
 
 # Purpose
@@ -70,6 +63,7 @@ Add up to three specialists when the scope warrants their distinct expertise:
 
 Select specialists with non-overlapping scopes.
 Reviewers are read-only and must never concurrently edit the worktree, index, or review artifacts.
+They return findings only; this workflow owns report consolidation and persistence.
 
 ## 3. Run the exhaustive review
 
@@ -106,9 +100,14 @@ Run affected direct checks after each fix.
 
 This skill does not create commits and does not invoke `git-commit-review`.
 
+The initial exhaustive review is cycle one.
+One targeted verification after fixes is cycle two.
+Before starting cycle three or any later cycle, use `ask_user` to obtain explicit approval for that individual additional cycle.
+The count never resets for the same review target.
+
 ## 6. Persist the detailed report
 
-Write the full consolidated analysis to:
+After consolidating the returned findings and their outcomes, write the full analysis to:
 
 ```text
 .copilot/reports/reviews/{yyyy}/{MM}/full-review-{dd}-{hhmmss}.md
@@ -132,4 +131,5 @@ If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 2. Use Architect, Principal Developer, and Senior Developer hats plus no more than three relevant specialists.
 3. Keep all reviewers read-only and never allow concurrent edits to the worktree.
 4. Include all severity levels and persist a detailed report.
-5. Do not create commits.
+5. Never exceed two review cycles without explicit user approval for each additional cycle.
+6. Do not create commits.

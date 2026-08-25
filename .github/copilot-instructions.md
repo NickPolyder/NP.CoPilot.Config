@@ -13,19 +13,23 @@ copilot-instructions.md    → Root operating contract (symlinked to ~/.copilot/
 instructions/*.instructions.md → Canonical policies (coordination, workflow, lifecycle, delivery, style)
 agents/*.md                → Specialist agent definitions (17 agents)
 skills/*/SKILL.md          → Focused workflows (25 skills)
-mcps/                      → Self-hosted MCP server stack (Docker Compose: SearXNG + Playwright)
+mcps/                      → MCP integration support (remote Docker Compose: SearXNG only)
 templates/                 → Per-repo scaffolding templates (Generic, Angular, Blazor, Service Fabric) + repo-bootstrap/ (agent contract + docs memory tree)
-mcp-config.json            → MCP client config pointing at SearXNG + Playwright endpoints
+mcp-config.json            → MCP client config for SearXNG bridge + local Playwright
 install.ps1                → Symlinks this repo into ~/.copilot/ (core install script)
 install-project.ps1        → Scaffolds project-level templates into a target repo (-Template param)
 mcps/deploy.ps1            → Deploys MCP Docker stack (Remote/Local/WSL modes)
 ```
 
-### Configuration Precedence (important for understanding scope)
+### Configuration Conflict Resolution (important for understanding scope)
+
+Copilot combines applicable guidance from all of these sources:
 
 1. **Global** (`~/.copilot/`) — this repo's content, always active
-2. **Project** (`.github/instructions/*.instructions.md`) — repo-specific overrides
+2. **Project** (`.github/instructions/*.instructions.md`) — repository-specific guidance
 3. **Local** (gitignored per-user files) — personal preferences
+
+When combined guidance conflicts, use the most repository-specific instruction unless a higher-priority system or safety constraint prevents it.
 
 ## Key Conventions
 
@@ -41,13 +45,13 @@ mcps/deploy.ps1            → Deploys MCP Docker stack (Remote/Local/WSL modes)
 - Skills coordinate with agents for domain expertise
 - Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`, `full-code-review`) must never nest inside each other
 
-### Invocation Hierarchy (strict)
+### Skill Composition (bounded)
 
 ```
-User → Skill → Agent → Tools
+User → one entry workflow or atomic skill → atomic phase skills → Agent → Tools
 ```
 
-No level may call upward. No orchestrator may nest inside another orchestrator.
+Only one entry workflow may be active. Entry workflows and thin coordinators may sequence their documented atomic skills; atomic skills never invoke entry workflows or coordinators. A completed workflow may hand off to a separate terminal workflow such as `git-commit-review`; this is not nesting.
 
 ### PowerShell Scripts
 
@@ -59,7 +63,7 @@ No level may call upward. No orchestrator may nest inside another orchestrator.
 
 ### MCP Stack
 
-- Runs SearXNG (search) and Playwright (browser) as Docker containers
+- Runs pinned SearXNG (search) as the remote Docker container; Playwright runs locally as a pinned stdio MCP process
 - Default target: Raspberry Pi at `raspberrypi` / `192.168.1.2`
 - `mcp-config.json` merge logic: existing entries win on conflict, backup is created
 

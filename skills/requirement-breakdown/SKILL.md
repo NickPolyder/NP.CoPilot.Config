@@ -4,14 +4,6 @@ description: >
   Takes a high-level requirement or feature request and systematically breaks it
   into epics, user stories with acceptance criteria, assigns work to the
   appropriate specialist agents, and identifies dependencies.
-tags:
-  - requirements
-  - planning
-  - user-stories
-  - workflow
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

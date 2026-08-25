@@ -31,6 +31,6 @@ Stop and surface the conflict when instructions or ownership are unclear, the de
 
 ## Final Rules (Anchor)
 
-1. Keep global policy portable; project instructions own repository mission and delivery specifics.
+1. Keep global policy portable; when combined guidance conflicts, project instructions own repository mission and delivery specifics unless higher-priority safety constraints prevent it.
 2. Follow the operating loop and stop conditions.
 3. Use the canonical policy owner instead of duplicating cross-cutting rules.

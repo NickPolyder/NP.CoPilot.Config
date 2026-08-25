@@ -1,29 +1,46 @@
 # Agent & Skill Coordination
 
 > **Intent (anchor):** Define how global, project, and local instructions coordinate with skills, agents, and tools. This file is the single canonical source for precedence, the invocation hierarchy, and handoff rules.
-> **Always:** Apply canonical precedence; preserve User → Skill → Agent → Tools; take direct action on small tasks and delegate only substantial, specialized, or parallelizable work to the matching specialist on a task-appropriate model; use structured handoffs.
-> **Never:** Let an agent invoke an orchestrator skill, let orchestrator skills nest, delegate reflexively on a domain keyword, or delegate beyond the depth cap (orchestrator → specialist → at most one sideways handoff → terminal).
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Always:** Apply the repository conflict-resolution policy; preserve legal User → Skill → Agent → Tools flow; take direct action on small tasks and delegate only substantial, specialized, or parallelizable work to the matching specialist on a task-appropriate model; use structured handoffs.
+> **Never:** Let an agent invoke an entry workflow, allow an active entry workflow to nest, delegate reflexively on a domain keyword, or delegate beyond the depth cap (orchestrator → specialist → at most one sideways handoff → terminal).
+> **Precedence:** Copilot combines applicable global, project, and local guidance. When that guidance conflicts, treat the most repository-specific instruction as authoritative unless a higher-priority system or safety constraint prevents it; within a file, the **Final Rules (Anchor)** win.
 
 ## Configuration Precedence
 
-These instructions are global — they load before any repo-level config. The full precedence order:
+Copilot combines applicable instruction sources. This repository's conflict-resolution policy is:
 
 1. **Global** (`~/.copilot/`) — these files, plus global agents and skills. Always active.
 2. **Project** (`.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`) — repo-specific overrides: framework, infra, build commands, feature toggles.
 3. **Local** (gitignored per-user files) — personal overrides that don't belong in source control.
 
-Project config extends global; it should not contradict it. When a project defines specific tooling (e.g., Angular, PostgreSQL, Azure DevOps), agents and skills should respect those choices and skip irrelevant guidance.
+When loaded guidance conflicts, agents should treat project-specific direction as more authoritative than global guidance, and local personal preferences as more authoritative than project guidance, unless a higher-priority system or safety constraint prevents it. When a project defines specific tooling (e.g., Angular, PostgreSQL, Azure DevOps), agents and skills should respect those choices and skip irrelevant guidance.
 
-## Skill Invocation Hierarchy
+## Skill Composition
 
-Skills and agents follow a strict invocation hierarchy to prevent recursive nesting:
+Skills and agents follow a bounded composition model:
 
-1. **User → Skill** — the user (or another skill's approval gate) invokes a skill.
-2. **Skill → Agent** — skills coordinate with specialist agents for domain expertise.
-3. **Agent → Tools** — agents use tools (edit, search, run commands) but do **not** invoke orchestrator skills.
+```text
+User
+  -> one entry workflow or an atomic skill invoked directly
+      -> zero or more atomic phase skills
+          -> agents
+              -> tools
+```
 
-Orchestrator skills (`prd-workflow`, `feature-planning`, `git-commit-review`, `full-code-review`) must never be invoked by an agent or nested inside another orchestrator. If an agent identifies work that would benefit from a skill, it should recommend the skill to the user rather than invoking it directly.
+| Role | Skills | Rule |
+|---|---|---|
+| Entry workflow | `prd-workflow`, `feature-planning` | Owns end-to-end sequencing and approval gates. Only one may be active. |
+| Thin coordinator | `dependency-audit`, `test-gap-analysis` | Sequences its named atomic skills behind one approval gate. |
+| Atomic phase | `codebase-research`, `feature-design-doc`, `task-breakdown`, `implementation-runner`, `dependency-audit-report`, `dependency-upgrade-execution`, `test-gap-audit`, `test-gap-fill` | Performs one bounded phase and never invokes an entry workflow. |
+| Terminal workflow | `git-commit-review`, `full-code-review` | Starts only through direct user invocation or after a prior workflow has completed its own state. It never runs inside an active workflow. |
+
+Rules:
+
+1. A user may invoke an entry workflow, thin coordinator, atomic phase, or terminal workflow directly.
+2. An active entry workflow or thin coordinator may sequence only its documented atomic phase skills and agents.
+3. Skill-to-skill edges must be acyclic and depth-bounded; an atomic phase never invokes an entry workflow or coordinator.
+4. A completed workflow may recommend or explicitly hand off to a separate terminal workflow, such as `git-commit-review`; this is a new workflow, not nesting.
+5. **Agent → Tools** — agents use tools (edit, search, run commands) but do not invoke skills. If an agent identifies work needing a skill, it recommends that skill to the user or returns the recommendation to its invoking workflow.
 
 ## Agent Routing & Model Fit
 
@@ -50,13 +67,13 @@ Substantial domain work belongs to the specialist that owns it. As orchestrator,
 | Architecture decisions, layer boundaries, dependency direction, patterns, SOLID/DDD trade-offs | `architect` |
 | .NET backend — Web API, EF Core, DDD, CQRS, messaging | `backend-developer` |
 | Angular / front-end Blazor — components, accessibility, responsive UI | `frontend-developer` |
-| End-to-end features spanning .NET backend **and** Angular/Blazor frontend | `fullstack-developer` |
+| One logical change owns both an API contract and its consuming Angular/Blazor UI | `fullstack-developer` |
 | Node.js / TypeScript / Next.js dashboards and small web apps | `node-developer` |
 | Python — MCP servers, FastAPI, async services, automation | `python-developer` |
 | Data modeling, migrations, query optimization, data integrity | `database-engineer` |
-| Azure Service Fabric — Reliable Services/Actors, clusters, upgrades, partitioning | `service-fabric-engineer` |
-| Service integration, API contracts, messaging, resilience, observability, distributed design | `systems-engineer` |
-| CI/CD, IaC, containers, cloud infra, monitoring, automation scripting | `devops-engineer` |
+| Azure Service Fabric — Reliable Services/Actors, clusters, upgrades, partitioning, and platform diagnostics | `service-fabric-engineer` |
+| Service integration, API contracts, messaging, resilience, application/service observability, distributed design | `systems-engineer` |
+| CI/CD, IaC, containers, cloud infrastructure, and deployment/monitoring infrastructure | `devops-engineer` |
 | Security — threat modeling, vulnerability analysis, authn/authz, secure coding | `security-engineer` |
 | Test strategy, coverage analysis, pyramid balance, edge-case discovery | `qa-engineer` |
 | Deterministic unit tests, test plans, mutation/branch/condition coverage | `test-engineer` |
@@ -65,7 +82,7 @@ Substantial domain work belongs to the specialist that owns it. As orchestrator,
 | UX — research, wireframes, prototypes, usability, design systems, IA | `ux-engineer` |
 | Documentation writing craft — audience, structure, clarity, editing, examples | `technical-writer` |
 
-**Multi-domain work:** chain the specialists rather than absorbing their work. A typical feature flows `product-owner` → `architect` → the relevant developer agent → `test-engineer` → `qa-engineer` → `security-engineer` → `code-reviewer`. Use `fullstack-developer` when a change genuinely spans both tiers; otherwise split across `frontend-developer` and `backend-developer`.
+**Multi-domain work:** chain the specialists rather than absorbing their work. A typical feature flows `product-owner` → `architect` → the relevant developer agent → `test-engineer` → `qa-engineer` → `security-engineer` → `code-reviewer`. Use `fullstack-developer` only when the same logical change owns both its API contract and consuming UI; otherwise split across `frontend-developer` and `backend-developer`. `systems-engineer` owns application/service observability, `devops-engineer` owns deployment and monitoring infrastructure, and `service-fabric-engineer` owns Service Fabric diagnostics.
 
 **Stays on the orchestrator (do it inline):** single-file lookups, reading files, mechanical edits, answering questions from context, Trivial-tier changes, and the coordination/synthesis of specialist output. When unsure whether a task is big enough to delegate, **default to doing it inline** unless it is genuinely substantial, needs specialized judgment, or is parallelizable — reflexive over-delegation (and the loops it causes) is the more common failure than under-delegation.
 
@@ -138,8 +155,8 @@ When returning from a handoff:
 
 ## Final Rules (Anchor)
 
-1. Apply precedence as Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored).
-2. Follow the invocation hierarchy: User → Skill → Agent → Tools.
+1. Treat applicable global, project, and local instructions as combined; resolve conflicts toward the most repository-specific guidance unless a higher-priority system or safety constraint prevents it.
+2. Follow the bounded composition model: User → one entry workflow or atomic skill → atomic phase skills → agents → tools.
 3. **Direct action first:** do small, mechanical, or read-only tasks inline; delegate only substantial, specialized, or parallelizable work. Default to inline when unsure.
 4. **Cap delegation depth:** orchestrator → specialist → at most one sideways handoff → terminal. A delegated agent does the work with tools and never re-delegates within the chain.
 5. Route substantial domain work to the matching specialist per the Specialist Agent Delegation table, tier-gated (Trivial = never, Standard = inline default, Full = coordinate), on a model that fits the task (judgment → strong, mechanical → cheap).

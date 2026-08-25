@@ -7,11 +7,6 @@ description: >
   document types. Elevates the quality of prose; defers placement, indexing,
   and file conventions to the documentation skill.
 model: claude-sonnet-5
-tags:
-  - documentation
-  - writing
-  - editing
-  - communication
 ---
 
 # Technical Writer Agent

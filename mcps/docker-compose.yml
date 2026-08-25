@@ -1,6 +1,6 @@
 services:
   searxng:
-    image: searxng/searxng:latest
+    image: searxng/searxng:2026.8.22-9fea41204
     container_name: searxng
     restart: unless-stopped
     ports:
@@ -27,25 +27,6 @@ services:
   # by the MCP client (Copilot CLI) as a subprocess. See docs/mcps.md for the
   # correct MCP client configuration. Only SearXNG itself runs on the host;
   # the bridge runs locally on your workstation.
-
-  playwright-mcp:
-    image: mcp/playwright:latest
-    container_name: playwright-mcp
-    restart: unless-stopped
-    ports:
-      - "${PLAYWRIGHT_MCP_PORT:-8931}:8931"
-    environment:
-      - PLAYWRIGHT_MCP_PORT=8931
-      - PLAYWRIGHT_MCP_HOST=0.0.0.0
-      - PLAYWRIGHT_MCP_HEADLESS=true
-    command: ["--port", "8931", "--host", "0.0.0.0", "--allowed-hosts", "*"]
-    shm_size: 512m
-    networks:
-      - mcp-network
-    deploy:
-      resources:
-        limits:
-          memory: 1g
 
 networks:
   mcp-network:

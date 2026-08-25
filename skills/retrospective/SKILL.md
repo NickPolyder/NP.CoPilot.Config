@@ -4,14 +4,6 @@ description: >
   Generates a structured retrospective after completing a feature, bug fix, or
   significant piece of work. Captures what was built, what went well, what to
   improve, and concrete follow-up actions.
-tags:
-  - retrospective
-  - reflection
-  - workflow
-  - improvement
-visibility: user
-tools:
-  [agent, edit/createFile]
 ---
 
 # Purpose

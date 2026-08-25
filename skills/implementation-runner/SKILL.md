@@ -4,14 +4,6 @@ description: >
   Executes an approved task breakdown in dependency order, producing working
   code with tests alongside, updating task status, and reporting per-phase
   results.
-tags:
-  - implementation
-  - execution
-  - coding
-  - tasks
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

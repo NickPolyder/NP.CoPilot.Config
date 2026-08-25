@@ -4,14 +4,6 @@ description: >
   Recovers context from previous sessions. Queries session history, finds
   recent work in the current repository, summarizes progress, and reloads
   relevant plans, tasks, and decisions so work can continue seamlessly.
-tags:
-  - session
-  - continuity
-  - context
-  - resume
-visibility: user
-tools:
-  [agent]
 ---
 
 # Purpose
@@ -116,7 +108,25 @@ Compile findings into a concise status report:
 Continue with {recommended next action}? (yes / different task / show more context)
 ```
 
-## Step 3: Hand Off
+## Step 3: Map State to the Next Valid Phase
+
+Use observed artifacts and state rather than guessing a workflow:
+
+| Observed state | Next valid action |
+|---|---|
+| No feature artifact or active work | Start the requested work normally. |
+| Research exists but no `design.md` | Ask the user to approve moving to `feature-design-doc`. |
+| `design.md` exists but no `tasks.md` | Ask the user to approve `task-breakdown`. |
+| `tasks.md` has incomplete work and no blocker | Resume the approved implementation task or use `implementation-runner`. |
+| `tasks.md` has a blocker or Git/session evidence is contradictory | Surface the blocker and ask the user to resolve the conflict before implementation. |
+| All tasks are complete but validation/review evidence is missing | Resume the applicable validation or review step; do not claim delivery. |
+| Validation and review evidence are complete, but no delivery evidence exists | Hand off to the configured delivery workflow. |
+
+Treat an uncommitted Git worktree as active evidence, not proof that a task is
+complete. Session history and AgentMemory can explain state, but repository
+artifacts and the current Git state determine the next workflow phase.
+
+## Step 4: Hand Off
 
 Based on the user's choice:
 

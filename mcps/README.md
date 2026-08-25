@@ -1,6 +1,6 @@
 # MCP Server Stack
 
-Self-hosted Model Context Protocol (MCP) servers that extend Copilot CLI with web search and browser automation.
+Self-hosted SearXNG infrastructure for the MCP search integration.
 
 For full documentation, see [docs/mcps.md](../docs/mcps.md).
 
@@ -78,7 +78,9 @@ This installs [`mcp-config.json`](../mcp-config.json) into `~/.copilot/mcp-confi
       ]
     },
     "playwright": {
-      "url": "http://raspberrypi:8931/mcp"
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }
@@ -86,13 +88,13 @@ This installs [`mcp-config.json`](../mcp-config.json) into `~/.copilot/mcp-confi
 
 Replace the IP (`192.168.1.2`) with your Pi's address. The SearXNG bridge uses the IP directly because the hostname won't resolve inside the Docker container on Windows.
 
-> **Note:** The SearXNG MCP bridge runs locally on your workstation (stdio transport) — it queries SearXNG on the Pi over HTTP. Playwright MCP runs on the Pi and Copilot connects to it directly over the network.
+> **Note:** Both MCP bridges run locally on your workstation over stdio. The SearXNG bridge queries the Pi over HTTP; Playwright runs locally and no browser-control port is published on the network.
 
 ## File Layout
 
 ```
 mcps/
-├── docker-compose.yml       # Docker Compose stack (SearXNG + Playwright)
+├── docker-compose.yml       # Docker Compose stack (SearXNG only)
 ├── searxng/
 │   └── settings.yml         # SearXNG engine and server configuration
 ├── .env.example             # Environment variable template
@@ -105,13 +107,13 @@ mcps/
 | Service | Port | Description |
 |---|---|---|
 | SearXNG | 8080 | Metasearch engine (HTTP API + web UI for debugging) |
-| Playwright MCP | 8931 | Headless browser MCP tool (SSE transport) |
 
-## Local MCP Bridge
+## Local MCP Processes
 
 | Service | Transport | Description |
 |---|---|---|
 | SearXNG MCP Bridge | stdio | Launched by Copilot CLI, queries SearXNG over HTTP |
+| Playwright MCP | stdio | Launched by Copilot CLI from the pinned `@playwright/mcp` package |
 
 ## Updating
 
@@ -121,7 +123,7 @@ To pull latest images and restart:
 .\mcps\deploy.ps1
 ```
 
-The deploy script always pulls latest images before starting containers.
+The deploy script pulls the explicitly pinned image before starting containers. Update the image tag deliberately, then redeploy.
 
 ## Manual Operations
 

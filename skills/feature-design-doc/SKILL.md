@@ -4,14 +4,6 @@ description: >
   Generates a feature design document (design.md) grounded in prior codebase
   research — overview, goals, user stories, scope, data model, API, UI, and
   test/security planning summaries.
-tags:
-  - design
-  - documentation
-  - feature
-  - planning
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles]
 ---
 
 # Purpose

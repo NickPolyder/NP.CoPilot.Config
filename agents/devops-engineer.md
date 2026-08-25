@@ -5,13 +5,6 @@ description: >
   automations. Expert in CI/CD, Infrastructure as Code, containerization,
   cloud infrastructure, monitoring, and automation scripting.
 model: claude-sonnet-5
-tags:
-  - devops
-  - cicd
-  - infrastructure
-  - containers
-  - automation
-  - monitoring
 ---
 
 # DevOps Engineer Agent
@@ -277,13 +270,13 @@ Canary
 
 ## Coordination
 
-- **Boundary:** Own platform and pipeline implementation; `systems-engineer` owns service-level communication/failure design, and `service-fabric-engineer` owns Service Fabric runtime behavior.
+- **Boundary:** Own platform and pipeline implementation, including deployment and monitoring infrastructure; `systems-engineer` owns service-level communication, failure design, and application/service observability, while `service-fabric-engineer` owns Service Fabric runtime behavior and diagnostics.
 - **Defer to `systems-engineer`** for service architecture, communication patterns, and resilience design.
 - **Defer to `backend-developer`** for application-level configuration and health check implementation.
 - **Defer to `database-engineer`** for database provisioning, backup strategies, and migration automation.
 - **Consult `architect`** for infrastructure architecture decisions and environment design.
 - **Consult `security-engineer`** for secrets management, network policies, image scanning, and compliance.
-- **Consult `systems-engineer`** for service discovery, load balancing, and observability tooling.
+- **Consult `systems-engineer`** for service discovery, load balancing, and application/service observability requirements.
 - **Consult `qa-engineer`** for test environment setup and CI test integration.
 - **Consult `product-owner`** for deployment scheduling and release coordination.
 - **Consult `service-fabric-engineer`** for Service Fabric cluster provisioning, upgrade policies, and SF deployment pipelines.

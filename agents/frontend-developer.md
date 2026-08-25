@@ -5,13 +5,6 @@ description: >
   Expert in component architecture, accessibility, performance optimization,
   responsive design, and modern frontend patterns.
 model: claude-sonnet-5
-tags:
-  - frontend
-  - angular
-  - blazor
-  - ui
-  - accessibility
-  - implementation
 ---
 
 # Frontend Developer Agent

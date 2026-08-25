@@ -5,10 +5,6 @@ description: >
   structure, layer boundaries, dependency direction, patterns, and cross-cutting
   concerns. Provides guidance grounded in SOLID principles and DDD practices.
 model: claude-opus-4.8
-tags:
-  - architecture
-  - design
-  - review
 ---
 
 # Architect Agent

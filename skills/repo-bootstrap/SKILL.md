@@ -6,16 +6,6 @@ description: >
   durable docs/ working-memory skeleton (PLAN, TASKS, decisions, features,
   handoffs, reviews, retrospectives). Interviews the user, analyzes the repo,
   and produces tailored content behind an approval gate.
-tags:
-  - bootstrap
-  - onboarding
-  - instructions
-  - documentation
-  - agent-config
-  - scaffolding
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

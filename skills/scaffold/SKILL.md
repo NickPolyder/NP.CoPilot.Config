@@ -4,14 +4,6 @@ description: >
   Generates boilerplate for common architectural patterns — services, aggregates,
   controllers, test projects, and more. Ensures new code follows established
   conventions and layer boundaries from the start.
-tags:
-  - code-generation
-  - scaffolding
-  - architecture
-  - patterns
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles]
 ---
 
 # Purpose

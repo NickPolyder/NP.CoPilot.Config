@@ -6,12 +6,6 @@ description: >
   requirement analysis, and bridging communication between stakeholders
   and the development team.
 model: claude-sonnet-5
-tags:
-  - product
-  - requirements
-  - user-stories
-  - planning
-  - communication
 ---
 
 # Product Owner Agent

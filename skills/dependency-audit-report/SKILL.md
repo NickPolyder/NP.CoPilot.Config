@@ -4,14 +4,6 @@ description: >
   Read-only audit of project dependencies for outdated versions, known
   vulnerabilities, deprecations, and license risk; produces a prioritized,
   risk-categorized upgrade plan. Never edits manifests.
-tags:
-  - dependencies
-  - security
-  - audit
-  - report
-visibility: user
-tools:
-  [agent]
 ---
 
 # Purpose
@@ -21,6 +13,10 @@ tools:
 > **Never:** edit manifests, update lock files, run package upgrades, or mix dependency audit work with feature work.
 
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
+
+The audit report is conversational by default. Persist it only when the user,
+repository policy, or a parent workflow explicitly requests a durable artifact;
+otherwise return the findings and proposed upgrade plan without writing files.
 
 You are conducting a read-only dependency health audit. This skill produces an audit report and prioritized upgrade plan; it never edits manifests or lock files.
 

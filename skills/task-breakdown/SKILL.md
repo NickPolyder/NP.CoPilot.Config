@@ -3,14 +3,6 @@ name: task-breakdown
 description: >
   Breaks a feature design into an ordered, dependency-aware tasks.md — phases,
   complexity estimates, parallelizable markers, and paired test tasks.
-tags:
-  - tasks
-  - planning
-  - breakdown
-  - estimation
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

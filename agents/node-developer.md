@@ -5,13 +5,6 @@ description: >
   where a full .NET stack would be overkill. Expert in TypeScript, Next.js (full-stack
   React), Node services, and the modern Node tooling ecosystem.
 model: claude-sonnet-5
-tags:
-  - node
-  - typescript
-  - nextjs
-  - react
-  - dashboard
-  - implementation
 ---
 
 # Node.js Developer Agent

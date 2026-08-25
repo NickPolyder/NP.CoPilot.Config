@@ -4,15 +4,6 @@ description: >
   Retroactively audits existing code for untested paths, weak assertions,
   and missing edge case coverage. Identifies what should have been caught
   and generates concrete test cases to fill the gaps.
-tags:
-  - testing
-  - coverage
-  - quality
-  - gaps
-  - retroactive
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles]
 ---
 
 # Purpose

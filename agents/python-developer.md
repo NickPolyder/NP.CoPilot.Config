@@ -5,13 +5,6 @@ description: >
   small services. Expert in the MCP Python SDK / FastMCP, FastAPI, modern typed
   Python (3.11+), and the uv + ruff toolchain.
 model: claude-sonnet-5
-tags:
-  - python
-  - mcp
-  - fastapi
-  - async
-  - tooling
-  - implementation
 ---
 
 # Python Developer Agent

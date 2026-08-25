@@ -5,12 +5,6 @@ description: >
   tests. Produces test plans, test matrices, and final unit tests that maximize
   branch, condition, and mutation coverage. Never writes production code.
 model: claude-sonnet-5
-tags:
-  - testing
-  - unit-tests
-  - coverage
-  - mutation
-  - determinism
 ---
 
 # Test Engineer Agent

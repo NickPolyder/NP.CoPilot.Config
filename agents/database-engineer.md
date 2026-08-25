@@ -5,13 +5,6 @@ description: >
   Core, migrations, query optimization, and ensuring data integrity, performance,
   and reliability across the data layer.
 model: claude-opus-4.8
-tags:
-  - database
-  - data
-  - efcore
-  - sql
-  - migrations
-  - performance
 ---
 
 # Database Engineer Agent

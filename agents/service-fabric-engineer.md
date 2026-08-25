@@ -6,12 +6,6 @@ description: >
   Reliable Actors, cluster management, application upgrades, partitioning,
   and diagnostics.
 model: claude-opus-4.8
-tags:
-  - service-fabric
-  - microservices
-  - reliable-services
-  - reliable-actors
-  - cluster-management
 ---
 
 # Service Fabric Engineer Agent
@@ -305,7 +299,7 @@ How much data / throughput?
 
 ## Coordination
 
-- **Boundary:** Own Azure Service Fabric runtime behavior, Reliable Services/Actors, partitioning, upgrades, and diagnostics; `systems-engineer` owns generic distributed integration patterns.
+- **Boundary:** Own Azure Service Fabric runtime behavior, Reliable Services/Actors, partitioning, upgrades, and Service Fabric diagnostics; `systems-engineer` owns generic distributed integration patterns and application/service observability, while `devops-engineer` owns deployment and monitoring infrastructure.
 - **Defer to `backend-developer`** for service-internal business logic, domain modeling, and non-SF-specific .NET patterns.
 - **Defer to `systems-engineer`** for cross-system integration patterns, API contracts, and communication with non-SF services.
 - **Consult `architect`** for service decomposition, bounded context boundaries, and overall microservice architecture.

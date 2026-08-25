@@ -4,14 +4,6 @@ description: >
   Lightweight pre-commit workflow that splits atomic candidates, validates an
   index-only snapshot, runs direct checks, and performs a targeted review before
   creating a safe, approved commit.
-tags:
-  - git
-  - code-review
-  - workflow
-  - quality
-visibility: user
-tools:
-  [agent, code-review, edit/editFiles, todo]
 ---
 
 # Purpose
@@ -78,6 +70,10 @@ Before dispatching a reviewer, run the repository's applicable import, restore, 
 - Prefer the narrowest checks that exercise the staged behavior.
 - Run imports or compilation before tests so direct failures are surfaced first.
 - Run the commands from the snapshot or point them at snapshot paths, never at the working tree.
+- When the staged snapshot contains Copilot configuration files, run
+  `pwsh -NoProfile -File .\scripts\Validate-Config.ps1 -RepositoryRoot $snapshotPath`
+  before launching reviewers. Run its focused regression suite separately from
+  the repository root when the staged changes affect the validator or its tests.
 
 If the snapshot cannot be materialized, imports/build/type checks fail, or targeted tests fail, stop.
 Report the concrete failure and fix it before launching any reviewer.
@@ -123,6 +119,9 @@ Each reviewer must:
 
 Do not add replacement reviewers to extend the timebox.
 If review coverage is incomplete when the timebox expires, say so in the final report and let the user decide whether to continue or invoke `full-code-review`.
+
+Reviewers return findings only.
+They must not create report files, directories, or other artifacts; this workflow owns consolidation and persistence.
 
 ## 6. Consolidate findings and decide
 
@@ -183,7 +182,7 @@ Never commit secrets.
 
 ## 10. Persist one final report
 
-Write one concise final report for the candidate at:
+After consolidating reviewer findings and recording their dispositions, write one concise final report for the candidate at:
 
 ```text
 .copilot/reports/reviews/{yyyy}/{MM}/commit-review-{dd}-{hhmmss}.md

@@ -4,15 +4,6 @@ description: >
   Analyzes code changes or a feature area and generates a comprehensive test
   strategy with coverage plan, edge case discovery, test data approach, and
   prioritized test cases. Coordinates with developer agents for implementation.
-tags:
-  - testing
-  - strategy
-  - coverage
-  - quality
-  - workflow
-visibility: user
-tools:
-  [agent, code-review, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose
@@ -370,6 +361,15 @@ If tests already exist, use them only to inform the forward-looking plan:
 
 ---
 
+## Approval and Handoff
+
+This skill produces a proposed strategy only. Present it to the user for
+approval before any agent implements the planned tests. After approval, route
+concrete deterministic unit tests to `test-engineer`; route integration, E2E,
+performance, and cross-pyramid execution to the assigned developer or
+`qa-engineer`. The strategy itself is conversational unless the user explicitly
+asks to persist it in a repository artifact.
+
 # Checklist
 
 1. ☐ Target code/feature analyzed and understood
@@ -394,6 +394,7 @@ If tests already exist, use them only to inform the forward-looking plan:
 - Every bug fix should include a regression test in the implementation plan.
 - Test the behavior, not the implementation — refactoring should not break tests.
 - Present the strategy for review before implementation begins.
+- Do not hand planned tests to an implementation agent until the user approves the strategy.
 
 ---
 

@@ -5,12 +5,6 @@ description: >
   service integration, API contracts, messaging, resilience patterns,
   observability, and distributed system design.
 model: claude-opus-4.8
-tags:
-  - systems
-  - integration
-  - distributed
-  - resilience
-  - observability
 ---
 
 # Systems Engineer Agent
@@ -254,7 +248,7 @@ Load Balancer / Orchestrator
 
 ## Coordination
 
-- **Boundary:** Own generic integration contracts, resilience, observability, and distributed failure design; `service-fabric-engineer` owns Service Fabric-specific runtime implementation.
+- **Boundary:** Own generic integration contracts, resilience, application/service observability, and distributed failure design. `devops-engineer` owns deployment and monitoring infrastructure; `service-fabric-engineer` owns Service Fabric-specific runtime implementation and diagnostics.
 - **Defer to `backend-developer`** for service-internal implementation, domain logic, and data access.
 - **Defer to `devops-engineer`** for infrastructure provisioning, deployment pipelines, and container orchestration.
 - **Defer to `database-engineer`** for data modeling, replication, and database-level HA.

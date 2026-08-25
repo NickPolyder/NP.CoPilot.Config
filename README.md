@@ -36,18 +36,30 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   ├── security-engineer.md         Threat modeling & OWASP agent
 │   ├── service-fabric-engineer.md   Service Fabric specialist
 │   ├── systems-engineer.md          Integration & resilience agent
+│   ├── technical-writer.md          Documentation craft specialist
+│   ├── test-engineer.md             Deterministic unit-test specialist
 │   └── ux-engineer.md               User research & design agent
 ├── skills/
 │   ├── architecture-decision-record/
 │   │   └── SKILL.md                 Structured ADR creation
+│   ├── codebase-research/
+│   │   └── SKILL.md                 Read-only codebase research
 │   ├── dependency-audit/
 │   │   └── SKILL.md                 Package vulnerability & update audit
+│   ├── dependency-audit-report/
+│   │   └── SKILL.md                 Read-only dependency audit report
+│   ├── dependency-upgrade-execution/
+│   │   └── SKILL.md                 Approved dependency upgrade execution
 │   ├── documentation/
 │   │   └── SKILL.md                 Documentation maintenance workflow
 │   ├── feature-planning/
 │   │   └── SKILL.md                 Multi-agent feature planning with approval gates
+│   ├── feature-design-doc/
+│   │   └── SKILL.md                 Feature design document generation
 │   ├── git-commit-review/
 │   │   └── SKILL.md                 Lightweight staged pre-commit review workflow
+│   ├── implementation-runner/
+│   │   └── SKILL.md                 Approved task implementation
 │   ├── full-code-review/
 │   │   └── SKILL.md                 Explicit exhaustive multi-hat review workflow
 │   ├── prd-workflow/
@@ -68,8 +80,14 @@ Global GitHub Copilot CLI configuration — instructions, skills, and agents tha
 │   │   └── SKILL.md                 Code generation for common patterns
 │   ├── security-audit/
 │   │   └── SKILL.md                 STRIDE + OWASP security assessment
+│   ├── task-breakdown/
+│   │   └── SKILL.md                 Dependency-aware task generation
 │   ├── test-gap-analysis/
 │   │   └── SKILL.md                 Retroactive test coverage audit
+│   ├── test-gap-audit/
+│   │   └── SKILL.md                 Read-only test-gap audit
+│   ├── test-gap-fill/
+│   │   └── SKILL.md                 Approved test-gap implementation
 │   └── test-strategy/
 │       └── SKILL.md                 Test pyramid, edge cases, coverage plan
 ├── mcps/
@@ -129,9 +147,33 @@ Scaffolds project-specific config into a repo's `.github/instructions/` director
 
 Then edit the generated files to match your project's tech stack.
 
+## Validation
+
+Run the repository-owned structural validation before proposing configuration
+changes for review:
+
+```powershell
+pwsh -NoProfile -File .\scripts\Validate-Config.ps1
+```
+
+The validator is read-only. It validates frontmatter, references, workflow
+composition, README inventory, runtime version pins and documented waivers, MCP JSON, Compose syntax,
+and review capability boundaries. The regression suite remains independently
+runnable with `pwsh -NoProfile -File .\tests\ValidateConfig\Run-ValidateConfigTests.ps1`.
+
+Enable the repository pre-commit hook to validate staged configuration changes
+against an index-only snapshot:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+The hook runs only when staged paths include Copilot configuration or its
+validator. It never reads unstaged worktree changes.
+
 ## MCP Servers
 
-Self-hosted MCP (Model Context Protocol) servers that extend Copilot CLI with web search and browser automation. The stack runs on a Raspberry Pi and includes SearXNG (search) and Playwright (headless browser).
+MCP (Model Context Protocol) integrations extend Copilot CLI with web search and browser automation. The remote Raspberry Pi stack runs pinned SearXNG; Playwright MCP runs locally on the workstation over stdio from the user-approved `@latest` package channel.
 
 - **Quick start:** See [`mcps/README.md`](mcps/README.md)
 - **Full reference:** See [`docs/mcps.md`](docs/mcps.md)
@@ -147,7 +189,7 @@ Self-hosted MCP (Model Context Protocol) servers that extend Copilot CLI with we
 | **Project** | `.github/instructions/*.instructions.md` | Repo-specific: framework, build commands, feature toggles |
 | **Local** | `.github/instructions/local-preferences.instructions.md` | Personal overrides, gitignored |
 
-Global loads first. Project config extends it. Local preferences layer on top.
+Copilot combines applicable guidance from every level. When the guidance conflicts, agents should follow the most repository-specific instruction unless a higher-priority system or safety constraint prevents it.
 
 ### Operating Model
 
@@ -181,13 +223,17 @@ Copilot CLI reads config from `~/.copilot/`. Rather than copying files there, `i
 
 ## Overriding Per-Repo
 
-Repository-level config (`.github/copilot-instructions.md`, `.github/instructions/`, `.github/agents/`, `.github/skills/`) takes precedence over global config. Use repo-level overrides when a project needs different behaviour.
+Repository-level config (`.github/copilot-instructions.md`, `.github/instructions/`, `.github/agents/`, `.github/skills/`) provides the more repository-specific guidance when combined instructions conflict. Use it when a project needs different behaviour.
 
 ## Skills Quick Reference
 
 | Skill | When to Use |
 |---|---|
 | `prd-workflow` | Build something from scratch: research → design → tasks → implement |
+| `codebase-research` | Read an existing codebase before designing a feature |
+| `feature-design-doc` | Turn grounded research into a feature design document |
+| `task-breakdown` | Convert an approved design into dependency-aware tasks |
+| `implementation-runner` | Execute an approved task breakdown in dependency order |
 | `feature-planning` | Plan a feature across all domains (UX, arch, security, deployment) |
 | `requirement-breakdown` | Break an epic into user stories with acceptance criteria |
 | `git-commit-review` | Fast pre-commit review of one staged atomic candidate |
@@ -197,7 +243,11 @@ Repository-level config (`.github/copilot-instructions.md`, `.github/instruction
 | `repo-bootstrap` | Bootstrap a repo for agent-driven work: agent contract + docs memory tree |
 | `test-strategy` | Design test coverage for a feature or code change |
 | `test-gap-analysis` | Audit existing code for untested paths and weak assertions |
+| `test-gap-audit` | Produce a read-only risk-prioritized test-gap report |
+| `test-gap-fill` | Generate approved tests for identified gaps |
 | `dependency-audit` | Check for outdated/vulnerable packages and upgrade safely |
+| `dependency-audit-report` | Produce a read-only dependency risk report |
+| `dependency-upgrade-execution` | Execute approved dependency upgrades in safe batches |
 | `security-audit` | STRIDE threat model + OWASP checklist assessment |
 | `architecture-decision-record` | Capture a significant architectural decision |
 | `documentation` | Create or update project documentation |

@@ -1,71 +1,63 @@
-# Self-Hosted MCP Servers
+# MCP Integrations
 
-Model Context Protocol (MCP) servers extend GitHub Copilot CLI with additional capabilities by exposing external tools over a standardised protocol. This document covers the self-hosted MCP servers running on a local Raspberry Pi.
+MCP integrations extend Copilot CLI with web search and browser automation.
+The selected architecture intentionally separates remote search infrastructure from local browser control:
 
-## Overview
+- **SearXNG** runs as a pinned Docker service on the Raspberry Pi.
+- The **SearXNG MCP bridge** runs locally over stdio and queries SearXNG over HTTP.
+- **Playwright MCP** runs locally over stdio from npm's `@latest` package
+  channel, by user-approved exception.
 
-The MCP stack provides two capabilities to Copilot CLI:
+No remote browser-control service or port is deployed.
 
-1. **Web search** — Privacy-respecting search via SearXNG, exposed as an MCP tool through a local bridge process.
-2. **Browser automation** — Headless Chromium via Playwright, exposed as an MCP tool for page interaction, screenshots, and scraping.
+## Architecture
 
-### Architecture
-
+```text
+Copilot CLI (workstation)
+  ├── SearXNG MCP bridge (local stdio Docker process)
+  │     └── queries -> SearXNG (Pi, HTTP port 8080)
+  └── Playwright MCP (local stdio npx process)
+        └── controls a local browser
 ```
-Copilot CLI (your workstation)
-  ├── searxng MCP bridge (stdio, runs locally via npx/docker)
-  │     └── queries → SearXNG HTTP API (on Pi, port 8080)
-  └── playwright MCP (SSE, network) ──→ Playwright container (on Pi, port 8931)
-```
 
-**Why the split?** The SearXNG MCP bridge (`isokoliuk/mcp-searxng`) is a **stdio-only** MCP server — it communicates over stdin/stdout and has no built-in HTTP/SSE transport. It must be launched by the MCP client as a subprocess. Playwright MCP supports `--port` for SSE transport and runs as a persistent network service.
+This removes the former unauthenticated LAN browser-control endpoint while retaining browser automation for the local Copilot session.
 
-The Docker Compose stack on the Pi runs **SearXNG** (the search engine) and **Playwright MCP** (the browser). The SearXNG MCP bridge runs locally on your workstation, launched by Copilot CLI, and reaches SearXNG over the network.
+## Versions
 
-## Server Reference
+| Component | Location | Pinned version |
+|---|---|---|
+| SearXNG | Raspberry Pi Docker Compose | `searxng/searxng:2026.8.22-9fea41204` |
+| SearXNG MCP bridge | Workstation Docker subprocess | `isokoliuk/mcp-searxng:1.0.3` |
+| Playwright MCP | Workstation npx subprocess | `@playwright/mcp@latest` (user-approved mutable-version waiver) |
 
-| Component | Image | Runs On | Transport | Port |
-|---|---|---|---|---|
-| SearXNG | `searxng/searxng:latest` | Pi (Docker) | HTTP API | 8080 |
-| SearXNG MCP Bridge | `isokoliuk/mcp-searxng:latest` | Workstation (stdio) | stdio | — |
-| Playwright MCP | `mcp/playwright:latest` | Pi (Docker) | SSE (HTTP) | 8931 |
+SearXNG and the SearXNG bridge use explicit versions. Playwright intentionally
+follows `@latest` at the user's direction; the validator reports that narrow
+exception as a warning and continues to reject other mutable runtime versions.
 
-### SearXNG
+## Client Configuration
 
-SearXNG is a self-hosted metasearch engine that aggregates results from multiple search providers (Google, DuckDuckGo, Bing, Wikipedia, GitHub) without tracking. It runs as a standalone HTTP service that the MCP bridge queries.
-
-- **Memory limit:** 512 MB
-- **Configuration:** [`mcps/searxng/settings.yml`](../mcps/searxng/settings.yml)
-- **Why self-hosted:** No API keys required, no rate limits from third-party search APIs, full control over which engines are queried.
-
-### SearXNG MCP Bridge
-
-A lightweight Node.js process that connects to SearXNG's HTTP API and exposes search as an MCP-compatible tool. Copilot CLI launches this as a subprocess — it does **not** run on the Pi.
-
-- **Transport:** stdio only (no HTTP/SSE server mode)
-- **Environment variable:** `SEARXNG_URL` must point to the SearXNG instance on the Pi.
-- **Install options:** `npx mcp-searxng` or `docker run -i --rm isokoliuk/mcp-searxng`
-
-### Playwright MCP
-
-Provides headless Chromium browser automation as an MCP tool. Useful for interacting with web pages, taking screenshots, extracting content from JavaScript-rendered sites, and filling forms.
-
-- **Memory limit:** 1 GB
-- **Shared memory:** 512 MB (`/dev/shm` — required by Chromium)
-- **Runs headless:** Configured via `PLAYWRIGHT_MCP_HEADLESS=true` environment variable.
-- **SSE transport:** Configured via `PLAYWRIGHT_MCP_PORT` and `PLAYWRIGHT_MCP_HOST=0.0.0.0` environment variables.
-
-## Connecting Copilot CLI
-
-### MCP Configuration
-
-The repo includes a ready-to-use [`mcp-config.json`](../mcp-config.json) at the repo root. Install it into `~/.copilot/` using the install script:
+Install the repository-owned MCP entries:
 
 ```powershell
 .\install.ps1 -Mcp
 ```
 
-This uses the Docker-based SearXNG bridge with a **pinned version** for supply-chain safety. The config:
+The installer either creates an `mcp-config.json` symlink or merges repository-owned entries into an existing user config.
+Its manifest records ownership and hashes so later installs can update unchanged owned entries, preserve user entries, and report conflicts without printing values or secrets.
+
+Check the active state without exposing endpoints or configuration bodies:
+
+```powershell
+.\install.ps1 -Status
+```
+
+Repair only missing or drifted repository-owned artifacts:
+
+```powershell
+.\install.ps1 -Repair
+```
+
+The tracked client definition is:
 
 ```json
 {
@@ -80,129 +72,56 @@ This uses the Docker-based SearXNG bridge with a **pinned version** for supply-c
       ]
     },
     "playwright": {
-      "url": "http://raspberrypi:8931/mcp"
+      "type": "local",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }
 ```
 
-> **Note:** Replace the IP with the address of the machine running the Docker stack. The SearXNG bridge uses the IP directly because it runs inside a Docker container on your workstation where the hostname may not resolve. Playwright connects directly from the host OS, so hostname resolution works. The Playwright endpoint uses `/mcp` (streamable HTTP); `/sse` is also supported as a legacy fallback.
+Replace the SearXNG IP with the address of the deployed host.
+The bridge uses an IP because it runs inside Docker, where the LAN hostname may not resolve.
 
-#### Alternative: npx-based SearXNG bridge
+## Remote SearXNG Deployment
 
-If you prefer `npx` over Docker for the local bridge:
+The remote stack is defined by `mcps\docker-compose.yml`.
+It contains only SearXNG and publishes only the SearXNG HTTP port.
 
-```json
-"searxng": {
-  "type": "local",
-  "command": "npx",
-  "args": ["-y", "mcp-searxng"],
-  "env": {
-    "SEARXNG_URL": "http://raspberrypi:8080"
-  }
-}
+```powershell
+Copy-Item mcps\.env.example mcps\.env
+.\mcps\deploy.ps1
 ```
 
-> **⚠️ Supply chain risk:** `npx -y` always fetches the latest version. Consider pinning: `"args": ["-y", "mcp-searxng@1.0.3"]`
+Use the deploy script's `-WhatIf` option to preview target changes.
+The service image is pinned; deployment pulls that exact tag rather than a mutable `latest` tag.
 
-### Verifying the Connection
+## Validation and Troubleshooting
 
-Once configured, Copilot CLI should list the MCP tools when it starts a session. You can verify with:
+Run the structural checks after changing MCP files:
 
-- `/env` — shows loaded MCP servers and their tools
-- Ask Copilot to perform a web search or browse a page
+```powershell
+pwsh -NoProfile -File .\scripts\Validate-Config.ps1
+```
 
-## Docker Compose Stack
-
-The stack on the Pi is defined in [`mcps/docker-compose.yml`](../mcps/docker-compose.yml). Key design decisions:
-
-- **Dedicated network** (`mcp-network`) — Containers communicate internally.
-- **Health checks** — SearXNG has a health check for readiness verification.
-- **Restart policy** — All containers use `unless-stopped` so they survive reboots.
-- **Resource limits** — Memory caps prevent runaway containers from exhausting the Pi's limited RAM.
-- **Environment-based config** — Playwright MCP uses environment variables (`PLAYWRIGHT_MCP_PORT`, `PLAYWRIGHT_MCP_HOST`, `PLAYWRIGHT_MCP_HEADLESS`) instead of command-line args for cleaner compose files.
-
-### Published Ports
-
-| Port | Service | Exposed To |
+| Symptom | Likely cause | Action |
 |---|---|---|
-| 8080 | SearXNG HTTP API + web UI | LAN (bridge queries this; also useful for debugging) |
-| 8931 | Playwright MCP (SSE) | LAN (Copilot CLI connects here) |
+| No SearXNG tools | Client entry is absent or remote service is unavailable | Run `.\install.ps1 -Status`, then check the SearXNG service. |
+| Search returns no results | SearXNG engines are blocked or rate-limited | Check the SearXNG web UI on port 8080 and try another engine. |
+| No Playwright tools | Node/npm cannot launch the local pinned package | Verify Node.js is installed and restart Copilot CLI. |
+| Browser automation fails | Local browser dependency or package issue | Review the local Playwright MCP process output; do not open a remote browser-control port as a workaround. |
+| MCP entry conflict | A repository-owned entry was edited locally | Preserve the local change or resolve it deliberately, then run `.\install.ps1 -Repair`. |
 
-## Adding a New MCP Server
+## Adding an Integration
 
-MCP servers come in two flavours — choose the right pattern:
+Choose one explicit model:
 
-### Network MCP (SSE transport — like Playwright)
+- **Remote service plus local stdio bridge:** Use a pinned remote backend only when a local bridge needs it, as with SearXNG.
+- **Local stdio MCP:** Prefer this for workstation-only capability such as browser automation.
+- **Remote network MCP:** Use only when remote access is necessary and the service has an explicit authentication and network-boundary design.
 
-The server runs as a persistent container on the Pi with an HTTP/SSE endpoint.
-
-1. **Add the service** to `mcps/docker-compose.yml`:
-
-   ```yaml
-   new-mcp-server:
-     image: your/image:tag
-     container_name: new-mcp-server
-     restart: unless-stopped
-     ports:
-       - "${NEW_MCP_PORT:-9000}:9000"
-     networks:
-       - mcp-network
-     deploy:
-       resources:
-         limits:
-           memory: 256m
-   ```
-
-2. **Add the MCP config** entry:
-
-   ```json
-   {
-     "new-mcp-server": {
-       "url": "http://raspberrypi:9000/mcp"
-     }
-   }
-   ```
-
-### Stdio MCP (subprocess — like SearXNG bridge)
-
-The server is launched by Copilot CLI as a local subprocess.
-
-1. **Add the MCP config** entry:
-
-   ```json
-   {
-     "new-mcp-server": {
-       "type": "local",
-       "command": "npx",
-       "args": ["-y", "new-mcp-package"],
-       "env": {
-         "SOME_URL": "http://raspberrypi:9000"
-       }
-     }
-   }
-   ```
-
-2. If the stdio MCP needs a backend service on the Pi, add that service to `docker-compose.yml`.
-
-### Common steps
-
-3. **Add environment variables** to `mcps/.env.example` and your deployed `.env`.
-4. **Deploy** with `mcps/deploy.ps1`.
-5. **Document** the new server in this file.
-
-## Deployment
-
-See [`mcps/README.md`](../mcps/README.md) for deployment instructions and the deploy script reference.
-
-## Troubleshooting
-
-| Symptom | Likely Cause | Fix |
-|---|---|---|
-| Copilot can't find MCP tools | MCP config not loaded or wrong URL | Run `/env` to check. Verify `mcp-config.json` and that containers are running |
-| Search returns no results | SearXNG engines blocked or rate-limited | Check SearXNG web UI at `:8080`, try different engines |
-| Playwright times out | Container OOM or Chromium crash | Check `docker logs playwright-mcp`, increase memory limit |
-| Playwright exits with code 0 | Missing `--port` / env vars | Ensure `PLAYWRIGHT_MCP_PORT` and `PLAYWRIGHT_MCP_HOST=0.0.0.0` are set |
-| SearXNG MCP bridge restart loop | Running as Docker service (stdio-only) | Don't run in compose — launch via MCP client config instead |
-| `chown: Read-only file system` on SearXNG | settings.yml mounted as `:ro` | Harmless warning — SearXNG starts fine, the entrypoint just can't chown |
-| Memory limit warnings on Pi | Kernel cgroup config | Enable memory cgroup: add `cgroup_memory=1 cgroup_enable=memory` to `/boot/cmdline.txt` and reboot |
+Do not ship both local and remote transports for the same integration without a documented decision.
+All new runtime images and packages must use explicit versions, be covered by `Validate-Config.ps1`, and have a safe installer lifecycle.

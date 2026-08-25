@@ -4,14 +4,6 @@ description: >
   Guides the creation of structured Architecture Decision Records (ADRs) that
   capture context, options evaluated, decisions made, and consequences. Stores
   ADRs in the docs/decisions/ folder for long-term reference.
-tags:
-  - architecture
-  - decisions
-  - documentation
-  - workflow
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

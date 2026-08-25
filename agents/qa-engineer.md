@@ -5,12 +5,6 @@ description: >
   discovery, and test automation. Expert in the test pyramid, quality assurance
   processes, and ensuring software reliability across the full stack.
 model: claude-sonnet-5
-tags:
-  - qa
-  - testing
-  - quality
-  - automation
-  - coverage
 ---
 
 # QA Engineer Agent

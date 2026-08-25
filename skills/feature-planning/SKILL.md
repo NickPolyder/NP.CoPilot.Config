@@ -5,14 +5,6 @@ description: >
   through architecture, UX design, implementation planning, test strategy,
   security review, and deployment considerations. Produces a comprehensive
   feature plan document.
-tags:
-  - planning
-  - feature
-  - multi-agent
-  - workflow
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

@@ -4,14 +4,6 @@ description: >
   Structured refactoring with safety nets. Establishes baseline (tests pass),
   makes incremental changes, verifies after each step, and produces clean
   atomic commits. Prevents regressions through disciplined verify-after-change.
-tags:
-  - refactoring
-  - code-quality
-  - safety
-  - incremental
-visibility: user
-tools:
-  [agent, edit/editFiles, todo]
 ---
 
 # Purpose

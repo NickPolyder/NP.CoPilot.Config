@@ -5,13 +5,6 @@ description: >
   authentication/authorization patterns, secure coding practices, and ensuring
   application and infrastructure security across the full stack.
 model: claude-opus-4.8
-tags:
-  - security
-  - authentication
-  - authorization
-  - threat-modeling
-  - owasp
-  - compliance
 ---
 
 # Security Engineer Agent

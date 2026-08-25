@@ -5,13 +5,6 @@ description: >
   folder, ensuring consistency in structure, style, and coverage whenever
   functionality changes. Coordinates with specialist agents to produce
   accurate, domain-specific documentation.
-tags:
-  - documentation
-  - docs
-  - workflow
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

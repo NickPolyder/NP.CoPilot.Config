@@ -6,13 +6,6 @@ description: >
   products are intuitive, accessible, and user-centered from concept to
   delivery.
 model: claude-sonnet-5
-tags:
-  - ux
-  - design
-  - user-research
-  - wireframing
-  - usability
-  - information-architecture
 ---
 
 # UX Engineer Agent

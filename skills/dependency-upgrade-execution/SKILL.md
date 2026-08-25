@@ -4,14 +4,6 @@ description: >
   Executes an approved dependency upgrade plan in risk-ordered batches
   (patch → minor → major) with restore/build/test verification after each batch,
   then hands verified changes to git-commit-review.
-tags:
-  - dependencies
-  - upgrade
-  - execution
-  - maintenance
-visibility: user
-tools:
-  [agent, edit/editFiles]
 ---
 
 # Purpose

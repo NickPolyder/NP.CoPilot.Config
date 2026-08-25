@@ -4,16 +4,6 @@ description: >
   Orchestrated product workflow that chains codebase research, design document
   generation, task breakdown, and implementation. Each phase requires explicit
   approval before proceeding. Produces design.md, tasks.md, and working code.
-tags:
-  - planning
-  - design
-  - tasks
-  - implementation
-  - workflow
-  - orchestration
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose

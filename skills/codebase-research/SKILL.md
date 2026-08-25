@@ -4,14 +4,6 @@ description: >
   Investigates an existing codebase to produce a grounded research summary —
   structure, patterns, conventions, relevant code, and constraints — before
   any design work. Read-only.
-tags:
-  - research
-  - discovery
-  - codebase
-  - analysis
-visibility: user
-tools:
-  [agent]
 ---
 
 # Purpose

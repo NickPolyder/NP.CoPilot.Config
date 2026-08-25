@@ -3,7 +3,7 @@
 > **Intent (anchor):** Keep outbound communications immediately relevant, credible, and easy to act on.
 > **Always:** help the reader grasp what matters and why within the opening; use an adaptive what -> why -> consequence -> reinforcement -> action flow.
 > **Never:** manufacture urgency, invent evidence, or pad a simple message to expose every stage mechanically.
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/...`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Precedence:** Copilot combines applicable global, project, and local guidance. When guidance conflicts, follow the most repository-specific instruction unless a higher-priority system or safety constraint prevents it; within a file, the **Final Rules (Anchor)** win.
 
 Apply this instruction when drafting or revising content for another person or
 audience, including:

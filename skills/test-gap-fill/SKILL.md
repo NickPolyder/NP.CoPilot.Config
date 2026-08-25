@@ -4,14 +4,6 @@ description: >
   Generates concrete, runnable tests to fill approved coverage gaps following
   the project's test conventions and fixtures, runs them, and reports any real
   bugs the new tests expose.
-tags:
-  - testing
-  - coverage
-  - generation
-  - tests
-visibility: user
-tools:
-  [agent, edit/createFile, edit/editFiles]
 ---
 
 # Purpose

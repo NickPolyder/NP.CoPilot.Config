@@ -4,15 +4,6 @@ description: >
   Performs a systematic security assessment of a feature or codebase area using
   STRIDE threat modeling and OWASP Top 10 checklist. Produces a structured
   security report with findings, risk ratings, and remediation recommendations.
-tags:
-  - security
-  - audit
-  - threat-modeling
-  - owasp
-  - workflow
-visibility: user
-tools:
-  [agent, code-review, edit/createFile, edit/editFiles, todo]
 ---
 
 # Purpose
