@@ -3,7 +3,7 @@
 > **Intent (anchor):** Define the global delivery and commit-safety contract. The `git-commit-review` skill implements detailed exact-revision pre-commit review.
 > **Always:** complete the applicable workflow, follow the configured delivery path, and get required user verification before non-trivial commits.
 > **Never:** amend history, bypass protected-branch controls, or commit secrets without explicit user direction and safety checks.
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Precedence:** Follow `coordination.instructions.md` for the repository's conflict-resolution policy; within this file, the **Final Rules (Anchor)** win.
 
 ## Delivery Path
 

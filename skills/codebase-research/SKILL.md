@@ -92,7 +92,7 @@ No files should be edited or created by this skill.
 - **Read-only only** — do not create, edit, move, or delete files.
 - **No design decisions yet** — document what exists and what constrains the work; leave solution design to `feature-design-doc`.
 - **Keep the approval gate** — present the research summary and ask before moving to design.
-- **Respect configuration precedence** — project and local instructions may refine global conventions but must not contradict them.
+- **Respect configuration precedence** — resolve conflicting guidance using the canonical policy in `instructions/coordination.instructions.md`.
 
 ---
 

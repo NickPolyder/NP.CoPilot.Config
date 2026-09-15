@@ -3,7 +3,7 @@
 > **Intent (anchor):** Define the default tiered development workflow when no more specific skill or project workflow is active.
 > **Always:** classify task scope first; validate changed behavior proportionally; defer ownership, blockers, and delivery evidence to the work lifecycle policy.
 > **Never:** let the default workflow bypass a skill's approval gates or commit-review requirements.
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Precedence:** Follow `coordination.instructions.md` for the repository's conflict-resolution policy; within this file, the **Final Rules (Anchor)** win.
 
 Every task follows a tiered workflow. Assess the scope on entry and apply the appropriate tier. The user can override the classification at any time (e.g., "treat this as trivial" or "use the full workflow"). Follow `work-lifecycle.instructions.md` for atomic ownership, blockers, revision evidence, and capability-gated repository controls.
 
@@ -25,7 +25,7 @@ The tier also sets the delegation posture (see `coordination.instructions.md` �
 |------|--------------------|
 | **Trivial** | Never delegate. Do it inline. |
 | **Standard** | Inline by default. Delegate only for genuinely specialized judgment or substantial multi-step work. |
-| **Full** | Coordinate/delegate across specialists, respecting the depth cap (orchestrator → specialist → at most one sideways handoff → terminal). |
+| **Full** | Coordinate the required specialist work; delegated specialists use tools and return additional-domain needs to the orchestrator. |
 
 ## Trivial Tier
 

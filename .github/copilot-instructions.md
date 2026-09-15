@@ -4,7 +4,7 @@
 
 A **global GitHub Copilot CLI configuration** repository. It defines instructions, agents, skills, MCP server infrastructure, and installer scripts that apply across all workspaces via symlinks into `~/.copilot/`.
 
-This is not a typical code project — there are no build/test/lint pipelines. The deliverables are markdown definitions and PowerShell scripts.
+This is not a typical code project — there are no build/test/lint pipelines, but repository-owned local validators and isolated regression suites exist. The deliverables are markdown definitions and PowerShell scripts.
 
 ## Architecture
 
@@ -63,7 +63,7 @@ Only one entry workflow may be active. Entry workflows and thin coordinators may
 
 ### MCP Stack
 
-- Runs pinned SearXNG (search) as the remote Docker container; Playwright runs locally as a pinned stdio MCP process
+- Runs pinned SearXNG (search) as the remote Docker container; Playwright runs locally as a stdio MCP process under the existing user-approved `@latest` waiver
 - Default target: Raspberry Pi at `raspberrypi` / `192.168.1.2`
 - `mcp-config.json` merge logic: existing entries win on conflict, backup is created
 
@@ -75,6 +75,8 @@ Only one entry workflow may be active. Entry workflows and thin coordinators may
 
 ## Working in This Repo
 
-- Changes to `copilot-instructions.md`, `agents/`, or `skills/` take effect immediately in any Copilot CLI session (they're symlinked)
-- Test install scripts with `-WhatIf` where supported (`deploy.ps1`) or by inspecting symlink targets
+- Changes to `copilot-instructions.md`, `agents/`, or `skills/` update symlinked disk content; do not assume an already-running session has reloaded that content.
+- Validate configuration with `pwsh -NoProfile -File .\scripts\Validate-Config.ps1`; use `scripts\Validate-GitCommitReviewSkills.ps1` for the selected review-policy wording checks.
+- Run the relevant isolated suite: `tests\Install\Run-InstallTests.ps1`, `tests\InstallProject\Run-InstallProjectTests.ps1`, or `tests\ValidateConfig\Run-ValidateConfigTests.ps1`, each via `pwsh -NoProfile -File`. Do not test installer changes against the active user installation.
+- For commit-review changes, run `tests\GitCommitReviewSkill\Run-GitCommitReviewSkillTests.ps1` and `tests\GitCommitReviewSkill\Run-GitSnapshotProcedureTests.ps1` via `pwsh -NoProfile -File`.
 - The `mcps/` stack requires Docker and a deployed host — see `mcps/README.md` for setup

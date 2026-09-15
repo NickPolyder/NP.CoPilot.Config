@@ -122,6 +122,50 @@ This is install/repair failure handling, not a new all-or-nothing uninstall
 transaction or a power-loss recovery guarantee.
 No active user installation was adopted or repaired as part of this follow-up.
 
+### Review and Policy Corrections
+
+The [commit-review procedure](git-commit-review-redesign.md) now distinguishes
+the complete index tree from changed paths and refreshes candidate identity
+after fixes.
+The [coordination reference](../agent-coordination.md) records terminal
+delegation, proportional test/documentation work, and outcome-based specialist
+guidance.
+The user's trivial auto-commit preference is unchanged.
+
+New hooks, expanded hook triggers, runtime inventory tooling, and a behavioral
+evaluation framework remain deferred.
+
+### Local Verification
+
+The September corrections were exercised against disposable targets and
+repositories, with no live installation or remote delivery.
+
+| Check | Result |
+|---|---|
+| Global installer regression suite | 18 passed |
+| Project installer regression suite | 24 passed |
+| Commit-review wording regression suite | 7 passed |
+| Git snapshot procedure suite | 2 passed |
+| Configuration regression suite | 54 passed |
+| Configuration validator (`-SkipDockerCompose`) | 51 checks passed |
+| Review-policy validator | 30 selected wording checks passed |
+
+The installer cases cover preserved conflicts, repeat/template-match handling,
+explicit adoption, matching unowned MCP entries, publication failures after
+artifact changes, byte-exact prior manifests, and temporary-file cleanup.
+The snapshot cases cover full-tree versus changed-path scope, deleted and
+renamed files, unstaged isolation, and fresh trees after restaged fixes.
+These results are local evidence, not a behavioral benchmark of agent execution.
+Commands are listed in the [repository validation reference](../../README.md#validation).
+
+### Lessons
+
+Passing isolated cases is not proof that all lifecycle sequences are covered.
+Ownership must survive repeated operations, and failure injection must reach
+state publication after artifacts have changed.
+Structural policy checks should state their limits rather than imply measured
+agent compliance.
+
 ## Implementation Notes
 
 - The target branch began at `50fac003adc8d6a6f6a9f2a9b9a7d3f8d16aecdb`.

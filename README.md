@@ -156,10 +156,28 @@ changes for review:
 pwsh -NoProfile -File .\scripts\Validate-Config.ps1
 ```
 
-The validator is read-only. It validates frontmatter, references, workflow
-composition, README inventory, runtime version pins and documented waivers, MCP JSON, Compose syntax,
-and review capability boundaries. The regression suite remains independently
-runnable with `pwsh -NoProfile -File .\tests\ValidateConfig\Run-ValidateConfigTests.ps1`.
+The validator is read-only. It checks selected frontmatter and references, a
+declared orchestration map, README inventory entries, runtime version pins and
+documented waivers, MCP JSON, optional Compose syntax, and selected review
+capability rules. These are structural checks, not proof of arbitrary skill
+composition, runtime behavior, or complete semantic consistency.
+
+Run the focused review-policy check and relevant isolated regression suites
+separately when changing their corresponding surfaces:
+
+```powershell
+pwsh -NoProfile -File .\scripts\Validate-GitCommitReviewSkills.ps1
+pwsh -NoProfile -File .\tests\ValidateConfig\Run-ValidateConfigTests.ps1
+pwsh -NoProfile -File .\tests\Install\Run-InstallTests.ps1
+pwsh -NoProfile -File .\tests\InstallProject\Run-InstallProjectTests.ps1
+pwsh -NoProfile -File .\tests\GitCommitReviewSkill\Run-GitCommitReviewSkillTests.ps1
+pwsh -NoProfile -File .\tests\GitCommitReviewSkill\Run-GitSnapshotProcedureTests.ps1
+```
+
+Installer suites use disposable targets, not the active user installation.
+The review-policy check verifies selected wording, not execution by an agent.
+The snapshot-procedure suite exercises Git tree/scope separation and restaged
+fixes in disposable repositories.
 
 Enable the repository pre-commit hook to validate staged configuration changes
 against an index-only snapshot:
@@ -212,6 +230,8 @@ Absent or disabled capabilities add no process requirements.
 ### Symlinks
 
 Copilot CLI reads config from `~/.copilot/`. Rather than copying files there, `install.ps1` symlinks them so changes stay version-controlled.
+Symlinks expose updated disk content; they do not prove that an active session
+has reloaded it.
 
 | Item | Symlink Source | Symlink Target |
 |---|---|---|
@@ -219,7 +239,7 @@ Copilot CLI reads config from `~/.copilot/`. Rather than copying files there, `i
 | Instructions Folder | `instructions/` | `~/.copilot/instructions/` |
 | Agents | `agents/` | `~/.copilot/agents/` |
 | Skills | `skills/` | `~/.copilot/skills/` |
-| MCP Config | `mcp-config.json` | `~/.copilot/mcp-config.json` *(opt-in with `-Mcp`)* |
+| MCP Config | `mcp-config.json` | `~/.copilot/mcp-config.json` *(opt-in merged file with `-Mcp`, not a symlink)* |
 
 ## Overriding Per-Repo
 

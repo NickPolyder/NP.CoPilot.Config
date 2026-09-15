@@ -10,7 +10,7 @@ description: >
 
 > **Intent (anchor):** Perform an exhaustive, multi-reviewer analysis only when the user explicitly requests it.
 > **Always:** define the review scope; use three distinct core review hats; include all severity levels; produce a detailed report.
-> **Never:** run automatically during normal pre-commit work; edit the reviewed worktree; or create a commit.
+> **Never:** run automatically during normal pre-commit work, let reviewers edit code or artifacts, or create a commit. The orchestrator may write the report specified in section 6.
 
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
@@ -97,6 +97,7 @@ Medium and Low findings are visible and actionable, but they do not block unless
 
 If the user requests fixes, confine re-review to modified files, previous finding locations, and directly affected contracts unless the user requests another whole-target pass.
 Run affected direct checks after each fix.
+Only a separately authorized implementation step may change reviewed code; reviewers remain read-only, and report publication is the review workflow's only repository write.
 
 This skill does not create commits and does not invoke `git-commit-review`.
 

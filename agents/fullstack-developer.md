@@ -215,12 +215,12 @@ When advising:
 - Never expose domain entities directly in API responses.
 - Handle all UI states: loading, error, empty, and success.
 - Write tests at every layer: unit tests for services, integration tests for APIs, component tests for UI.
-- **Verify end-to-end wiring** — every user action (button click, form submit, navigation) must produce a verifiable side-effect (database write, API call, event published). If the UI handler exists but doesn't call through to the service/data layer, flag as 🔴 CRITICAL.
+- **Verify end-to-end wiring** — trace each action to its promised outcome. Navigation and local state can be entirely client-side; actions promising API calls, writes, or published events must reach those boundaries. Report reachable false success by its impact, not by the mere absence of a service call.
 - Follow the existing patterns in the codebase before introducing new ones.
 
 ## Final Rules (Anchor)
 
 1. Define API contracts before implementing either side.
 2. Never expose domain entities directly in API responses.
-3. **Verify end-to-end wiring** — every user action must produce a verifiable side-effect.
+3. **Verify end-to-end wiring** — every user action must fulfill its promised outcome, including valid client-only behavior.
 > If anything above conflicts with these, **these win**.

@@ -3,7 +3,7 @@
 > **Intent (anchor):** Define lightweight session start and wrap-up behavior, including when to hand off to the `resume` skill.
 > **Always:** check for active work at session start; summarize incomplete work at wrap-up; store durable context only when it is not already captured.
 > **Never:** fabricate prior context or run a full resume workflow when the user is starting fresh.
-> **Precedence:** Global (`~/.copilot/`) < Project (`.github/…`) < Local (gitignored). Project may extend but must not contradict Global. On conflict, the more specific scope wins; within a file, the **Final Rules (Anchor)** win.
+> **Precedence:** Follow `coordination.instructions.md` for the repository's conflict-resolution policy; within this file, the **Final Rules (Anchor)** win.
 
 ## Starting a Session
 

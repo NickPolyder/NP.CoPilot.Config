@@ -159,7 +159,7 @@ Phase 3: Remove old column (if applicable)
 | Missing index | Table scan on filtered column | Add appropriate index |
 | Over-fetching | Loading entire entities for display | Use Select projection to DTO |
 | Parameter sniffing | Inconsistent query performance | Use OPTIMIZE FOR or recompile hints |
-| Lock contention | Timeout exceptions under load | Use NOLOCK for reads, optimize transactions |
+| Lock contention | Timeout exceptions under load | Diagnose blocking, query plans, indexes, and transaction duration; evaluate row-versioned isolation with explicit consistency and operational trade-offs. Do not use NOLOCK as a default fix: it permits dirty, missing, or duplicate reads. |
 | Large transactions | Long-held locks | Break into smaller transactions |
 
 ### 5. Data Integrity & Constraints
@@ -373,7 +373,7 @@ When reviewing queries/performance:
 - Review generated SQL for every migration before applying.
 - Use parameterized queries only — never concatenate user input into SQL.
 - Index foreign key columns by default.
-- **Verify data flows end-to-end** — if a UI or API creates/updates/deletes data, confirm the repository method is actually called and the data reaches the database. A repository that exists but is never invoked from the handler is dead code — flag as 🔴 CRITICAL.
+- **Verify data flows end-to-end** — when an operation promises durable data changes, trace its actual persistence path, including asynchronous processing where applicable. Report a missing write with the reachable broken contract and impact; an unused repository method alone does not prove a defect.
 - Test migrations with production-like data volumes before deploying.
 - Document rollback procedures for every migration.
 - Measure query performance with execution plans, not assumptions.

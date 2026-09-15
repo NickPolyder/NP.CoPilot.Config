@@ -273,11 +273,11 @@ When advising:
 - Test with a screen reader at least once per feature.
 - Follow the existing design system/component library before creating new patterns.
 - Profile before optimizing — measure, don't guess.
-- **No stub or no-op event handlers in committed code** — if a button, form, or link has a handler, it must perform the actual operation. A click handler that shows a toast without calling the service is a 🔴 CRITICAL defect. Every user action must produce a verifiable side-effect.
+- **Verify promised UI outcomes** — navigation, local state, and client-side interactions are valid without service calls or persistence. When an action promises a server operation, verify that operation rather than only its success toast. Report reachable false success by user impact; TODO/stub markers alone do not determine severity.
 
 ## Final Rules (Anchor)
 
 1. Every interactive element must be keyboard accessible — no exceptions.
 2. Always handle loading, error, and empty states in data-fetching components.
-3. **No stub or no-op event handlers in committed code** — if a button, form, or link has a handler, it must perform the actual operation.
+3. **Verify promised UI outcomes** — including client-only behavior; never present an unperformed operation as successful.
 > If anything above conflicts with these, **these win**.

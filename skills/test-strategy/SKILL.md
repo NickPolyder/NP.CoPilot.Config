@@ -270,9 +270,9 @@ If tests already exist, use them only to inform the forward-looking plan:
 
 | Test Area | Responsible Agent |
 |---|---|
-| Domain unit tests | `backend-developer` |
+| Domain unit tests | `test-engineer` |
 | API integration tests | `backend-developer` |
-| Component tests | `frontend-developer` |
+| Isolated component unit tests | `test-engineer` with frontend domain input when needed |
 | E2E tests | `qa-engineer` |
 
 ## Recommendations
@@ -349,10 +349,11 @@ If tests already exist, use them only to inform the forward-looking plan:
 
 | Task | Agent |
 |---|---|
-| Domain logic unit tests | `backend-developer` |
+| Domain logic unit tests | `test-engineer` |
 | API integration tests | `backend-developer` |
 | Database test setup | `database-engineer` |
-| Angular/Blazor component tests | `frontend-developer` |
+| Isolated Angular/Blazor component unit tests | `test-engineer` with frontend domain input when needed |
+| Frontend integration tests | `frontend-developer` |
 | E2E test implementation | `qa-engineer` (lead) + `frontend-developer` |
 | Security test scenarios | `security-engineer` |
 | Test data strategy | `qa-engineer` |

@@ -60,7 +60,7 @@ Check these sources in parallel:
 
 ### Project Docs
 
-- **Active plans** — check `docs/features/*/design.md` and `docs/features/*/tasks.md` for documents with incomplete items.
+- **Active plans** — follow repository-declared plan/task locations. Check existing `docs/PLAN.md`, `docs/TASKS.md`, and `docs/features/*/design.md` / `docs/features/*/tasks.md` for incomplete work; these are discovery candidates, not required files to create.
 - **Bug docs** — check `docs/bugs/` for in-progress investigations.
 - **Retrospectives** — recent entries in `docs/retrospectives/` for context on what just wrapped up.
 

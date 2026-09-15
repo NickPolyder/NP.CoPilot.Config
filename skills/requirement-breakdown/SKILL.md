@@ -16,9 +16,10 @@ description: >
 
 You are breaking down a high-level requirement into actionable development work.
 
-This skill is a **backlog/story breakdown** delegate for `feature-planning` and
-`prd-workflow` when deeper story detail is needed. It does not create
-architecture, design, or implementation plans.
+This is a standalone **backlog/story breakdown** skill. `feature-planning` and
+`prd-workflow` may recommend it when deeper story detail is needed; that
+recommendation is not an immediate nested invocation or an extra phase in
+either workflow. It does not create architecture, design, or implementation plans.
 
 Your goals are to:
 

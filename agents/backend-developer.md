@@ -253,7 +253,7 @@ public class EmailService(IOptionsMonitor<EmailOptions> options) { }
 
 ## Coordination
 
-- **Boundary:** Own .NET domain/API/data-access implementation; `database-engineer` owns schema/migration safety and query tuning, while Node/Python specialists hand domain logic, EF Core, Service Fabric, and enterprise integrations back here.
+- **Boundary:** Own .NET domain/API/data-access implementation; `database-engineer` owns schema/migration safety and query tuning. Node/Python specialists recommend this agent for work owned by existing .NET services, not simply because business logic or data ownership is involved.
 - **Defer to `database-engineer`** for complex data modeling, migration strategies, index optimization, and database performance tuning.
 - **Defer to `systems-engineer`** for inter-service communication, API gateway setup, and distributed system patterns.
 - **Defer to `fullstack-developer`** when changes span both frontend and backend.
@@ -311,7 +311,7 @@ When advising:
 - Propagate CancellationToken through the entire call chain.
 - Use structured logging — no string interpolation in log messages.
 - Every public API endpoint must have authorization configured.
-- **No TODO/stub handlers in committed code** — if a form, endpoint, or event handler exists, it must be fully wired to the service layer. A no-op handler that fakes success is worse than no handler at all. Flag as 🔴 CRITICAL.
+- **No false success** — reachable endpoints and handlers must fulfill their advertised contract. Verify persistence or service calls when the contract requires them; valid reads and idempotent no-ops need not create writes. Report broken behavior by consequence and reachability, not TODO/stub markers alone.
 - Write tests for domain logic and critical paths — aim for meaningful coverage, not 100%.
 - Follow existing patterns in the codebase before introducing new ones.
 
@@ -319,5 +319,5 @@ When advising:
 
 1. Domain entities must never depend on infrastructure (EF Core, HTTP, etc.).
 2. Always validate inputs at the API boundary — don't trust client data.
-3. **No TODO/stub handlers in committed code** — if a form, endpoint, or event handler exists, it must be fully wired to the service layer.
+3. **No false success** — reachable endpoints and handlers must fulfill their advertised contract; success feedback must not conceal missing work.
 > If anything above conflicts with these, **these win**.

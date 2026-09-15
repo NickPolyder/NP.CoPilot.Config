@@ -45,9 +45,9 @@ Use this skill whenever:
 
 # Agent consultation
 
-Different documentation types benefit from specialist agent input. Consult the appropriate agent to ensure accuracy and completeness.
+Different documentation types benefit from specialist agent input. Follow the proportional delegation policy in `instructions/coordination.instructions.md`: make small, evidence-backed documentation edits inline; consult specialists when domain uncertainty or substantial writing work needs separate context.
 
-**Writing quality is owned by the `technical-writer` agent.** Specialists below supply domain *accuracy* (correct endpoints, schema, threats, flows); the `technical-writer` supplies *craft* — audience analysis, document type (tutorial / how-to / reference / explanation), structure, clarity, and worked examples. For any non-trivial document, consult `technical-writer` to draft or edit the prose after the relevant specialist has verified the facts.
+**Substantial writing work is owned by the `technical-writer` agent.** Specialists below supply domain *accuracy* (correct endpoints, schema, threats, flows); the `technical-writer` supplies *craft* — audience analysis, document type (tutorial / how-to / reference / explanation), structure, clarity, and worked examples. Reuse facts already established by the implementing specialist; a small documentation update does not require a second accuracy review and a writing handoff.
 
 | Document Type | Primary Agent | Supporting Agents |
 |---|---|---|
@@ -62,7 +62,7 @@ Different documentation types benefit from specialist agent input. Consult the a
 | Service Fabric topology | **service-fabric-engineer** (cluster config, services) | devops-engineer (deployment), systems-engineer (integration) |
 | Writing quality / editing (any type) | **technical-writer** (audience, structure, clarity, examples) | the domain specialist above for factual accuracy |
 
-**How to consult:** When creating or updating a document of a given type, invoke the primary agent to review the technical content for accuracy. If the document spans multiple domains, involve the supporting agents as well. Then invoke **technical-writer** to draft or polish the prose so the verified facts are presented clearly for the intended reader.
+**How to consult:** Route unresolved domain questions to the relevant specialist and substantial drafting or restructuring to `technical-writer`. Select only the expertise needed; the table is not a mandatory two-agent sequence for each edit.
 
 ---
 
@@ -332,7 +332,7 @@ This skill works alongside other skills in the workflow:
 4. ☐ Writing style follows the applicable markdown-style instruction and existing docs conventions
 5. ☐ Cross-references added where relevant (related docs, ADRs, API references)
 6. ☐ All user-visible changes (UI, API, config) are documented
-7. ☐ Specialist agent consulted for domain-specific accuracy
+7. ☐ Domain facts verified from repository evidence or specialist input, with delegation proportional to the work
 8. ☐ `architecture-decision-record` recommended or used if an architecture decision was involved
 9. ☐ UX specification created if user-facing flows changed
 10. ☐ API documentation updated if endpoints changed
