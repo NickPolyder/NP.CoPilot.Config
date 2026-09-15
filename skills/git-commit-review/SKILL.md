@@ -46,18 +46,29 @@ Do not review unstaged changes or a mixture of candidates.
 
 Review the index, not the mutable worktree.
 
-1. Require a non-empty `git diff --cached`.
-2. Create a temporary directory outside the repository.
-3. Materialize exactly the index tree into that directory, for example:
+1. Require a non-empty `git diff --cached`. Record the base revision (HEAD, or the empty tree for an unborn branch); capture the review diff from that base and the immutable tree in step 5.
+2. Create a temporary directory outside the repository and choose an archive path outside that directory.
+3. Capture the candidate tree ID and materialize that immutable tree into the directory, for example:
 
    ```powershell
    $tree = git write-tree
-   git archive --format=tar $tree | tar -xf - -C $snapshotPath
+   if ($LASTEXITCODE -ne 0) { throw 'Cannot capture the index tree.' }
+   git archive --format=tar --output="$archivePath" $tree
+   if ($LASTEXITCODE -ne 0) { throw 'Cannot archive the candidate tree.' }
+   tar -xf $archivePath -C $snapshotPath
+   if ($LASTEXITCODE -ne 0) { throw 'Cannot extract the candidate snapshot.' }
    ```
 
-   `git checkout-index --all --prefix="$snapshotPath\"` is an equivalent option.
-4. Confirm the materialized file list matches `git diff --cached --name-only`, allowing only files intentionally excluded by Git attributes.
-5. Keep the snapshot for validation and review, then remove it after the workflow.
+   Avoid a binary archive pipeline through PowerShell. If `export-ignore` or
+   `export-subst` attributes would omit or transform tracked inputs, instead use
+   `git read-tree $tree` with an isolated temporary `GIT_INDEX_FILE` and
+   `GIT_WORK_TREE` set to `$snapshotPath`, then
+   `git checkout-index --all --prefix="$snapshotPath\"`. Checkout attributes must
+   come from the captured tree, not unstaged files. Restore both previous
+   environment values afterwards; never rewrite the repository index to build a snapshot.
+4. Verify snapshot paths, file types, and contents against the captured tree using `git ls-tree -r --full-tree $tree` and its blob contents, accounting explicitly for checkout filters and platform mode handling. The snapshot includes unchanged tracked files and excludes deleted files. Resolve required submodules or LFS content at their recorded revisions, or stop if a faithful validation input cannot be produced.
+5. Use changed paths only for review scope, not snapshot completeness. Capture the diff between the recorded base revision and `$tree`, including deletions, renames, and binary changes; use NUL-delimited path output when processing names programmatically. Re-run `git write-tree` and require it to equal `$tree` before accepting the captured diff and snapshot as one candidate.
+6. Keep the snapshot and tree ID for validation and review, then remove only the workflow's temporary snapshot, archive, and temporary index after the workflow.
 
 Never substitute the working tree for this snapshot.
 Unstaged changes must not affect validation or reviewer conclusions.
@@ -71,9 +82,9 @@ Before dispatching a reviewer, run the repository's applicable import, restore, 
 - Run imports or compilation before tests so direct failures are surfaced first.
 - Run the commands from the snapshot or point them at snapshot paths, never at the working tree.
 - When the staged snapshot contains Copilot configuration files, run
-  `pwsh -NoProfile -File .\scripts\Validate-Config.ps1 -RepositoryRoot $snapshotPath`
+  `pwsh -NoProfile -File "$snapshotPath\scripts\Validate-Config.ps1" -RepositoryRoot $snapshotPath`
   before launching reviewers. Run its focused regression suite separately from
-  the repository root when the staged changes affect the validator or its tests.
+  the snapshot root when the staged changes affect the validator or its tests.
 
 If the snapshot cannot be materialized, imports/build/type checks fail, or targeted tests fail, stop.
 Report the concrete failure and fix it before launching any reviewer.
@@ -140,14 +151,18 @@ Never silently discard a concrete finding.
 
 ## 7. Fix and scope re-review
 
-After a fix, re-run direct validation for the changed files and affected targeted tests.
+After a fix, stage only the approved fix hunks and confirm the candidate still contains no unrelated changes.
+Record the new tree ID with `git write-tree`, rematerialize the snapshot using section 2, and bind affected validation and re-review to that new candidate.
+Never validate an old snapshot after a fix or treat worktree-only results as evidence for the staged candidate.
+Re-run direct validation for the changed files and affected targeted tests against the new snapshot.
 Re-review only:
 
 - Files modified by the fix.
 - Previous finding locations.
 - Directly affected contracts: public interfaces, abstract types, schemas, and public signatures the fix implements or depends on.
 
-Do not rescan the original diff.
+Do not rescan unchanged parts of the original diff.
+Retain earlier findings for unchanged content, but refresh evidence for every affected contract.
 
 The initial review is cycle one.
 One targeted re-review is cycle two.
@@ -168,7 +183,8 @@ Before committing:
 1. Present the staged candidate summary, validation results, final blocker state, accepted risks, and delayed follow-ups.
 2. Require the user to manually verify the changes.
 3. After confirmation, use `ask_user` to obtain approval for the proposed conventional commit message.
-4. Create the commit only after approval.
+4. Immediately before committing, require `git write-tree` to equal the final validated tree ID. If it differs, stop and refresh the snapshot, affected checks, review, and approvals for the changed candidate.
+5. Create the commit only after approval. Verify the resulting commit tree equals the validated tree ID; if a commit hook changed it, report the mismatch and stop delivery rather than claiming the commit was reviewed or amending it automatically.
 
 The commit message must use imperative mood, keep its subject to 72 characters or fewer, and include the required trailers:
 
@@ -190,7 +206,7 @@ After consolidating reviewer findings and recording their dispositions, write on
 
 Include:
 
-- Candidate summary and resulting commit SHA, or `ABORTED`.
+- Candidate summary, base revision, validated tree ID, and resulting commit SHA, or `ABORTED`.
 - Snapshot preflight and final-suite outcomes.
 - Reviewers used, selection rationale, and cycle count.
 - Deduplicated findings grouped by the four decision statuses.
@@ -209,7 +225,7 @@ If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 
 ## Final Rules (Anchor)
 
-1. Materialize and validate an index-only snapshot before launching reviewers.
+1. Materialize and validate the captured index tree before launching reviewers; restaged fixes require a new snapshot and affected evidence, and the committed tree must match the validated tree ID.
 2. Use one `code-reviewer`, at most one ordinary specialist, and a second specialist only for high-risk cross-domain changes.
 3. Never commit unresolved Critical or High findings unless the user explicitly accepts the risk and directs the commit.
 4. Never auto-invoke `full-code-review`.

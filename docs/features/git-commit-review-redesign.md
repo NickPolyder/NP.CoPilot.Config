@@ -19,14 +19,27 @@ This preserves high-signal review while avoiding repeated scans of unchanged cod
 `git-commit-review` now:
 
 1. Splits mixed work into atomic candidates and stages one candidate only.
-2. Materializes the Git index in a temporary clean snapshot.
+2. Captures the index tree ID and materializes it in a temporary clean snapshot, verifying complete tree contents separately from changed-path review scope.
 3. Runs import, build, type, and targeted test checks against that snapshot before reviewers start.
 4. Stops immediately when preflight fails.
 5. Reviews Critical and High findings within an approximately ten-minute timebox.
-6. Re-reviews only changed files, prior finding locations, and directly affected contracts after a fix.
+6. Stages approved fixes, records a new tree ID, rebuilds the snapshot, and repeats affected validation and targeted review only for changed files, prior finding locations, and directly affected contracts.
 7. Requires explicit approval for every cycle after the second.
 8. Runs the full existing test suite once at the final gate.
 9. Requires manual verification and approved conventional commit message before committing.
+10. Checks the index identity immediately before commit and the resulting commit tree afterwards; a mismatch stops delivery.
+
+### Snapshot Identity Correction (2026-09-15)
+
+An index tree contains all tracked files, including unchanged files.
+The staged diff describes only changes and can include deletions that are absent from the tree.
+These file sets must not be compared for equality.
+The [skill](../../skills/git-commit-review/SKILL.md) now checks snapshot contents against the captured tree, and uses the diff only to scope review.
+Archive attributes, checkout filters, submodules, and LFS must not silently remove or transform required validation inputs.
+
+Each restaged fix invalidates the old snapshot for affected checks.
+The final report records the validated tree ID so validation, review, and the resulting commit can be traced to the same candidate.
+The review-policy validator checks selected wording for these requirements; it does not establish that a session executed them correctly.
 
 ## Automatic Escalation
 

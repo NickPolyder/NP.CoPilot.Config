@@ -3,9 +3,10 @@
     Validates the Git review skill policy invariants.
 
 .DESCRIPTION
-    Checks the Markdown skill definitions for the lightweight and exhaustive
-    review contracts. This script has no external dependencies and makes no
-    changes, so it is safe to run repeatedly.
+    Checks selected required and forbidden wording in the Markdown review
+    contracts. These structural checks do not prove workflow execution or
+    general semantic consistency. The script has no external dependencies and
+    makes no changes, so it is safe to run repeatedly.
 
 .PARAMETER SkillRoot
     Path to the skills directory. Defaults to this repository's skills directory.
@@ -99,6 +100,12 @@ if ($null -ne $lightweight) {
 
     Write-Host '  Lightweight clean-index preflight and cycle limits' -ForegroundColor Yellow
     Assert-Pattern -Content $lightweight -Pattern '(git write-tree.*git archive --format=tar|git checkout-index)' -Description 'Materializes the Git index with git write-tree and git archive'
+    Assert-Pattern -Content $lightweight -Pattern 'Verify snapshot paths, file types, and contents against the captured tree.*git ls-tree -r --full-tree' -Description 'Checks snapshot completeness against the captured tree'
+    Assert-Pattern -Content $lightweight -Pattern 'Use changed paths only for review scope, not snapshot completeness' -Description 'Separates changed-path scope from snapshot completeness'
+    Assert-Pattern -Content $lightweight -Pattern 'materialized file list matches `git diff --cached --name-only`' -Description 'Rejects the invalid changed-path snapshot comparison' -Absent
+    Assert-Pattern -Content $lightweight -Pattern 'stage only the approved fix hunks.*new tree ID.*rematerialize the snapshot.*affected validation and re-review' -Description 'Rebinds fixed candidates to a new snapshot and affected checks'
+    Assert-Pattern -Content $lightweight -Pattern 'Immediately before committing, require `git write-tree` to equal the final validated tree ID' -Description 'Guards the final candidate tree before commit'
+    Assert-Pattern -Content $lightweight -Pattern 'Verify the resulting commit tree equals the validated tree ID' -Description 'Verifies the committed tree identity'
     Assert-Pattern -Content $lightweight -Pattern 'snapshot cannot be materialized.*stop.*before launching any reviewer' -Description 'Blocks reviewers when clean-index preflight fails'
     Assert-Pattern -Content $lightweight -Pattern 'initial review is cycle one.*cycle two.*cycle three.*explicit approval' -Description 'Requires approval for every review cycle after two'
     Assert-Pattern -Content $lightweight -Pattern '(files modified|modified files).*previous finding locations.*directly affected contracts' -Description 'Scopes re-review to changed files, findings, and contracts'
