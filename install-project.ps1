@@ -195,6 +195,55 @@ function New-ProjectManifestObject {
     }
 }
 
+function Save-ManifestFileAtomically {
+    <#
+    .SYNOPSIS
+        Serializes a manifest to JSON and publishes it atomically: the JSON
+        is written to a sibling temp file first, and only promoted over the
+        real manifest path with a single same-directory rename-replace once
+        that write has fully succeeded. A failure at any point
+        (serialization, disk full, locked file) leaves a prior manifest at
+        ManifestPath, if any, completely unmodified instead of a
+        half-written/corrupt file.
+    .NOTES
+        Deliberately uses [System.IO.File]::Move(source, dest, $true) rather
+        than Move-Item -Force: PowerShell's FileSystemProvider can satisfy
+        -Force by deleting the destination and then moving, which is two
+        separate operations with a window where ManifestPath would be
+        missing if interrupted between them. The 3-arg File.Move overload
+        (available since .NET Core 3.0, which this script's
+        `#Requires -Version 7.0` guarantees) maps to a single OS-level
+        rename-replace call (MoveFileEx/MOVEFILE_REPLACE_EXISTING on
+        Windows, rename(2) on POSIX) that either fully succeeds or fully
+        fails, and covers both first publication (no prior file) and
+        replacing an existing one.
+    #>
+    param(
+        [Parameter(Mandatory)]$Manifest,
+        [Parameter(Mandatory)][string]$ManifestPath
+    )
+
+    $dir = Split-Path $ManifestPath -Parent
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    $tempPath = Join-Path $dir ".manifest-$([guid]::NewGuid().ToString('N')).tmp"
+    $published = $false
+    try {
+        ($Manifest | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $tempPath -Encoding utf8 -NoNewline
+        [System.IO.File]::Move($tempPath, $ManifestPath, $true)
+        $published = $true
+    }
+    finally {
+        if (-not $published -and (Test-Path -LiteralPath $tempPath)) {
+            try {
+                Remove-Item -LiteralPath $tempPath -Force
+            }
+            catch {
+                Write-Status '⚠️' "Could not remove temporary manifest file $tempPath after a failed publish: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 function Save-ProjectManifest {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -202,9 +251,7 @@ function Save-ProjectManifest {
         [Parameter(Mandatory)][string]$ManifestPath
     )
     if ($PSCmdlet.ShouldProcess($ManifestPath, 'Write install manifest')) {
-        $dir = Split-Path $ManifestPath -Parent
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        ($Manifest | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $ManifestPath -Encoding utf8 -NoNewline
+        Save-ManifestFileAtomically -Manifest $Manifest -ManifestPath $ManifestPath
     }
 }
 
@@ -393,9 +440,31 @@ function Install-ProjectFile {
     }
 
     $currentHash = Get-Sha256FileHash -Path $TargetPath
+    $previouslyConflicted = $PreviousArtifact -and ($PreviousArtifact.Status -eq 'Conflict')
 
     if ($currentHash -eq $sourceHash) {
-        Write-Status '✅' "$Name already up to date."
+        if ($previouslyConflicted -and -not $Force) {
+            # Content now happens to byte-match the current template, but
+            # this path was never adopted (no prior Managed record, no
+            # -Force). A coincidental match must never silently confer
+            # ownership — otherwise a later non-forced re-run, or a future
+            # template revision that happens to match, could flip an
+            # untouched user file to 'Managed' and make -Uninstall eligible
+            # to delete content this installer never actually wrote.
+            Write-Status 'ℹ️' "$Name matches the current template but was never taken over by the installer; leaving ownership unchanged. Use -Force to adopt it explicitly."
+            return [pscustomobject]@{
+                Name = $Name; TargetPath = $TargetPath; BackupPath = $carriedBackupPath
+                InstalledHash = $currentHash; Status = 'Conflict'
+            }
+        }
+        if ($previouslyConflicted) {
+            # -Force was supplied: explicit adoption, even though there is
+            # nothing to overwrite because content already matches.
+            Write-Status '✅' "$Name adopted (-Force); already matches current template."
+        }
+        else {
+            Write-Status '✅' "$Name already up to date."
+        }
         return [pscustomobject]@{
             Name = $Name; TargetPath = $TargetPath; BackupPath = $carriedBackupPath
             InstalledHash = $currentHash; Status = 'Managed'
@@ -536,6 +605,20 @@ function Invoke-ProjectInstall {
             $gitignorePath = Join-Path $TargetPath '.gitignore'
             $gitignoreManaged = Set-GitignoreEntry -GitignorePath $gitignorePath
         }
+
+        if ($WhatIfPreference) {
+            Write-Host "`nWhatIf: no changes were made.`n" -ForegroundColor Yellow
+            return
+        }
+
+        # Manifest publication happens inside this same try so that a failure
+        # here (serialization, disk full, locked file) triggers the identical
+        # rollback as any other failed install step, rather than leaving
+        # already-copied artifacts on disk untracked by any manifest.
+        $manifest = New-ProjectManifestObject -TargetPath $TargetPath -Template $Template -Artifacts $artifacts `
+            -GitignoreManaged ([bool]$gitignoreManaged) -InstructionsDirCreatedByUs ([bool]$instructionsDirCreatedByUs) `
+            -ExistingManifest $existingManifest
+        Save-ProjectManifest -Manifest $manifest -ManifestPath (Get-ManifestPath -TargetPath $TargetPath)
     }
     catch {
         Write-Status '❌' "Install step failed: $($_.Exception.Message)"
@@ -543,19 +626,9 @@ function Invoke-ProjectInstall {
         throw
     }
 
-    if ($WhatIfPreference) {
-        Write-Host "`nWhatIf: no changes were made.`n" -ForegroundColor Yellow
-        return
-    }
-
-    $manifest = New-ProjectManifestObject -TargetPath $TargetPath -Template $Template -Artifacts $artifacts `
-        -GitignoreManaged ([bool]$gitignoreManaged) -InstructionsDirCreatedByUs ([bool]$instructionsDirCreatedByUs) `
-        -ExistingManifest $existingManifest
-    Save-ProjectManifest -Manifest $manifest -ManifestPath (Get-ManifestPath -TargetPath $TargetPath)
-
     $conflicts = @($artifacts | Where-Object { $_.Status -eq 'Conflict' })
     if ($conflicts.Count -gt 0) {
-        Write-Status '⚠️' "Left unchanged (differs from template, use -Force to overwrite): $($conflicts.Name -join ', ')"
+        Write-Status '⚠️' "Left unchanged (not owned by the installer; use -Force to adopt): $($conflicts.Name -join ', ')"
     }
 
     Write-Host "`n✅ Project templates installed (template: $Template).`n" -ForegroundColor Green
@@ -622,6 +695,20 @@ function Invoke-ProjectUninstall {
     foreach ($artifact in @($manifest.Artifacts)) {
         $path = $artifact.TargetPath
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            continue
+        }
+
+        if ($artifact.Status -ne 'Managed') {
+            # Never taken over by this installer (it existed with different
+            # content, or was never adopted with -Force): its InstalledHash
+            # is only the foreign content's own hash for reporting purposes,
+            # not something this installer wrote. Comparing hashes here would
+            # trivially "match" untouched foreign content and delete a file
+            # the installer never owned, so ownership is checked explicitly
+            # before any hash-based drift comparison is trusted.
+            Write-Status '⚠️' "$($artifact.Name) was never taken over by the installer (existing content differed at last run); leaving it in place untouched."
+            $remainingArtifacts += $artifact
+            $anyConflict = $true
             continue
         }
 

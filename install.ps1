@@ -332,6 +332,55 @@ function New-ManifestObject {
     }
 }
 
+function Save-ManifestFileAtomically {
+    <#
+    .SYNOPSIS
+        Serializes a manifest to JSON and publishes it atomically: the JSON
+        is written to a sibling temp file first, and only promoted over the
+        real manifest path with a single same-directory rename-replace once
+        that write has fully succeeded. A failure at any point
+        (serialization, disk full, locked file) leaves a prior manifest at
+        ManifestPath, if any, completely unmodified instead of a
+        half-written/corrupt file.
+    .NOTES
+        Deliberately uses [System.IO.File]::Move(source, dest, $true) rather
+        than Move-Item -Force: PowerShell's FileSystemProvider can satisfy
+        -Force by deleting the destination and then moving, which is two
+        separate operations with a window where ManifestPath would be
+        missing if interrupted between them. The 3-arg File.Move overload
+        (available since .NET Core 3.0, which this script's
+        `#Requires -Version 7.0` guarantees) maps to a single OS-level
+        rename-replace call (MoveFileEx/MOVEFILE_REPLACE_EXISTING on
+        Windows, rename(2) on POSIX) that either fully succeeds or fully
+        fails, and covers both first publication (no prior file) and
+        replacing an existing one.
+    #>
+    param(
+        [Parameter(Mandatory)]$Manifest,
+        [Parameter(Mandatory)][string]$ManifestPath
+    )
+
+    $dir = Split-Path $ManifestPath -Parent
+    if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $tempPath = Join-Path $dir ".manifest-$([guid]::NewGuid().ToString('N')).tmp"
+    $published = $false
+    try {
+        ($Manifest | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $tempPath -Encoding utf8 -NoNewline
+        [System.IO.File]::Move($tempPath, $ManifestPath, $true)
+        $published = $true
+    }
+    finally {
+        if (-not $published -and (Test-Path -LiteralPath $tempPath)) {
+            try {
+                Remove-Item -LiteralPath $tempPath -Force
+            }
+            catch {
+                Write-Status '⚠️' "Could not remove temporary manifest file $tempPath after a failed publish: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 function Save-Manifest {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -340,9 +389,7 @@ function Save-Manifest {
     )
 
     if ($PSCmdlet.ShouldProcess($ManifestPath, 'Write install manifest')) {
-        $dir = Split-Path $ManifestPath -Parent
-        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-        ($Manifest | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $ManifestPath -Encoding utf8 -NoNewline
+        Save-ManifestFileAtomically -Manifest $Manifest -ManifestPath $ManifestPath
     }
 }
 
@@ -591,14 +638,28 @@ function Sync-McpEntries {
         }
 
         $currentHash = Get-EntryHash $existingProp.Value
+        $previousHash = $PreviousOwnedHashes[$entryName]
+
+        if (-not $previousHash) {
+            # A same-named entry already exists here that this installer has
+            # never recorded owning. Even if its content happens to
+            # byte-match our template right now, that coincidence must never
+            # silently confer ownership — only an entry we are adding for
+            # the first time (above), or one we already track as ours, may
+            # become "owned". Otherwise a later -Uninstall could remove an
+            # entry the user created independently, just because it happened
+            # to match.
+            $conflicts.Add($entryName)
+            continue
+        }
+
         if ($currentHash -eq $sourceHash) {
             $preserved.Add($entryName)
             $ownedHashes[$entryName] = $sourceHash
             continue
         }
 
-        $previousHash = $PreviousOwnedHashes[$entryName]
-        if ($previousHash -and ($previousHash -eq $currentHash)) {
+        if ($previousHash -eq $currentHash) {
             # Unchanged since our last install of this entry: safe to refresh.
             $existingProp.Value = $sourceValue
             $updated.Add($entryName)
@@ -606,9 +667,9 @@ function Sync-McpEntries {
             continue
         }
 
-        # Either never owned by us, or the user modified an owned entry since our last install.
+        # Owned by us previously but the user modified it since our last install.
         $conflicts.Add($entryName)
-        if ($previousHash) { $ownedHashes[$entryName] = $previousHash }
+        $ownedHashes[$entryName] = $previousHash
     }
 
     [pscustomobject]@{
@@ -828,20 +889,24 @@ function Invoke-InstallOrRepair {
             }
             $artifacts += $artifact
         }
+
+        if ($WhatIfPreference) {
+            Write-Host "`nWhatIf: no changes were made.`n" -ForegroundColor Yellow
+            return
+        }
+
+        # Manifest publication happens inside this same try so that a failure
+        # here (serialization, disk full, locked file) triggers the identical
+        # rollback as any other failed link/merge step, rather than leaving
+        # already-created symlinks/merges on disk untracked by any manifest.
+        $manifest = New-ManifestObject -SourceRoot $SourceRoot -TargetRoot $TargetRoot -RunArtifacts $artifacts -ExistingManifest $ExistingManifest
+        Save-Manifest -Manifest $manifest -ManifestPath $ManifestPath
     }
     catch {
         Write-Status '❌' "$verb step failed: $($_.Exception.Message)"
         Undo-Transaction
         throw
     }
-
-    if ($WhatIfPreference) {
-        Write-Host "`nWhatIf: no changes were made.`n" -ForegroundColor Yellow
-        return
-    }
-
-    $manifest = New-ManifestObject -SourceRoot $SourceRoot -TargetRoot $TargetRoot -RunArtifacts $artifacts -ExistingManifest $ExistingManifest
-    Save-Manifest -Manifest $manifest -ManifestPath $ManifestPath
 
     Write-Host "`n✅ $verb complete.`n" -ForegroundColor Green
 }

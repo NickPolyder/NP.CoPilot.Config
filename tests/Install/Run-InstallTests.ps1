@@ -583,6 +583,102 @@ Test-Case -Name 'Install_Should_PreserveAndReportConflict_When_UserModifiesARepo
     }
 
 # ---------------------------------------------------------------------------
+# Regression: a same-named MCP entry that already exists in the target and
+# happens to be byte-identical to the repo's own entry, but was never
+# previously recorded as owned (PreviousOwnedHashes has no entry for it —
+# including on this very first run), must never be silently adopted as
+# repo-owned just because its content coincidentally matches. It must be
+# reported as a Conflict and, critically, must still be present after a
+# later -Uninstall (Remove-OwnedMcpEntries only ever considers entries
+# recorded in OwnedEntries).
+# ---------------------------------------------------------------------------
+
+Test-Case -Name 'Uninstall_Should_PreserveMatchingButNeverOwnedMcpEntry_When_ItCoincidentallyMatchesRepoContentOnFirstInstall' `
+    -Arrange {
+        $root = New-FixtureRoot
+        $repoMcpPath = Get-RepoSourcePath 'mcp-config.json'
+        $repoJson = Get-Content -LiteralPath $repoMcpPath -Raw -Encoding utf8 | ConvertFrom-Json
+        $entryName = (Get-RepoMcpServerNames) | Select-Object -First 1
+        $entryValue = $repoJson.mcpServers.$entryName
+
+        # Pre-seed the target with a regular (non-symlink) mcp-config.json
+        # that already contains an entry byte-identical to the repo's own —
+        # but this installer has never run here before, so it has never
+        # recorded owning it. This is exactly the "coincidental match,
+        # never owned" condition the fix targets. An unrelated genuine
+        # user-owned entry is also present: with only the coincidental
+        # entry, RemainingCount would hit 0 after the repo-owned entries are
+        # removed, taking the separate "restore pristine backup" path,
+        # which happens to restore the coincidental entry too and would
+        # mask the bug either way. A guaranteed-surviving sibling entry
+        # keeps RemainingCount > 0, forcing the real discriminator: is the
+        # coincidental entry itself still present, or was it silently
+        # removed alongside the repo-owned entries?
+        $userConfig = [ordered]@{ mcpServers = [ordered]@{} }
+        $userConfig.mcpServers.$entryName = $entryValue
+        $userConfig.mcpServers.unrelatedUserServer = [ordered]@{ type = 'local'; command = 'node'; args = @('unrelated.js') }
+        ($userConfig | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath (Join-Path $root 'mcp-config.json') -Encoding utf8 -NoNewline
+
+        [pscustomobject]@{ Root = $root; EntryName = $entryName }
+    } `
+    -Act {
+        param($arranged)
+        $installResult = Invoke-Install -TargetRoot $arranged.Root -ExtraArgs @('-Mcp')
+        $manifestAfterInstall = Import-Manifest -TargetRoot $arranged.Root
+        $uninstallResult = Invoke-Install -TargetRoot $arranged.Root -ExtraArgs @('-Uninstall')
+        [pscustomobject]@{
+            InstallResult = $installResult; ManifestAfterInstall = $manifestAfterInstall
+            UninstallResult = $uninstallResult; Arranged = $arranged
+        }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.InstallResult.ExitCode -ne 0) { throw "expected install exit 0, got $($ctx.InstallResult.ExitCode). Output: $($ctx.InstallResult.Output)" }
+        if ($ctx.InstallResult.Output -notmatch [regex]::Escape('Preserved MCP servers with a conflict (user-modified or not repo-owned)')) {
+            throw "expected the coincidental-match entry to be reported as a conflict, not silently adopted. Output: $($ctx.InstallResult.Output)"
+        }
+        if ($ctx.InstallResult.Output -notmatch [regex]::Escape($ctx.Arranged.EntryName)) {
+            throw "expected the conflict message to name '$($ctx.Arranged.EntryName)'. Output: $($ctx.InstallResult.Output)"
+        }
+
+        $mcpArtifactAfterInstall = @($ctx.ManifestAfterInstall.Artifacts) | Where-Object { $_.Name -eq 'mcp-config.json' } | Select-Object -First 1
+        $ownedNamesAfterInstall = @($mcpArtifactAfterInstall.OwnedEntries.PSObject.Properties.Name)
+        if ($ownedNamesAfterInstall -contains $ctx.Arranged.EntryName) {
+            throw "a coincidental content match must never silently confer ownership; '$($ctx.Arranged.EntryName)' must not be recorded as repo-owned"
+        }
+        if ($mcpArtifactAfterInstall.EntryStatus.$($ctx.Arranged.EntryName) -ne 'Conflict') {
+            throw "expected '$($ctx.Arranged.EntryName)' to be recorded with EntryStatus 'Conflict', got '$($mcpArtifactAfterInstall.EntryStatus.$($ctx.Arranged.EntryName))'"
+        }
+
+        if ($ctx.UninstallResult.ExitCode -ne 0) { throw "expected uninstall exit 0, got $($ctx.UninstallResult.ExitCode). Output: $($ctx.UninstallResult.Output)" }
+        if ($ctx.UninstallResult.Output -notmatch [regex]::Escape('Uninstall complete. Installer state removed.')) {
+            throw "expected a clean uninstall — the never-owned entry is invisible to the owned-entry removal pass, not a 'needs attention' outcome. Output: $($ctx.UninstallResult.Output)"
+        }
+
+        $mcpConfigPath = Join-Path $ctx.Arranged.Root 'mcp-config.json'
+        if (-not (Test-Path -LiteralPath $mcpConfigPath)) { throw "expected mcp-config.json to still exist; it holds an entry this installer never owned" }
+        $finalJson = Get-Content -LiteralPath $mcpConfigPath -Raw | ConvertFrom-Json
+        $survivingProp = $finalJson.mcpServers.PSObject.Properties[$ctx.Arranged.EntryName]
+        if (-not $survivingProp) {
+            throw "expected the never-owned, coincidentally-matching MCP entry '$($ctx.Arranged.EntryName)' to survive -Uninstall untouched"
+        }
+        if (-not $finalJson.mcpServers.PSObject.Properties['unrelatedUserServer']) {
+            throw "expected the guaranteed-surviving sibling user entry to remain, confirming RemainingCount stayed > 0"
+        }
+
+        # Every repo-owned entry that WAS added during install (this repo
+        # has more than one MCP server, so at least one other entry was
+        # freshly Added) must have been cleanly removed.
+        $repoNames = Get-RepoMcpServerNames
+        $addedNames = @($repoNames | Where-Object { $_ -ne $ctx.Arranged.EntryName })
+        foreach ($name in $addedNames) {
+            if ($finalJson.mcpServers.PSObject.Properties[$name]) {
+                throw "expected repo-owned entry '$name' to be removed by -Uninstall"
+            }
+        }
+    }
+
+# ---------------------------------------------------------------------------
 # Regression: the manifest's MCP restore point must remain the pristine
 # pre-install copy across every re-merge, never a snapshot of the file
 # taken after it already contains repo-owned entries. A second merge round
@@ -737,6 +833,134 @@ Test-Case -Name 'Uninstall_Should_RestoreForeignSymlinkUntouched_When_ItPreExist
         $restoredMarker = Get-Content -LiteralPath (Join-Path $instructionsPath 'marker.txt') -Raw
         if ($restoredMarker -ne $ctx.Arranged.MarkerContent) {
             throw "expected the foreign symlink's target content to remain reachable and unchanged after restore"
+        }
+    }
+
+# ---------------------------------------------------------------------------
+# Manifest publication/directory-creation failure rollback: a failure inside
+# Save-ManifestFileAtomically must roll back the artifacts written earlier in
+# the same run, leave any prior manifest byte-for-byte untouched, and never
+# leave a stray .manifest-*.tmp file behind.
+# ---------------------------------------------------------------------------
+
+Test-Case -Name 'Install_Should_RollBackCreatedLinksAndLeaveNoManifest_When_InstallerDirPathIsBlockedByAFile' `
+    -Arrange {
+        $root = New-FixtureRoot
+        # Pre-occupy the installer's own state-directory path with a plain
+        # file, so Save-ManifestFileAtomically's write of a sibling temp
+        # file underneath it fails with a real, unmocked filesystem error (a
+        # file cannot have children) instead of a shim or mock.
+        New-Item -ItemType File -Path (Join-Path $root '.np-copilot-installer') -Force | Out-Null
+        $root
+    } `
+    -Act {
+        param($root)
+        [pscustomobject]@{ Result = (Invoke-Install -TargetRoot $root); Root = $root }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when manifest publication cannot even create its directory. Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Installing step failed:')) {
+            throw "expected an installing-step-failed message. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run')) {
+            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted CreatedSymlink:')) {
+            throw "expected the created core-link symlinks to be reverted. Output: $($ctx.Result.Output)"
+        }
+
+        foreach ($name in $script:CoreLinkNames) {
+            if (Test-Path -LiteralPath (Join-Path $ctx.Root $name)) {
+                throw "expected core link '$name' to be removed by rollback, none of them pre-existed in this fresh fixture"
+            }
+        }
+        if (Test-Path -LiteralPath (Get-ManifestPath -TargetRoot $ctx.Root)) {
+            throw "no manifest should ever be published when its directory could not be prepared"
+        }
+
+        # The precondition file must be left exactly as this test made it —
+        # the installer never got far enough to touch it (New-Item -Force is
+        # a no-op success over an existing path, so it stays a plain file).
+        $installerDirItem = Get-Item -LiteralPath (Join-Path $ctx.Root '.np-copilot-installer') -Force
+        if ($installerDirItem.PSIsContainer) { throw "the precondition file at the installer-directory path should not have been converted into a directory" }
+    }
+
+Test-Case -Name 'Repair_Should_RollBackArtifactAndPreservePriorManifestBytes_When_ManifestPublicationFailsDueToLockedManifest' `
+    -Arrange {
+        $root = New-FixtureRoot
+        $firstInstall = Invoke-Install -TargetRoot $root
+        if ($firstInstall.ExitCode -ne 0) { throw "arrange: initial install failed: $($firstInstall.Output)" }
+
+        # Drift one core link into a real directory holding user data, the
+        # same setup as Repair_Should_FixOnlyTheDriftedCoreLink..., so
+        # -Repair has real artifact work to do (a backup + a new symlink)
+        # before manifest publication is attempted.
+        $instructionsPath = Join-Path $root 'instructions'
+        (Get-Item -LiteralPath $instructionsPath -Force).Delete()
+        New-Item -ItemType Directory -Path $instructionsPath | Out-Null
+        Set-Content -LiteralPath (Join-Path $instructionsPath 'marker.txt') -Value 'user data' -Encoding utf8 -NoNewline
+
+        $manifestPath = Get-ManifestPath -TargetRoot $root
+        $priorManifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
+        # Share-Read lock: -Repair must first successfully read the existing
+        # manifest (Import-InstallManifest) before attempting the repair, so
+        # the lock must allow reads through while still blocking the later
+        # atomic [System.IO.File]::Move(temp, manifestPath, $true) publish —
+        # an exclusive (FileShare.None) lock would fail that earlier read
+        # first and never reach the rollback path this test targets.
+        $lockStream = [System.IO.File]::Open($manifestPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read)
+
+        [pscustomobject]@{
+            Root = $root; InstructionsPath = $instructionsPath
+            ManifestPath = $manifestPath; PriorManifestBytes = $priorManifestBytes; LockStream = $lockStream
+        }
+    } `
+    -Act {
+        param($arranged)
+        try {
+            $result = Invoke-Install -TargetRoot $arranged.Root -ExtraArgs @('-Repair')
+        }
+        finally {
+            # Must release the lock before the harness's own cleanup tries
+            # to remove the fixture root, regardless of outcome above.
+            $arranged.LockStream.Dispose()
+        }
+        [pscustomobject]@{ Result = $result; Arranged = $arranged }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when the manifest publish's atomic Move fails against a locked destination. Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Repairing step failed:')) {
+            throw "expected a repairing-step-failed message. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run')) {
+            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted CreatedSymlink:')) {
+            throw "expected the newly-created repair symlink to be reverted. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted MovedToBackup:')) {
+            throw "expected the drifted directory's backup to be restored. Output: $($ctx.Result.Output)"
+        }
+
+        $restoredItem = Get-Item -LiteralPath $ctx.Arranged.InstructionsPath -Force
+        if ($restoredItem.LinkType -eq 'SymbolicLink') {
+            throw "expected the drifted real directory to be restored, not left as the (rolled-back) repaired symlink"
+        }
+        $restoredMarker = Get-Content -LiteralPath (Join-Path $ctx.Arranged.InstructionsPath 'marker.txt') -Raw
+        if ($restoredMarker -ne 'user data') {
+            throw "expected the drifted directory's content to be restored byte-for-byte, got '$restoredMarker'"
+        }
+
+        $manifestBytesAfter = [System.IO.File]::ReadAllBytes($ctx.Arranged.ManifestPath)
+        if ([System.Convert]::ToBase64String($manifestBytesAfter) -ne [System.Convert]::ToBase64String($ctx.Arranged.PriorManifestBytes)) {
+            throw "expected the prior manifest to remain byte-for-byte unchanged after a failed publish attempt"
+        }
+
+        $leftoverTempFiles = Get-ChildItem -LiteralPath (Split-Path $ctx.Arranged.ManifestPath -Parent) -Filter '.manifest-*.tmp' -File -ErrorAction SilentlyContinue
+        if ($leftoverTempFiles) {
+            throw "expected the temporary manifest file to be cleaned up after a failed publish, found: $($leftoverTempFiles.Name -join ', ')"
         }
     }
 

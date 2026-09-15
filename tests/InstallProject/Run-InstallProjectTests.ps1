@@ -739,6 +739,262 @@ Test-Case -Name 'Uninstall_Should_RemoveInstallerCreatedArtifactWithoutRestoring
     }
 
 # ---------------------------------------------------------------------------
+# Status-before-hash uninstall gate: a Conflict-status artifact that was
+# never adopted must survive -Uninstall untouched, even though it was never
+# edited since install (so its content hash still matches InstalledHash).
+# ---------------------------------------------------------------------------
+
+Test-Case -Name 'Uninstall_Should_PreserveNeverAdoptedConflictFile_When_NoEditOccursBetweenInstallAndUninstall' `
+    -Arrange {
+        $root = New-GitFixtureRoot
+        $instructionsDir = Get-InstructionsDir -TargetPath $root
+        New-Item -ItemType Directory -Path $instructionsDir -Force | Out-Null
+        $projectConfigPath = Join-Path $instructionsDir 'project-config.instructions.md'
+        $foreignContent = 'PRE-EXISTING FOREIGN CONTENT NEVER ADOPTED BY THE INSTALLER'
+        Set-Content -LiteralPath $projectConfigPath -Value $foreignContent -Encoding utf8 -NoNewline
+
+        $installResult = Invoke-InstallProject -TargetPath $root
+        if ($installResult.ExitCode -ne 0) { throw "arrange: initial install failed: $($installResult.Output)" }
+        $manifestAfterInstall = Import-ProjectTestManifest -TargetPath $root
+        $artifactAfterInstall = @($manifestAfterInstall.Artifacts) | Where-Object { $_.Name -eq 'project-config.instructions.md' }
+        if ($artifactAfterInstall.Status -ne 'Conflict') {
+            throw "arrange: expected the pre-existing file to be recorded as Conflict, got '$($artifactAfterInstall.Status)'"
+        }
+
+        # Deliberately never edit the file between install and uninstall, so
+        # its live hash still matches InstalledHash — the exact condition
+        # under which a hash-only gate would have (incorrectly) deleted it.
+        [pscustomobject]@{ Root = $root; ProjectConfigPath = $projectConfigPath; ForeignContent = $foreignContent }
+    } `
+    -Act {
+        param($arranged)
+        [pscustomobject]@{ Result = (Invoke-InstallProject -TargetPath $arranged.Root -ExtraArgs @('-Uninstall')); Arranged = $arranged }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -ne 0) { throw "expected exit 0 (a soft warning, not a hard failure), got $($ctx.Result.ExitCode). Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('was never taken over by the installer (existing content differed at last run); leaving it in place untouched.')) {
+            throw "expected the never-adopted-conflict preservation message. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('some items needed manual attention and were left in place')) {
+            throw "expected the partial-uninstall summary banner. Output: $($ctx.Result.Output)"
+        }
+
+        $actualContent = Get-Content -LiteralPath $ctx.Arranged.ProjectConfigPath -Raw
+        if ($actualContent -ne $ctx.Arranged.ForeignContent) {
+            throw "a Conflict-status file that was never edited since install must survive -Uninstall byte-for-byte; the ownership status gate must be checked before any hash-based drift comparison"
+        }
+
+        $manifest = Import-ProjectTestManifest -TargetPath $ctx.Arranged.Root
+        if (-not $manifest) { throw "expected a trimmed manifest to remain since the Conflict artifact still needs attention" }
+        $remaining = @($manifest.Artifacts)
+        if ($remaining.Count -ne 1) { throw "expected exactly 1 remaining artifact (the still-conflicting file), got $($remaining.Count)" }
+        if ($remaining[0].Name -ne 'project-config.instructions.md') { throw "expected the remaining artifact to be project-config.instructions.md, got '$($remaining[0].Name)'" }
+        if ($remaining[0].Status -ne 'Conflict') { throw "expected the remaining artifact to still be recorded as Conflict, got '$($remaining[0].Status)'" }
+
+        # The sibling artifact this installer DID create must have been cleanly removed.
+        $localPrefsPath = Join-Path (Get-InstructionsDir -TargetPath $ctx.Arranged.Root) 'local-preferences.instructions.md'
+        if (Test-Path -LiteralPath $localPrefsPath) { throw "expected the cleanly-owned sibling artifact to be removed by uninstall" }
+    }
+
+# ---------------------------------------------------------------------------
+# Coincidental template match must never silently confer ownership; only an
+# explicit -Force adopts a still-Conflict entry whose content happens to
+# match the current template.
+# ---------------------------------------------------------------------------
+
+Test-Case -Name 'Install_Should_NotAdoptCoincidentalTemplateMatch_When_ConflictExistsWithoutForce' `
+    -Arrange {
+        $root = New-GitFixtureRoot
+        $instructionsDir = Get-InstructionsDir -TargetPath $root
+        New-Item -ItemType Directory -Path $instructionsDir -Force | Out-Null
+        $projectConfigPath = Join-Path $instructionsDir 'project-config.instructions.md'
+        Set-Content -LiteralPath $projectConfigPath -Value 'FOREIGN CONTENT, DIFFERENT FROM TEMPLATE' -Encoding utf8 -NoNewline
+
+        $installResult = Invoke-InstallProject -TargetPath $root
+        if ($installResult.ExitCode -ne 0) { throw "arrange: initial install failed: $($installResult.Output)" }
+        $manifestAfterInstall = Import-ProjectTestManifest -TargetPath $root
+        $artifactAfterInstall = @($manifestAfterInstall.Artifacts) | Where-Object { $_.Name -eq 'project-config.instructions.md' }
+        if ($artifactAfterInstall.Status -ne 'Conflict') { throw "arrange: expected initial Conflict status, got '$($artifactAfterInstall.Status)'" }
+
+        # Now make the foreign content coincidentally byte-identical to the
+        # current template, WITHOUT ever running -Force.
+        Copy-Item -LiteralPath (Get-TemplateSourcePath -Template 'Generic') -Destination $projectConfigPath -Force
+
+        [pscustomobject]@{ Root = $root; ProjectConfigPath = $projectConfigPath }
+    } `
+    -Act {
+        param($arranged)
+        [pscustomobject]@{ Result = (Invoke-InstallProject -TargetPath $arranged.Root); Arranged = $arranged }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -ne 0) { throw "expected exit 0, got $($ctx.Result.ExitCode). Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('matches the current template but was never taken over by the installer; leaving ownership unchanged. Use -Force to adopt it explicitly.')) {
+            throw "expected the coincidental-match non-adoption message. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -match 'Rolling back') {
+            throw "a coincidental-match no-op must never trigger a rollback. Output: $($ctx.Result.Output)"
+        }
+
+        $manifest = Import-ProjectTestManifest -TargetPath $ctx.Arranged.Root
+        $artifact = @($manifest.Artifacts) | Where-Object { $_.Name -eq 'project-config.instructions.md' }
+        if ($artifact.Status -ne 'Conflict') {
+            throw "a coincidental template match must never silently confer ownership; expected Status to remain 'Conflict', got '$($artifact.Status)'"
+        }
+    }
+
+Test-Case -Name 'Install_Should_AdoptCoincidentalTemplateMatch_When_ForceIsSpecifiedOnAPriorConflict' `
+    -Arrange {
+        $root = New-GitFixtureRoot
+        $instructionsDir = Get-InstructionsDir -TargetPath $root
+        New-Item -ItemType Directory -Path $instructionsDir -Force | Out-Null
+        $projectConfigPath = Join-Path $instructionsDir 'project-config.instructions.md'
+        Set-Content -LiteralPath $projectConfigPath -Value 'FOREIGN CONTENT, DIFFERENT FROM TEMPLATE' -Encoding utf8 -NoNewline
+        $installResult = Invoke-InstallProject -TargetPath $root
+        if ($installResult.ExitCode -ne 0) { throw "arrange: initial install failed: $($installResult.Output)" }
+
+        Copy-Item -LiteralPath (Get-TemplateSourcePath -Template 'Generic') -Destination $projectConfigPath -Force
+        $root
+    } `
+    -Act {
+        param($root)
+        [pscustomobject]@{ Result = (Invoke-InstallProject -TargetPath $root -ExtraArgs @('-Force')); Root = $root }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -ne 0) { throw "expected exit 0, got $($ctx.Result.ExitCode). Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('adopted (-Force); already matches current template.')) {
+            throw "expected the -Force adoption confirmation. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -match 'Rolling back') {
+            throw "a successful -Force adoption must never trigger a rollback. Output: $($ctx.Result.Output)"
+        }
+
+        $manifest = Import-ProjectTestManifest -TargetPath $ctx.Root
+        $artifact = @($manifest.Artifacts) | Where-Object { $_.Name -eq 'project-config.instructions.md' }
+        if ($artifact.Status -ne 'Managed') {
+            throw "expected -Force to explicitly adopt the coincidentally-matching file, got Status '$($artifact.Status)'"
+        }
+    }
+
+# ---------------------------------------------------------------------------
+# Manifest publication/directory-creation failure rollback: a failure inside
+# Save-ManifestFileAtomically must roll back the artifacts written earlier in
+# the same run, leave any prior manifest byte-for-byte untouched, and never
+# leave a stray .manifest-*.tmp file behind.
+# ---------------------------------------------------------------------------
+
+Test-Case -Name 'Install_Should_RollBackWrittenArtifactsAndLeaveNoManifest_When_StateDirectoryPathIsBlockedByAFile' `
+    -Arrange {
+        $root = New-GitFixtureRoot
+        # Pre-occupy the installer's own state-directory path with a plain
+        # file, so Save-ManifestFileAtomically's write of a sibling temp
+        # file underneath it fails with a real, unmocked filesystem error (a
+        # file cannot have children) instead of a shim or mock.
+        New-Item -ItemType File -Path (Get-ProjectStateDir -TargetPath $root) -Force | Out-Null
+        $root
+    } `
+    -Act {
+        param($root)
+        [pscustomobject]@{ Result = (Invoke-InstallProject -TargetPath $root); Root = $root }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when manifest publication cannot even create its directory. Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Install step failed:')) {
+            throw "expected an install-step-failed message. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run')) {
+            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted WroteFile:')) {
+            throw "expected the copied template artifacts to be reverted. Output: $($ctx.Result.Output)"
+        }
+
+        if (Test-Path -LiteralPath (Get-InstructionsDir -TargetPath $ctx.Root)) {
+            throw "the instructions directory's contents must not survive a rolled-back run"
+        }
+        if (Test-Path -LiteralPath (Get-ProjectManifestPath -TargetPath $ctx.Root)) {
+            throw "no manifest should ever be published when its directory could not be prepared"
+        }
+
+        # The precondition file must be left exactly as this test made it —
+        # the installer never got far enough to touch it (New-Item -Force is
+        # a no-op success over an existing path, so it stays a plain file).
+        $stateDirItem = Get-Item -LiteralPath (Get-ProjectStateDir -TargetPath $ctx.Root) -Force
+        if ($stateDirItem.PSIsContainer) { throw "the precondition file at the state-directory path should not have been converted into a directory" }
+    }
+
+Test-Case -Name 'Install_Should_RollBackArtifactAndPreservePriorManifestBytes_When_ManifestPublicationFailsOnUpdateDueToLockedManifest' `
+    -Arrange {
+        $root = New-GitFixtureRoot
+        $firstInstall = Invoke-InstallProject -TargetPath $root
+        if ($firstInstall.ExitCode -ne 0) { throw "arrange: initial install failed: $($firstInstall.Output)" }
+
+        $projectConfigPath = Join-Path (Get-InstructionsDir -TargetPath $root) 'project-config.instructions.md'
+        $userEdit = 'USER EDIT PRESENT BEFORE THE FAILED FORCE-OVERWRITE RUN'
+        Set-Content -LiteralPath $projectConfigPath -Value $userEdit -Encoding utf8 -NoNewline
+
+        $manifestPath = Get-ProjectManifestPath -TargetPath $root
+        $priorManifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
+        # Share-Read lock: the installer must first successfully read the
+        # existing manifest (to resolve this run's PreviousArtifact) before
+        # attempting to republish it, so the lock must allow reads through
+        # while still blocking the later atomic
+        # [System.IO.File]::Move(temp, manifestPath, $true) publish — an
+        # exclusive (FileShare.None) lock would fail that earlier read too
+        # and mask this as an unrelated "absent manifest" run instead of the
+        # update-with-locked-destination scenario this test targets.
+        $lockStream = [System.IO.File]::Open($manifestPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read)
+
+        [pscustomobject]@{
+            Root = $root; ProjectConfigPath = $projectConfigPath; UserEdit = $userEdit
+            ManifestPath = $manifestPath; PriorManifestBytes = $priorManifestBytes; LockStream = $lockStream
+        }
+    } `
+    -Act {
+        param($arranged)
+        try {
+            $result = Invoke-InstallProject -TargetPath $arranged.Root -ExtraArgs @('-Force')
+        }
+        finally {
+            # Must release the lock before the harness's own cleanup tries
+            # to remove the fixture root, regardless of outcome above.
+            $arranged.LockStream.Dispose()
+        }
+        [pscustomobject]@{ Result = $result; Arranged = $arranged }
+    } `
+    -Assert {
+        param($ctx)
+        if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when the manifest publish's atomic Move fails against a locked destination. Output: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Install step failed:')) {
+            throw "expected an install-step-failed message. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run')) {
+            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
+        }
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted WroteFile:')) {
+            throw "expected the -Force overwrite of project-config.instructions.md to be reverted. Output: $($ctx.Result.Output)"
+        }
+
+        $restoredContent = Get-Content -LiteralPath $ctx.Arranged.ProjectConfigPath -Raw
+        if ($restoredContent -ne $ctx.Arranged.UserEdit) {
+            throw "expected the pre-run user edit to be restored after the -Force overwrite was rolled back, got '$restoredContent'"
+        }
+
+        $manifestBytesAfter = [System.IO.File]::ReadAllBytes($ctx.Arranged.ManifestPath)
+        if ([System.Convert]::ToBase64String($manifestBytesAfter) -ne [System.Convert]::ToBase64String($ctx.Arranged.PriorManifestBytes)) {
+            throw "expected the prior manifest to remain byte-for-byte unchanged after a failed publish attempt"
+        }
+
+        $leftoverTempFiles = Get-ChildItem -LiteralPath (Get-ProjectStateDir -TargetPath $ctx.Arranged.Root) -Filter '.manifest-*.tmp' -File -ErrorAction SilentlyContinue
+        if ($leftoverTempFiles) {
+            throw "expected the temporary manifest file to be cleaned up after a failed publish, found: $($leftoverTempFiles.Name -join ', ')"
+        }
+    }
+
+# ---------------------------------------------------------------------------
 # Hermeticity guard: this suite must never mutate the real repository's own
 # working tree/templates, or the real Copilot home.
 # ---------------------------------------------------------------------------

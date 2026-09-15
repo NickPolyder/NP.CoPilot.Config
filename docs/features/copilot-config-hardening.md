@@ -1,6 +1,6 @@
 # Copilot Configuration Hardening
 
-**Status:** In progress.
+**Status:** Follow-up corrections locally verified; changes await user review. Active-installation adoption remains unverified.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ The work addresses the configuration review completed on 2026-08-25: capability 
 | Area | Decision |
 |---|---|
 | Scope | Address all review findings in dependency-ordered phases. |
-| Playwright | Run a pinned local `@playwright/mcp` process; remove the remote Playwright service and port. |
+| Playwright | Run local `@playwright/mcp@latest` under the existing user-approved mutable-version waiver; the remote Playwright service and port remain removed. |
 | Hooks | Defer native hooks until the core controls have proved stable. |
 | AgentMemory | Keep the plugin as the only owner of its instruction, skill, and MCP integration. |
 | Review reports | Review workflows persist reports; `code-reviewer` returns findings only. |
@@ -42,17 +42,22 @@ The work addresses the configuration review completed on 2026-08-25: capability 
 
 ## Validation Contract
 
-The repository will gain a single dependency-free PowerShell 7 validation entry point:
+The repository has a dependency-free PowerShell 7 structural validation entry point:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Validate-Config.ps1
 ```
 
-It will validate configuration structure, references, inventories, required policy invariants, version pinning, and MCP syntax.
-Installer behavior will be validated separately against isolated temporary targets.
+It checks selected configuration structure, references, inventory entries, policy wording, version pinning, and MCP syntax.
+The orchestration map and wording assertions do not prove general semantic consistency or runtime behavior.
+Installer behavior is validated separately against isolated temporary targets.
 Applying installer changes to the active user configuration remains a user-approved manual step after repository checks pass.
 
 ## Completed Work
+
+The phase descriptions and counts below record earlier hardening runs, not new
+verification of the active installation.
+The September follow-up corrects gaps found after those phases.
 
 ### Phase 1: Structural Validation
 
@@ -93,6 +98,29 @@ Applying installer changes to the active user configuration remains a user-appro
   (approximately 13,340 tokens). No additional safe trimming was identified:
   the remaining material is scoped instruction, non-duplicated guidance, or
   load-bearing intent/final-rule anchors.
+
+## Follow-up Corrections (2026-09-15)
+
+### Installer Ownership and Publication
+
+Project uninstall now requires a `Managed` artifact before considering its hash
+for deletion or restoration.
+A previously preserved conflict remains unowned through repeated installation,
+including when a later template happens to match its bytes.
+Explicit `-Force` adoption remains available.
+Matching user MCP entries without prior ownership records are also preserved,
+not silently claimed by the global installer.
+
+Both installers publish manifests inside the install/repair rollback boundary.
+They write a temporary sibling file and replace the manifest through
+`System.IO.File.Move` with overwrite, rather than a provider-level
+`Move-Item -Force`.
+Failed publication rolls back managed artifact changes while preserving prior
+manifest bytes; only unpublished temporary files are eligible for cleanup.
+
+This is install/repair failure handling, not a new all-or-nothing uninstall
+transaction or a power-loss recovery guarantee.
+No active user installation was adopted or repaired as part of this follow-up.
 
 ## Implementation Notes
 
