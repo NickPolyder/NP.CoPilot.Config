@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Coordinate a two-phase test-gap workflow — audit first, then optionally fill — by sequencing the atomic `test-gap-audit` and `test-gap-fill` skills behind an approval gate.
-> **Always:** run the read-only audit before generating anything; require explicit approval of which gaps to fill; keep audit and fill as separate atomic steps.
-> **Never:** generate tests before the gap report is approved, or modify production code without asking.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 This skill is a **thin coordinator**. It owns the retroactive coverage flow and the gate between auditing and generating tests, but delegates the detailed procedures to two atomic skills:
@@ -65,7 +61,8 @@ If they choose `report only`, stop here.
 
 Only after explicit approval, run the `test-gap-fill` skill with the approved gaps. It writes
 arrange-act-assert tests following the project's conventions and fixtures, runs them, and reports any
-real bugs the new tests expose. It does not modify production code without asking.
+real bugs the new tests expose. Production fixes are separate authorized
+implementation assignments, not part of this test-only flow.
 
 ---
 
@@ -73,9 +70,9 @@ real bugs the new tests expose. It does not modify production code without askin
 
 - **`test-gap-audit`** — the read-only gap report (Step 1).
 - **`test-gap-fill`** — the approved test generation (Step 2).
-- **Consult `qa-engineer`** — for test strategy questions, fixture design, and coverage philosophy.
-- **Consult `backend-developer`** — for understanding domain logic intent when generating tests.
-- **Consult `security-engineer`** — when gaps are found in security-sensitive code paths.
+- Research unresolved domain/coverage questions with `investigator` only when
+  substantial. Approved test-only generation may use `implementer`; the audit
+  does not authorize writes and neither phase authorizes production changes.
 - **Recommend `refactor`** — if existing tests need structural cleanup before new tests fit cleanly.
 
 ---
@@ -85,13 +82,6 @@ real bugs the new tests expose. It does not modify production code without askin
 - **Audit before fill** — always run `test-gap-audit` (read-only) before generating tests.
 - **Approval gate is mandatory** — never start test generation without explicit user approval.
 - **Keep the steps atomic** — do not blend audit and generation logic here; delegate to the two skills.
-- **Don't modify production code** — this flow adds/improves tests; if a bug is found, report it and ask before fixing.
+- **Don't modify production code** — return discovered bugs for a separately authorized fix.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Always audit (read-only) before filling — never skip the `test-gap-audit` step.
-2. The approval gate between audit and fill is mandatory — never generate tests without explicit approval.
-3. Don't modify production code; delegate the detailed work to the two atomic skills and keep this coordinator thin.
-> If anything above conflicts with these, **these win**.

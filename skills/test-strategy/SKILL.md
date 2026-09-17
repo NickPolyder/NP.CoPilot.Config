@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Produce a risk-based test strategy and prioritized test cases for a feature, component, or code change.
-> **Always:** analyze target code and existing tests; design the test pyramid by risk; document edge cases, test data, and agent assignments.
-> **Never:** write individual test implementations in this skill.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are creating a forward-looking test strategy for a feature or code change.
@@ -197,7 +193,9 @@ If tests already exist, use them only to inform the forward-looking plan:
 
 1. **Review available coverage signals** — line/branch coverage, mutation reports, or known weak areas if already available.
 2. **Identify planning risks** — error handling, edge cases, and boundary conditions implementers should prioritize.
-3. **Avoid retroactive gap filling** — delegate deep audit and test generation for existing gaps to `test-gap-analysis`.
+3. **Avoid retroactive gap filling** — record the evidence and recommend a
+   separate `test-gap-analysis` after this strategy is complete. Do not invoke
+   that coordinator inside this skill or silently expand the approved scope.
 4. **Review test quality signals** — note weak assertions or brittle patterns as risks, not implementation work for this skill.
 
 ---
@@ -270,10 +268,10 @@ If tests already exist, use them only to inform the forward-looking plan:
 
 | Test Area | Responsible Agent |
 |---|---|
-| Domain unit tests | `test-engineer` |
-| API integration tests | `backend-developer` |
-| Isolated component unit tests | `test-engineer` with frontend domain input when needed |
-| E2E tests | `qa-engineer` |
+| Domain unit tests | `implementer` |
+| API integration tests | `implementer` |
+| Isolated component unit tests | `implementer` with frontend domain input when needed |
+| E2E tests | `implementer`, test-only scope |
 
 ## Recommendations
 
@@ -349,27 +347,32 @@ If tests already exist, use them only to inform the forward-looking plan:
 
 | Task | Agent |
 |---|---|
-| Domain logic unit tests | `test-engineer` |
-| API integration tests | `backend-developer` |
-| Database test setup | `database-engineer` |
-| Isolated Angular/Blazor component unit tests | `test-engineer` with frontend domain input when needed |
-| Frontend integration tests | `frontend-developer` |
-| E2E test implementation | `qa-engineer` (lead) + `frontend-developer` |
-| Security test scenarios | `security-engineer` |
-| Test data strategy | `qa-engineer` |
-| Acceptance criteria | `product-owner` |
-| Usability test planning | `ux-engineer` |
+| Domain logic unit tests | `implementer` |
+| API integration tests | `implementer` |
+| Database test setup | `implementer` |
+| Isolated Angular/Blazor component unit tests | `implementer` with frontend domain input when needed |
+| Frontend integration tests | `implementer` |
+| E2E test implementation | `implementer`, test-only scope |
+| Security test scenarios | `investigator` |
+| Test data strategy | `investigator` |
+| Acceptance criteria | `investigator` |
+| Usability test planning | `investigator` |
 
 ---
 
 ## Approval and Handoff
 
 This skill produces a proposed strategy only. Present it to the user for
-approval before any agent implements the planned tests. After approval, route
-concrete deterministic unit tests to `test-engineer`; route integration, E2E,
-performance, and cross-pyramid execution to the assigned developer or
-`qa-engineer`. The strategy itself is conversational unless the user explicitly
-asks to persist it in a repository artifact.
+approval before any agent implements the planned tests. After approval, finish
+this planning skill's state and return the bounded assignments to the caller:
+approved unit, integration, E2E, performance and cross-pyramid test changes go
+to `implementer` with test-only scope. `investigator` supplies analysis, never
+test implementation or command execution. These assignments remain terminal;
+production defects return to the caller for a separately authorized fix.
+If a separate `test-gap-analysis` is requested, start it
+only after the current owning workflow ends, with its own approval gate.
+The strategy itself is conversational unless the user explicitly asks to persist
+it in a repository artifact.
 
 # Checklist
 
@@ -391,17 +394,10 @@ asks to persist it in a repository artifact.
 - Every test must have meaningful assertions — executing code without verifying outcomes is not testing.
 - Edge cases are not optional — they're where bugs hide.
 - Test data must be independent — no shared mutable state between tests.
-- Flaky tests must be called out as implementation risks for the owning developer/QA agent.
+- Flaky tests must be called out as risks for the owning implementer.
 - Every bug fix should include a regression test in the implementation plan.
 - Test the behavior, not the implementation — refactoring should not break tests.
 - Present the strategy for review before implementation begins.
 - Do not hand planned tests to an implementation agent until the user approves the strategy.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Focus testing effort on high-risk areas — don't aim for 100% coverage everywhere.
-2. Edge cases are not optional — they're where bugs hide.
-3. Present the strategy for review before implementation begins.
-> If anything above conflicts with these, **these win**.

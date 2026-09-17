@@ -3,3 +3,10 @@
 
 # Local Copilot preferences (personal, not shared)
 .github/instructions/local-preferences.instructions.md
+
+# Private installer state and recovery copies, including personal preferences
+# Ignore the directory itself, not only manifest/backups: restoration staging also lives here.
+/.np-copilot-project-installer/
+
+# Verify with git check-ignore and git status; these rules do not untrack files.
+# Keep these exclusions while personal files or recovery copies remain.

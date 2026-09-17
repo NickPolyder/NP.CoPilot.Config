@@ -1,22 +1,12 @@
 ---
-applyTo:
-  - "**/*.ts"
-  - "**/*.tsx"
-  - "**/*.mts"
-  - "**/*.cts"
-  - "**/*.js"
-  - "**/*.jsx"
-  - "**/*.mjs"
-  - "**/*.cjs"
+applyTo: "**/*.ts,**/*.tsx,**/*.mts,**/*.cts,**/*.js,**/*.jsx,**/*.mjs,**/*.cjs"
 ---
 
 # TypeScript & Node.js Style
 
-> **Intent (anchor):** Apply framework-agnostic TypeScript/Node.js style rules only to JS/TS assets matched by `applyTo`; framework-specific project config (Angular, React, etc.) wins when more specific.
-
 ## TypeScript
 
-- Enable `strict` mode in `tsconfig.json` — no opting out of `strictNullChecks` or `noImplicitAny`.
+- Preserve existing strict checks; prefer `strict` for new projects. Do not migrate a repository's compiler settings merely to complete an unrelated edit.
 - Prefer `unknown` over `any`; reserve `any` for genuine escape hatches and comment why.
 - Let inference work — annotate public APIs, function boundaries, and exported types, not obvious locals.
 - Prefer `type` aliases and discriminated unions; use `interface` for object shapes meant to be extended/implemented.
@@ -27,26 +17,25 @@ applyTo:
 
 ## Style & Tooling
 
-- Format with Prettier and lint with ESLint (typescript-eslint) — no manual style nits.
-- Use ESM (`import`/`export`); avoid CommonJS `require` in new code.
+- Use the project's formatter and linter rather than adding tooling for style alone.
+- Follow the project's module system; prefer ESM for new projects.
 - Prefer named exports over default exports for refactor-safety and discoverability.
 - Use `async`/`await` over raw `.then()` chains; always handle rejections.
-- Never leave floating promises — `await`, return, or explicitly `void` them.
+- Await or return promises; intentional fire-and-forget work must still handle failures.
 
 ## Node.js Runtime
 
-- Target an active LTS Node version; declare it via `engines` in `package.json` and/or `.nvmrc`.
-- Read config and secrets from the environment — never hardcode; validate env at startup.
+- Respect the declared supported Node version; prefer active LTS for new projects, not an unsolicited runtime upgrade.
+- Read configuration from declared sources and secrets through repository-approved
+  runtime injection or direct secret-provider retrieval. Environment variables
+  are a delivery channel, not a secret store; never hardcode, commit, log, or
+  expose secrets to clients. Validate required values at startup.
 - Use the built-in `fetch` and Web APIs where available before reaching for dependencies.
 - Prefer async, non-blocking I/O; don't block the event loop with sync calls in request paths.
 - Pin dependencies with a committed lockfile; keep `dependencies` and `devDependencies` separated correctly.
-- Use a structured logger (pino/winston) over `console.log` for application logging.
+- Use the project's structured logger for application logging.
 
 ## Testing
 
 - Write tests with the project's runner (Vitest, Jest, or `node:test`); keep them isolated and deterministic.
 - Prefer testing behavior through public APIs over implementation details.
-
-## Final Rules (Anchor)
-
-Apply these rules only to JS/TS assets: keep TypeScript strict, prefer ESM, handle async failures, validate environment config, and test through public APIs.

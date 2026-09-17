@@ -13,7 +13,7 @@
 #>
 
 [CmdletBinding()]
-param()
+param([string]$Filter = '*')
 
 $ErrorActionPreference = 'Stop'
 
@@ -55,7 +55,9 @@ function Test-Case {
         [Parameter(Mandatory)][scriptblock]$Assert
     )
 
+    if ($Name -notlike $Filter) { return }
     $arranged = $null
+    $firstFixture = $script:InstallFixtureRoots.Count
     try {
         $arranged = & $Arrange
         $result = & $Act $arranged
@@ -66,20 +68,10 @@ function Test-Case {
         Write-TestFail -Name $Name -Detail $_.Exception.Message
     }
     finally {
-        $cleanupPaths = @()
-        if ($arranged -is [string]) {
-            $cleanupPaths = @($arranged)
-        }
-        elseif ($arranged) {
-            $propNames = $arranged.PSObject.Properties.Name
-            if ($propNames -contains 'CleanupPaths') { $cleanupPaths += @($arranged.CleanupPaths) }
-            elseif ($propNames -contains 'Root') { $cleanupPaths += @($arranged.Root) }
-        }
-
-        foreach ($cleanupRoot in $cleanupPaths) {
-            if ($cleanupRoot -and (Test-Path -LiteralPath $cleanupRoot -PathType Container)) {
-                Remove-FixtureRoot -Path $cleanupRoot
-            }
+        for ($i = $script:InstallFixtureRoots.Count - 1; $i -ge $firstFixture; $i--) {
+            try { Remove-FixtureRoot -Path $script:InstallFixtureRoots[$i] }
+            catch { Write-TestFail -Name "$Name cleanup" -Detail $_.Exception.Message }
+            $script:InstallFixtureRoots.RemoveAt($i)
         }
     }
 }
@@ -87,30 +79,6 @@ function Test-Case {
 Write-Host ''
 Write-Host '🔍 Running install.ps1 regression suite...' -ForegroundColor Cyan
 Write-Host ''
-
-# ---------------------------------------------------------------------------
-# Hermeticity baseline: captured BEFORE any test runs, so the guard test at
-# the end can prove nothing in this suite ever touched the real Copilot home.
-# ---------------------------------------------------------------------------
-
-$script:RealCopilotHome = Join-Path $HOME '.copilot'
-$script:RealInstallerDirExisted = Test-Path -LiteralPath (Join-Path $script:RealCopilotHome '.np-copilot-installer')
-$script:RealMcpConfigPath = Join-Path $script:RealCopilotHome 'mcp-config.json'
-$script:RealMcpConfigHashBefore = $null
-if (Test-Path -LiteralPath $script:RealMcpConfigPath -PathType Leaf) {
-    $script:RealMcpConfigHashBefore = (Get-FileHash -LiteralPath $script:RealMcpConfigPath -Algorithm SHA256).Hash
-}
-$script:RealCoreLinkTargetsBefore = @{}
-foreach ($linkName in $script:CoreLinkNames) {
-    $p = Join-Path $script:RealCopilotHome $linkName
-    $script:RealCoreLinkTargetsBefore[$linkName] = $null
-    if (Test-Path -LiteralPath $p) {
-        $item = Get-Item -LiteralPath $p -Force
-        if ($item.LinkType -eq 'SymbolicLink') {
-            $script:RealCoreLinkTargetsBefore[$linkName] = Resolve-TestLinkTarget $item
-        }
-    }
-}
 
 # ---------------------------------------------------------------------------
 # Fresh core install
@@ -774,8 +742,7 @@ Test-Case -Name 'Uninstall_Should_RestoreTrulyPristineMcpConfig_When_ASecondMerg
 Test-Case -Name 'Uninstall_Should_RestoreForeignSymlinkUntouched_When_ItPreExistedAtACoreLinkPath' `
     -Arrange {
         $root = New-FixtureRoot
-        $foreignTargetDir = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-foreign-target-" + [guid]::NewGuid())
-        New-Item -ItemType Directory -Path $foreignTargetDir | Out-Null
+        $foreignTargetDir = New-FixtureRoot
         $markerContent = "foreign-user-data-$([guid]::NewGuid())"
         Set-Content -LiteralPath (Join-Path $foreignTargetDir 'marker.txt') -Value $markerContent -Encoding utf8 -NoNewline
 
@@ -843,7 +810,7 @@ Test-Case -Name 'Uninstall_Should_RestoreForeignSymlinkUntouched_When_ItPreExist
 # leave a stray .manifest-*.tmp file behind.
 # ---------------------------------------------------------------------------
 
-Test-Case -Name 'Install_Should_RollBackCreatedLinksAndLeaveNoManifest_When_InstallerDirPathIsBlockedByAFile' `
+Test-Case -Name 'Install_Should_FailBeforeMutation_When_InstallerDirPathIsBlockedByAFile' `
     -Arrange {
         $root = New-FixtureRoot
         # Pre-occupy the installer's own state-directory path with a plain
@@ -860,14 +827,8 @@ Test-Case -Name 'Install_Should_RollBackCreatedLinksAndLeaveNoManifest_When_Inst
     -Assert {
         param($ctx)
         if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when manifest publication cannot even create its directory. Output: $($ctx.Result.Output)" }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Installing step failed:')) {
-            throw "expected an installing-step-failed message. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run')) {
-            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted CreatedSymlink:')) {
-            throw "expected the created core-link symlinks to be reverted. Output: $($ctx.Result.Output)"
+        if ($ctx.Result.Output -notmatch 'ordinary directories') {
+            throw "expected an explicit pre-mutation state-directory error. Output: $($ctx.Result.Output)"
         }
 
         foreach ($name in $script:CoreLinkNames) {
@@ -965,34 +926,18 @@ Test-Case -Name 'Repair_Should_RollBackArtifactAndPreservePriorManifestBytes_Whe
     }
 
 # ---------------------------------------------------------------------------
-# Hermeticity guard: this suite must never mutate the real Copilot home.
+. (Join-Path $PSScriptRoot 'Install-Lifecycle.Cases.ps1')
+
+# Fixture cleanup and invocation isolation, without reading any active home.
 # ---------------------------------------------------------------------------
 
-Test-Case -Name 'Suite_Should_NeverMutate_RealCopilotHome_AcrossAnyTest' `
+Test-Case -Name 'Suite_Should_UseIsolatedProcessesAndCleanEveryOwnedFixture' `
     -Arrange { $null } `
     -Act { param($unused) [pscustomobject]@{ ExitCode = 0; Output = '' } } `
     -Assert {
         param($r)
-        $installerDirExistsNow = Test-Path -LiteralPath (Join-Path $script:RealCopilotHome '.np-copilot-installer')
-        if ($installerDirExistsNow -ne $script:RealInstallerDirExisted) {
-            throw "a fixture appears to have leaked an installer manifest into the real Copilot home ($script:RealCopilotHome)"
-        }
-
-        if ($script:RealMcpConfigHashBefore) {
-            $hashAfter = (Get-FileHash -LiteralPath $script:RealMcpConfigPath -Algorithm SHA256).Hash
-            if ($hashAfter -ne $script:RealMcpConfigHashBefore) {
-                throw "the real Copilot home's mcp-config.json changed during this test run"
-            }
-        }
-
-        foreach ($linkName in $script:CoreLinkNames) {
-            $expectedTarget = $script:RealCoreLinkTargetsBefore[$linkName]
-            if (-not $expectedTarget) { continue }
-            $p = Join-Path $script:RealCopilotHome $linkName
-            if (-not (Test-IsSymlinkTo -Path $p -ExpectedTarget $expectedTarget)) {
-                throw "the real Copilot home's '$linkName' symlink was altered during this test run"
-            }
-        }
+        if ($script:IsolatedInstallInvocations -lt 1) { throw 'No isolated invocations were exercised.' }
+        if ($script:InstallFixtureRoots.Count -ne 0) { throw 'The fixture registry was not emptied after cleanup.' }
     }
 
 # ---------------------------------------------------------------------------
@@ -1000,6 +945,10 @@ Test-Case -Name 'Suite_Should_NeverMutate_RealCopilotHome_AcrossAnyTest' `
 # ---------------------------------------------------------------------------
 
 Write-Host ''
+if ($script:TestsPassed + $script:TestsFailed -eq 0) {
+    Write-Host "No regression cases matched '$Filter'." -ForegroundColor Red
+    exit 1
+}
 if ($script:TestsFailed -eq 0) {
     Write-Host "✅ All $script:TestsPassed regression tests passed." -ForegroundColor Green
     exit 0

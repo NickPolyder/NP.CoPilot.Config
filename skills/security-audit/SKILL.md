@@ -8,17 +8,20 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Assess one scoped feature, service, or codebase area for application security risks and produce a STRIDE/OWASP report.
-> **Always:** define scope and trust boundaries first; rate findings with standard severity; communicate critical findings immediately.
-> **Never:** expose secrets or audit an undefined "everything" scope.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a systematic security assessment.
 
-This skill is the **deep security delegate** when `git-commit-review`'s security
-hat finds issues needing STRIDE/OWASP depth. Dependency version and CVE
-inventory remains owned by `dependency-audit`.
+This is a standalone bounded STRIDE/OWASP assessment. A security specialist in an
+active review can return a recommendation for it, but cannot invoke it. Start
+this separate workflow only after the owning workflow has ended and the user has
+authorized the new scope; keep this skill's own approval gate. Do not relabel a
+blocked review complete merely to start another workflow.
+
+Dependency version, license, and CVE inventory belongs to
+`dependency-audit-report`; `dependency-audit` coordinates optional approved
+upgrades. Consume existing inventory evidence here or recommend that separate
+workflow after this audit, never run a coordinator inside this skill.
 
 Your goals are to:
 
@@ -38,7 +41,7 @@ Use this skill whenever:
 - The user asks for a security review, audit, or assessment.
 - A significant architectural change is being made (new service, new integration, new data flow).
 - A regular periodic security review is due.
-- The `git-commit-review` security hat identifies concerns that need a deeper STRIDE/OWASP assessment.
+- A completed review recommends a separately authorized deeper STRIDE/OWASP assessment.
 - A security incident has occurred and the codebase needs review.
 
 Do **not** use this skill for:
@@ -46,7 +49,8 @@ Do **not** use this skill for:
 - Simple code reviews (use the `code-reviewer` agent instead).
 - Pre-commit reviews (use the `git-commit-review` skill instead).
 - Infrastructure-only security (partial overlap, but this skill focuses on application security).
-- Dependency version, license, and CVE inventory — use `dependency-audit`.
+- Dependency version, license, and CVE inventory — recommend a separate
+  `dependency-audit-report`, or `dependency-audit` when approved upgrades are also wanted.
 
 ---
 
@@ -158,11 +162,14 @@ Systematically check each category:
 - [ ] Default credentials removed/changed
 - [ ] Error pages don't expose stack traces or internal details
 - [ ] Unnecessary features and endpoints disabled
-- [ ] Dependency posture reviewed only from existing scanner/report signals; run `dependency-audit` for CVE inventory
+- [ ] Dependency posture reviewed from cited existing scanner/report evidence;
+  missing CVE/license inventory is reported and recommended as a separate
+  `dependency-audit-report` handoff, not a nested invocation
 
 ### A06: Vulnerable Components
 - [ ] Dependency scanning enabled (Dependabot, Snyk)
-- [ ] Known dependency CVEs reviewed through `dependency-audit`; this audit does not own CVE discovery
+- [ ] Known dependency CVEs reviewed from available inventory evidence; missing
+  inventory remains unknown, not a clean assessment
 - [ ] Minimal dependencies (each is justified)
 - [ ] Dependencies from trusted sources only
 - [ ] Lock files committed (package-lock.json, etc.)
@@ -233,7 +240,7 @@ Produce a structured security assessment report:
 
 **Date:** {date}
 **Scope:** {what was audited}
-**Auditor:** security-engineer agent
+**Auditor:** {actual workflow owner and any delegated investigators}
 
 ## Executive Summary
 
@@ -303,19 +310,12 @@ After completing the audit, persist the report:
 
 # Agent coordination
 
-During the audit, involve specialist agents as needed:
-
-| Situation | Agent to Consult |
-|---|---|
-| Architecture-level threats | `architect` |
-| Backend code review | `backend-developer` |
-| Frontend security (XSS, CSP) | `frontend-developer` |
-| Database access patterns | `database-engineer` |
-| Service integration security | `systems-engineer` |
-| Infrastructure security | `devops-engineer` |
-| Service Fabric security | `service-fabric-engineer` |
-| Auth UX flows | `ux-engineer` |
-| Test coverage for security | `qa-engineer` |
+Keep the bounded audit inline unless a substantial independent question needs
+separate context. Assign it to `investigator` with relevant security and affected
+domain notes, required evidence and a stop condition. The caller executes
+authorized checks and owns the report; investigators do not edit or run commands.
+Required independent review uses `code-reviewer` with immutable intake rather
+than pretending an advisory investigation is independent acceptance.
 
 ---
 
@@ -332,7 +332,7 @@ During the audit, involve specialist agents as needed:
 
 **Date:** 2026-04-13
 **Scope:** src/Auth/ — login, registration, password reset, token management
-**Auditor:** security-engineer agent
+**Auditor:** {actual workflow owner and any delegated investigators}
 
 ## Executive Summary
 
@@ -393,10 +393,3 @@ password reset endpoint and token storage.
 - Follow existing security patterns in the codebase when recommending fixes.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Always define scope before starting the audit — never audit "everything" without boundaries.
-2. Never expose actual secrets, credentials, or sensitive data in the report.
-3. Critical findings must be communicated immediately — don't wait for the full report.
-> If anything above conflicts with these, **these win**.

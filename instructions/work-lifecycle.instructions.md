@@ -1,57 +1,35 @@
-# Work Lifecycle
+# Ownership and Evidence
 
-> **Intent (anchor):** Define a portable lifecycle for verified, atomic outcomes without requiring a particular issue tracker, worktree system, branch model, or deployment platform.
-> **Always:** make the outcome, owner, dependencies, candidate revision, and required evidence explicit when the work tier or project capabilities require them.
-> **Never:** invent repository capabilities, conceal blockers, claim completion without required evidence, or bypass a configured delivery path.
+One implementer owns each atomic outcome. Split independently shippable work;
+keep tests with the behavior they cover. Preserve user changes and foreign
+artifacts. Record dependencies and blockers when they affect delivery or a
+handoff, not as ceremony for every small task.
 
-## Lifecycle
+Validation, review and delivery evidence must identify the revision covered.
+Material changes invalidate affected evidence: repeat the relevant checks and
+review on the new candidate. Use the repository's actual delivery path, never an
+assumed direct push. Verify the originally observed outcome when practical;
+distinguish local evidence from unavailable integration or deployment evidence.
 
-1. **Ready** — the atomic outcome, owner, dependencies, and delivery path are understood.
-2. **Active** — one implementing agent owns the atomic outcome.
-3. **Blocked** — evidence and the dependency are recorded; release an active claim when the configured tracker supports claims.
-4. **Under review** — validation and independent review reference the exact candidate revision.
-5. **Delivered** — the configured delivery evidence is complete and the observed outcome is verified when applicable.
+## Repository capabilities
 
-Use the smallest lifecycle evidence that matches the work tier.
-Trivial work normally needs only the applicable local verification.
-Standard and Full work must retain enough evidence for the next agent or reviewer to understand the outcome and its status.
+Use declared capabilities, not invented infrastructure:
 
-## Atomic Outcomes and Blockers
-
-- Split work when outcomes, owners, repositories, or independently shippable changes differ.
-- Keep tests with the behavior they verify.
-- When a separate blocker prevents the current outcome, preserve the evidence, record or link the dependency in the configured system, and return the current work to a truthful blocked or ready state.
-- Do not silently expand the current outcome to resolve unrelated findings.
-- Perform root-cause analysis for incidents, recurrences, regressions, or systemic failures when repository policy requires it; do not require it for every isolated defect.
-
-## Exact-Revision Evidence
-
-Validation, review, CI, and delivery evidence must identify the candidate revision they cover.
-After a material change, repeat affected validation and review for the new revision.
-Use the project delivery path—staged snapshot, commit SHA, pull-request head SHA, merge queue result, or deployment run—rather than assuming a direct push to `main`.
-
-## Outcome Verification
-
-For user-facing, incident-driven, integration, or deployment work, verify the original observed outcome when practical.
-State clearly when local verification is the highest available evidence and identify any remaining external verification.
-
-## Repository Delivery Capabilities
-
-Project configuration may enable the following capabilities.
-Disabled or absent capabilities impose no additional ceremony.
-
-| Capability | When enabled |
+| Enabled capability | Required behavior |
 |---|---|
-| Issue tracking | Search before creating work; use one tracked item per atomic outcome; record dependencies and truthful state. |
-| Isolated worktrees | Concurrent implementers work outside human workspaces in separate worktrees. |
-| Remote delivery | Confirm the allowed branch, pull request, push, or human-handoff path before remote mutation. |
-| Protected branches | Follow required reviews, checks, code-owner, and branch rules; never bypass them. |
-| Integration queue | Follow the configured serialization and revalidation rules. |
-| Deployment evidence | Await required CI/deployment evidence and verify the observed outcome when applicable. |
+| Issue tracking | Search first; maintain one item per outcome and truthful dependencies/status. |
+| Isolated worktrees | Separate concurrent implementers from human workspaces. |
+| Remote delivery | Confirm the authorized branch, PR, push, or human handoff. |
+| Protected branches | Preserve required checks, reviews and code-owner controls. |
+| Integration queue | Follow serialization and revalidation requirements. |
+| Deployment evidence | Await required results and verify the observed outcome. |
 
-## Final Rules (Anchor)
+Absent optional capabilities add no ceremony; actual host protections and
+required story gates still apply. An unavailable required capability is a
+blocker, not permission to claim delivery.
 
-1. Work one atomic outcome at a time and keep blockers truthful.
-2. Bind required validation and review evidence to the exact candidate revision.
-3. Use only repository capabilities declared by project configuration.
-4. Follow the configured delivery path; do not assume direct write access to `main`.
+Preserve the existing capability owner and verified values. Project-config
+declarations are canonical when present; otherwise preserve the declaring root
+contract. The installer supports project-config or root Copilot owner markers.
+Other root declarations require an explicit preservation/reference or migration
+plan. Never generate competing default-disabled tables or silently reset values.

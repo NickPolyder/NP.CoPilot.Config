@@ -9,12 +9,21 @@
     install-project.ps1, any repo template, or the real Copilot home
     (~/.copilot). No Pester, no third-party dependency. Mirrors the
     conventions established by tests\Install\Run-InstallTests.ps1.
+    The entry point captures and verifies installer, test, and template bytes
+    together, then runs from that isolated source snapshot. It reports the
+    source fingerprint and rejects changed live inputs with exact paths.
+    Root README/.github guidance is not part of this source guard.
 .EXAMPLE
     pwsh -NoProfile -File .\tests\InstallProject\Run-InstallProjectTests.ps1
+.EXAMPLE
+    pwsh -NoProfile -File .\tests\InstallProject\Run-InstallProjectTests.ps1 -NamePattern '*Restoration*'
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [string]$NamePattern = '*',
+    [Parameter(DontShow)][switch]$FrozenSources
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -22,6 +31,34 @@ $script:TestsPassed = 0
 $script:TestsFailed = 0
 
 . (Join-Path $PSScriptRoot 'New-InstallProjectFixture.ps1')
+Initialize-ProjectTestEnvironment
+
+if (-not $FrozenSources) {
+    $exitCode = 1
+    try {
+        $snapshot = New-ProjectFrozenTestSource
+        $stateBefore = Test-Path -LiteralPath (Join-Path $script:InstallProjectRepoRoot $script:StateDirName)
+        Write-Host "Source root: $($snapshot.Manifest.SourceRoot)"
+        Write-Host "Captured at UTC: $($snapshot.Manifest.CapturedAtUtc)"
+        Write-Host "Source snapshot SHA-256: $($snapshot.Manifest.SourceId) ($($snapshot.Manifest.Files.Count) files)"
+        $result = Invoke-ProjectFixtureProcess -Program pwsh -Arguments @('-NoProfile', '-File', $snapshot.RunnerPath,
+            '-FrozenSources', '-NamePattern', $NamePattern) -WorkingDirectory $snapshot.Root
+        $changes = @(Compare-ProjectTestSourceManifest -Expected $snapshot.Manifest.Files `
+                -Actual @(Get-ProjectTestSourceManifest -Root $script:InstallProjectRepoRoot))
+        $stateChanged = (Test-Path -LiteralPath (Join-Path $script:InstallProjectRepoRoot $script:StateDirName)) -ne $stateBefore
+        $exitCode = $result.ExitCode
+        if ($changes.Count -or $stateChanged) {
+            Write-Host "Source guard FAILED for '$($snapshot.Manifest.SourceRoot)'. Results below apply only to the captured snapshot, not the changed working tree." -ForegroundColor Red
+            foreach ($change in $changes) { Write-Host "$($change.Path): $($change.Before) -> $($change.After)" -ForegroundColor Red }
+            if ($stateChanged) { Write-Host 'Project installer state appeared/disappeared in the original source repository.' -ForegroundColor Red }
+            $exitCode = 1
+        }
+        Write-Host $result.Output
+        if ($exitCode -eq 0) { Write-Host "Source guard passed: $($snapshot.Manifest.SourceId); root README/.github guidance excluded." }
+    }
+    finally { Remove-ProjectTestEnvironment }
+    exit $exitCode
+}
 
 function Write-TestPass {
     param([Parameter(Mandatory)][string]$Name)
@@ -54,6 +91,7 @@ function Test-Case {
         [Parameter(Mandatory)][scriptblock]$Assert
     )
 
+    if ($Name -notlike $NamePattern) { return }
     $arranged = $null
     try {
         $arranged = & $Arrange
@@ -88,16 +126,13 @@ Write-Host '🔍 Running install-project.ps1 regression suite...' -ForegroundCol
 Write-Host ''
 
 # ---------------------------------------------------------------------------
-# Hermeticity baseline: captured BEFORE any test runs, so the guard test at
-# the end can prove nothing in this suite ever touched the real repository's
-# own working tree/templates, or the real Copilot home.
+# Child processes receive fixture-owned homes, temp paths, and Git configuration.
+# Source hashes supplement that isolation; no active-home sentinels are used.
 # ---------------------------------------------------------------------------
 
-$script:RepoTemplatesHashBefore = (Get-ChildItem -LiteralPath $script:TemplatesDir -Recurse -File |
-        Sort-Object FullName | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }) -join ','
+try {
+$script:FrozenSource = Assert-ProjectFrozenTestSource
 $script:RepoRootStateDirExistedBefore = Test-Path -LiteralPath (Join-Path $script:InstallProjectRepoRoot $script:StateDirName)
-$script:RealCopilotHome = Join-Path $HOME '.copilot'
-$script:RealCopilotProjectStateDirExistedBefore = Test-Path -LiteralPath (Join-Path $script:RealCopilotHome $script:StateDirName)
 
 # ---------------------------------------------------------------------------
 # Fresh install: Generic template
@@ -366,8 +401,8 @@ Test-Case -Name 'Install_Should_AppendGitignoreBlockExactlyOnce_When_RunTwice' `
     -Assert {
         param($ctx)
         if ($ctx.Result.ExitCode -ne 0) { throw "expected exit 0, got $($ctx.Result.ExitCode). Output: $($ctx.Result.Output)" }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('.gitignore already contains the local preferences entry.')) {
-            throw "expected the second run to recognize the entry already present. Output: $($ctx.Result.Output)"
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Effective Git exclusions already cover local preferences and installer state/backups')) {
+            throw "expected the second run to verify exclusion without adopting existing text. Output: $($ctx.Result.Output)"
         }
 
         $gitignoreContent = Get-Content -LiteralPath (Join-Path $ctx.Root '.gitignore') -Raw
@@ -394,7 +429,7 @@ Test-Case -Name 'Uninstall_Should_RemoveGitignoreBlockArtifactsAndState_When_Not
     -Assert {
         param($ctx)
         if ($ctx.Result.ExitCode -ne 0) { throw "expected exit 0, got $($ctx.Result.ExitCode). Output: $($ctx.Result.Output)" }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Removed local preferences entry from .gitignore.')) {
+        if ($ctx.Result.Output -notmatch [regex]::Escape('Removed local preferences entry from .gitignore (only complete installer-owned blocks).')) {
             throw "expected the gitignore block removal message. Output: $($ctx.Result.Output)"
         }
         if ($ctx.Result.Output -notmatch [regex]::Escape('Uninstall complete. Installer state removed.')) {
@@ -548,20 +583,10 @@ Test-Case -Name 'Uninstall_Should_PreserveUserEditedFileAndTrimManifest_When_Fil
     }
 
 # ---------------------------------------------------------------------------
-# Transactional rollback: a mid-run failure undoes everything written so far
+# Directory collisions now fail before mutation, not during the write phase.
 # ---------------------------------------------------------------------------
-#
-# Failure seam: a directory (not a file) is pre-created at the target's
-# .gitignore path. Set-GitignoreEntry's Add-Content call deterministically
-# throws "Unable to write content because it is a directory" for such a
-# path (verified interactively; no production code change involved — this
-# is simply a hostile-but-valid pre-existing filesystem state, no different
-# in kind from the foreign-symlink fixtures already used elsewhere in this
-# repo's test suites). Both artifact files are written successfully before
-# this failure, so this exercises rollback of populated 'WroteFile' and
-# 'CreatedDirectory' transaction-log entries, not just an empty-log no-op.
 
-Test-Case -Name 'Install_Should_RollBackWrittenArtifactsAndInstructionsDir_When_GitignoreWriteFailsMidTransaction' `
+Test-Case -Name 'Install_Should_RejectGitignoreDirectoryBeforeWritingArtifacts' `
     -Arrange {
         $root = New-GitFixtureRoot
         New-Item -ItemType Directory -Path (Join-Path $root '.gitignore') | Out-Null
@@ -571,18 +596,8 @@ Test-Case -Name 'Install_Should_RollBackWrittenArtifactsAndInstructionsDir_When_
     -Assert {
         param($ctx)
         if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when the mid-transaction gitignore write fails" }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Install step failed:')) {
-            throw "expected an install-step-failed message. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run...')) {
-            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted WroteFile:')) {
-            throw "expected at least one reverted WroteFile entry in the rollback log. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted CreatedDirectory:')) {
-            throw "expected the newly-created instructions directory entry to be reverted. Output: $($ctx.Result.Output)"
-        }
+        if ($ctx.Result.Output -notmatch 'Directory collision at file path') { throw "expected a preflight directory collision: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -match 'Reverted WroteFile') { throw 'Preflight rejection must not first write artifacts.' }
 
         if (Test-Path -LiteralPath (Get-InstructionsDir -TargetPath $ctx.Root)) {
             throw "the instructions directory must not survive a rolled-back run"
@@ -623,7 +638,7 @@ Test-Case -Name 'Install_Should_CarryForwardEarliestBackupAndUninstallRestorePre
         # Simulate a source template revision landing in the repo, WITHOUT
         # touching this repo's real templates directory.
         Set-InstallProjectScriptCopyTemplateContent -ScriptCopyTemplatesDir $scriptCopy.TemplatesDir `
-            -FileName 'project-config.instructions.md' -Content 'REVISED TEMPLATE V2 CONTENT - SIMULATED SOURCE CHANGE'
+            -FileName 'project-config.instructions.md' -Content ((Get-Content -LiteralPath (Join-Path $scriptCopy.TemplatesDir 'project-config.instructions.md') -Raw) + "`nREVISED TEMPLATE V2 CONTENT - SIMULATED SOURCE CHANGE")
 
         [pscustomobject]@{
             Root = $root; ScriptCopy = $scriptCopy; ProjectConfigPath = $projectConfigPath
@@ -692,7 +707,7 @@ Test-Case -Name 'Uninstall_Should_RemoveInstallerCreatedArtifactWithoutRestoring
         # Simulate a source template revision landing in the repo, WITHOUT
         # touching this repo's real templates directory.
         Set-InstallProjectScriptCopyTemplateContent -ScriptCopyTemplatesDir $scriptCopy.TemplatesDir `
-            -FileName 'project-config.instructions.md' -Content 'REVISED TEMPLATE V2 CONTENT FOR CLEAN INSTALLER ARTIFACT'
+            -FileName 'project-config.instructions.md' -Content ((Get-Content -LiteralPath (Join-Path $scriptCopy.TemplatesDir 'project-config.instructions.md') -Raw) + "`nREVISED TEMPLATE V2 CONTENT FOR CLEAN INSTALLER ARTIFACT")
 
         $projectConfigPath = Join-Path (Get-InstructionsDir -TargetPath $root) 'project-config.instructions.md'
         [pscustomobject]@{
@@ -885,13 +900,10 @@ Test-Case -Name 'Install_Should_AdoptCoincidentalTemplateMatch_When_ForceIsSpeci
 # leave a stray .manifest-*.tmp file behind.
 # ---------------------------------------------------------------------------
 
-Test-Case -Name 'Install_Should_RollBackWrittenArtifactsAndLeaveNoManifest_When_StateDirectoryPathIsBlockedByAFile' `
+Test-Case -Name 'Install_Should_RejectStateDirectoryFileBeforeWritingArtifacts' `
     -Arrange {
         $root = New-GitFixtureRoot
-        # Pre-occupy the installer's own state-directory path with a plain
-        # file, so Save-ManifestFileAtomically's write of a sibling temp
-        # file underneath it fails with a real, unmocked filesystem error (a
-        # file cannot have children) instead of a shim or mock.
+        # Present but unusable state must stop preflight, even before copying templates.
         New-Item -ItemType File -Path (Get-ProjectStateDir -TargetPath $root) -Force | Out-Null
         $root
     } `
@@ -902,15 +914,8 @@ Test-Case -Name 'Install_Should_RollBackWrittenArtifactsAndLeaveNoManifest_When_
     -Assert {
         param($ctx)
         if ($ctx.Result.ExitCode -eq 0) { throw "expected a non-zero exit when manifest publication cannot even create its directory. Output: $($ctx.Result.Output)" }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Install step failed:')) {
-            throw "expected an install-step-failed message. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Rolling back changes made during this run')) {
-            throw "expected the rollback banner to fire. Output: $($ctx.Result.Output)"
-        }
-        if ($ctx.Result.Output -notmatch [regex]::Escape('Reverted WroteFile:')) {
-            throw "expected the copied template artifacts to be reverted. Output: $($ctx.Result.Output)"
-        }
+        if ($ctx.Result.Output -notmatch 'Unsafe directory path') { throw "expected a preflight state-path collision: $($ctx.Result.Output)" }
+        if ($ctx.Result.Output -match 'Reverted WroteFile') { throw 'Preflight rejection must not first write artifacts.' }
 
         if (Test-Path -LiteralPath (Get-InstructionsDir -TargetPath $ctx.Root)) {
             throw "the instructions directory's contents must not survive a rolled-back run"
@@ -946,7 +951,7 @@ Test-Case -Name 'Install_Should_RollBackArtifactAndPreservePriorManifestBytes_Wh
         # exclusive (FileShare.None) lock would fail that earlier read too
         # and mask this as an unrelated "absent manifest" run instead of the
         # update-with-locked-destination scenario this test targets.
-        $lockStream = [System.IO.File]::Open($manifestPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read)
+        $lockStream = [System.IO.File]::Open($manifestPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
 
         [pscustomobject]@{
             Root = $root; ProjectConfigPath = $projectConfigPath; UserEdit = $userEdit
@@ -995,37 +1000,38 @@ Test-Case -Name 'Install_Should_RollBackArtifactAndPreservePriorManifestBytes_Wh
     }
 
 # ---------------------------------------------------------------------------
-# Hermeticity guard: this suite must never mutate the real repository's own
-# working tree/templates, or the real Copilot home.
+# Source guard complements the fixture child-environment checks.
 # ---------------------------------------------------------------------------
 
-Test-Case -Name 'Suite_Should_NeverMutate_RealRepoOrCopilotHome_AcrossAnyTest' `
+. (Join-Path $PSScriptRoot 'ProjectInstallerSafety.Tests.ps1')
+
+Test-Case -Name 'Suite_Should_PreserveRepositoryTemplatesAndState_AcrossAnyTest' `
     -Arrange { $null } `
     -Act { param($unused) [pscustomobject]@{ ExitCode = 0; Output = '' } } `
     -Assert {
         param($r)
-        $templatesHashAfter = (Get-ChildItem -LiteralPath $script:TemplatesDir -Recurse -File |
-                Sort-Object FullName | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }) -join ','
-        if ($templatesHashAfter -ne $script:RepoTemplatesHashBefore) {
-            throw "the repository's own templates directory changed during this test run"
-        }
+        Assert-ProjectFrozenTestSource | Out-Null
 
         $repoStateDirExistsNow = Test-Path -LiteralPath (Join-Path $script:InstallProjectRepoRoot $script:StateDirName)
         if ($repoStateDirExistsNow -ne $script:RepoRootStateDirExistedBefore) {
             throw "a fixture appears to have leaked installer state into this repository's own root"
         }
 
-        $copilotHomeStateDirExistsNow = Test-Path -LiteralPath (Join-Path $script:RealCopilotHome $script:StateDirName)
-        if ($copilotHomeStateDirExistsNow -ne $script:RealCopilotProjectStateDirExistedBefore) {
-            throw "a fixture appears to have leaked installer state into the real Copilot home ($script:RealCopilotHome)"
-        }
+    Assert-ProjectFrozenTestSource | Out-Null
     }
+
+}
+finally { Remove-ProjectTestEnvironment }
 
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
 Write-Host ''
+if ($script:TestsPassed + $script:TestsFailed -eq 0) {
+    Write-Host "No regression tests matched '$NamePattern'." -ForegroundColor Red
+    exit 1
+}
 if ($script:TestsFailed -eq 0) {
     Write-Host "✅ All $script:TestsPassed regression tests passed." -ForegroundColor Green
     exit 0

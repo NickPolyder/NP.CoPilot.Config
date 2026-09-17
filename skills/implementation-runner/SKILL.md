@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Execute an approved `tasks.md` in dependency order, producing working code with tests and updated task status.
-> **Always:** follow task order; respect dependencies; write tests alongside code; update completed tasks; report after each phase and final verification.
-> **Never:** skip ahead, ignore failing tests, or change approved scope silently.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are executing an approved task breakdown, keeping implementation, tests, and task status synchronized.
@@ -50,18 +46,25 @@ Execute tasks in order, producing working code with tests.
 1. **Follow task order** — respect dependencies. Do not skip ahead.
 2. **For each task:**
    - Implement the code change.
-   - Write unit tests alongside the code.
-   - Mark the task as complete in `tasks.md` (prefix with `[x]`).
+   - Keep applicable tests with changed behavior using the repository's runner;
+     record no-runner limits and any policy-permitted direct verification.
+   - Verify the task before marking it complete in `tasks.md` (prefix with `[x]`).
 3. **After each phase** (group of related tasks), report:
    - What was implemented.
-   - Test results (pass/fail counts).
+   - Revision-bound verification (commands, working directories, pass/fail/skip
+     counts or explicit no-runner limits; never invented `0/0` passes).
    - Any deviations from the design.
-4. **After all tasks are complete**, run the full test suite and report results.
-5. **Commit handoff** — after implementation is verified, delegate commit review and commit creation to `git-commit-review`.
+4. **Final verification** — run the repository-required final checks, including
+   the full existing test suite when applicable. Follow the shared no-runner
+   contract; missing required checks remain blockers.
+5. **Commit handoff** — return completion and evidence to the invoking workflow
+   (such as `prd-workflow`); this phase finishing does not end its parent.
+   Standalone, finish this skill before recommending a separate
+   `git-commit-review`. Never start it inside an active parent.
 
 After implementation, ask:
 
-> **Implementation complete. {passed}/{total} tests passing. Ready for review? (yes / fix issues first)**
+> **Implementation status: {complete / blocked}. Verification: {actual results and limitations}. Ready for separate review? (yes / fix issues first)**
 
 ---
 
@@ -80,11 +83,13 @@ If the project defines a different docs or source structure, follow that instead
 
 # Coordination
 
-- **Backend/Frontend developer agents** — consult during implementation for pattern questions and framework-specific work.
-- **QA engineer agent** — consult for test coverage, edge cases, and verification strategy.
-- **Security engineer agent** — consult when implementation touches authentication, authorization, input validation, secrets, or sensitive data.
+- Use `implementer` for substantial approved implementation, test or writing
+  assignments. Keep small tasks inline and preserve each assignment's write scope.
+- Use `investigator` for substantial unresolved design, test-strategy or security
+  questions; independent assessment uses `code-reviewer` with immutable inputs.
 - **Documentation skill** — after implementation is complete, recommend using the `documentation` skill to update `docs/` with the implemented feature's documentation.
-- **Git commit review skill** — after implementation is verified, prepare a handoff and recommend `git-commit-review` for commit review and commit creation.
+- **Git commit review skill** — return a verification handoff to the caller;
+  recommend `git-commit-review` only as a separate workflow after the owner completes.
 
 ---
 
@@ -92,15 +97,11 @@ If the project defines a different docs or source structure, follow that instead
 
 - **Approved tasks only** — execute the approved `tasks.md`; do not silently add scope.
 - **Respect dependencies** — follow task order and do not skip ahead.
-- **Tests are required** — write tests alongside implementation and run the smallest relevant verification, escalating as needed.
+- **Behavior needs evidence** — keep applicable tests alongside implementation
+  and run the smallest relevant checks, escalating as required. Follow the
+  shared no-runner rules; missing required verification is a blocker.
 - **Status must stay current** — mark tasks complete in `tasks.md` only after implementation and verification for that task are done.
-- **Delegate commits** — prepare a `git-commit-review` handoff after verification; this skill does not own commit strategy or commit creation.
+- **Separate delivery** — prepare a `git-commit-review` handoff after verification;
+  never invoke it inside this phase or an active parent.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Follow the approved task order, respect dependencies, and keep `tasks.md` status current.
-2. Write tests alongside code and verify each phase before continuing.
-3. After verification, hand off commit review and commit creation to `git-commit-review`.
-> If anything above conflicts with these, **these win**.

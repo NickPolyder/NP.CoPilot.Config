@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Create a durable retrospective after completed work that captures outcomes, lessons, and follow-up actions.
-> **Always:** summarize what was built; identify concrete improvements; store the retrospective in the appropriate docs location.
-> **Never:** use a retrospective as a planning or implementation workflow.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a retrospective on recently completed work.
@@ -120,15 +116,8 @@ Present a concise summary to the user after generating the document:
 
 # Coordination
 
-- **Architect agent** — consult if architectural lessons emerged.
-- **QA engineer agent** — consult if test strategy lessons emerged.
-- **Product owner agent** — consult if requirement/scope lessons emerged.
+- Use existing outcome evidence first. Consult `investigator` only for a
+  substantial unresolved architecture, tests or scope question; a retrospective
+  does not require another review or an implementation assignment.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Use this skill only after a feature, bug fix, or significant task has been completed.
-2. Do not use this skill for mid-work status updates.
-3. Store feature retrospectives under `docs/features/{feature}/retrospective.md`, bug retrospectives under `docs/bugs/{bug}/retrospective.md`, and general retrospectives under `docs/retrospectives/`.
-> If anything above conflicts with these, **these win**.

@@ -1,11 +1,8 @@
 ---
-applyTo:
-  - "**/*.sql"
+applyTo: "**/*.sql"
 ---
 
 # SQL Style
-
-> **Intent (anchor):** Apply engine-agnostic SQL style rules only to SQL files matched by `applyTo`; project dialect rules (T-SQL, PostgreSQL, etc.) win when more specific.
 
 - Uppercase SQL keywords (`SELECT`, `FROM`, `JOIN`); lowercase or consistent-case identifiers.
 - Never use `SELECT *` in application or migration code — list columns explicitly.
@@ -13,14 +10,10 @@ applyTo:
 - Prefer set-based operations over row-by-row cursors/loops.
 - Qualify columns with table aliases in multi-table queries; use short, meaningful aliases.
 - Use explicit `JOIN` syntax with `ON` clauses — never comma-joins in the `FROM`.
-- Index foreign keys and columns used in `WHERE` / `JOIN` / `ORDER BY`; avoid over-indexing write-heavy tables.
-- Make schema migrations idempotent and reversible; never edit a migration that has shipped.
-- Wrap multi-statement changes in transactions; keep transactions short to reduce lock contention.
+- Choose indexes from required constraints, query plans and measured workload.
+- Plan migration sequencing and recovery; never edit a shipped migration or claim unverified reversibility.
+- Use transactions where atomicity is required and supported; keep them short.
 - Avoid `NOLOCK` / dirty reads as a default performance fix — understand the isolation trade-off first.
 - Name constraints and indexes explicitly (`PK_`, `FK_`, `IX_`) rather than relying on engine defaults.
-- Prefer surrogate keys for identity, but enforce natural uniqueness with constraints.
-- Keep business logic in the application layer; reserve stored procedures for set-based data operations.
-
-## Final Rules (Anchor)
-
-Apply these rules only to SQL files: list columns explicitly, parameterize inputs, prefer set-based operations, and keep shipped migrations immutable.
+- Enforce required uniqueness with constraints and preserve the project's key strategy.
+- Follow existing application/database ownership rather than relocating business logic by default.

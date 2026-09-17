@@ -1,46 +1,23 @@
-# Git Conventions
+# Delivery and Git
 
-> **Intent (anchor):** Define the global delivery and commit-safety contract. The `git-commit-review` skill implements detailed exact-revision pre-commit review.
-> **Always:** complete the applicable workflow, follow the configured delivery path, and get required user verification before non-trivial commits.
-> **Never:** amend history, bypass protected-branch controls, or commit secrets without explicit user direction and safety checks.
-> **Precedence:** Follow `coordination.instructions.md` for the repository's conflict-resolution policy; within this file, the **Final Rules (Anchor)** win.
+Before remote mutation, confirm the repository's allowed delivery path and
+required branch, review, CI and integration-queue controls. Missing push authority
+does not prevent locally verifiable work or a review-ready handoff.
 
-## Delivery Path
+For negligible non-behavioral edits such as typos, the standing preference allows
+a direct commit without the two approval prompts below. It never overrides a
+current no-commit restriction, project controls or an active workflow's gates,
+and never authorizes a push.
 
-Before any remote mutation, confirm the repository's allowed delivery path from project configuration and repository evidence.
-This may be a protected pull request, merge queue, direct push, or explicit human handoff.
-Missing direct-push authority is not a reason to bypass controls or abandon locally verifiable work.
+For other commits, obtain user verification of the changes, then explicit
+approval of the proposed commit message. Silence or unavailable approval tooling
+is not consent. Use `git-commit-review` for these commits; retain its
+exact-candidate evidence and independent-review gates.
 
-Follow configured branch protection, required checks, code-owner review, and integration-queue requirements.
-The work lifecycle policy owns candidate-revision evidence and outcome verification.
+- Never amend without explicit user direction or commit secrets.
+- Ask before destructive deletion or irreversible changes. Warn and obtain
+  confirmation before system/environment mutations.
+- Prefer rebase when reconciling branches only where the delivery policy permits.
+- Use clear conventional imperative commit messages with this trailer:
 
-## Commit Workflow
-
-Always follow this order:
-
-1. Complete the Development Workflow (appropriate tier steps).
-2. When the work is done, ask me to verify the changes before committing. *(Trivial tier: skip this — commit directly.)*
-3. After I confirm, use `ask_user` to present the proposed commit message for my approval.
-4. Only then create the commit.
-
-## Rules
-
-- **Never** amend commits unless I explicitly ask (use `ask_user` to confirm).
-- Prefer `git pull --rebase` over merge when reconciling a local branch is appropriate for the configured delivery path.
-- Write clear, conventional commit messages in imperative mood.
-- Always include the trailer: `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`
-
-## Safety Rails
-
-- Always run tests after making changes to verify nothing is broken.
-- Ask before deleting files or making irreversible changes.
-- Never commit secrets, credentials, or sensitive data.
-- Commands that modify the system or environment should be prefixed with a warning and require confirmation before execution.
-
-## Final Rules (Anchor)
-
-1. Never amend commits unless the user explicitly asks.
-2. Follow the repository's configured protected-branch and remote-delivery controls; never assume direct write access to `main`.
-3. Do not create a non-trivial commit until the user has verified changes and approved the commit message.
-4. Always include `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` in commit messages.
-> If anything above conflicts with these, **these win**.
+  `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`

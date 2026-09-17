@@ -17,6 +17,8 @@ $ErrorActionPreference = 'Stop'
 # tests\Install\New-InstallFixture.ps1 -> repo root is two levels up.
 $script:InstallRepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $script:InstallScriptPath = Join-Path $script:InstallRepoRoot 'install.ps1'
+$script:InstallFixtureRoots = [System.Collections.Generic.List[string]]::new()
+$script:IsolatedInstallInvocations = 0
 
 function New-FixtureRoot {
     <#
@@ -26,16 +28,16 @@ function New-FixtureRoot {
     #>
     $path = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-install-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $path | Out-Null
+    $script:InstallFixtureRoots.Add($path)
     $path
 }
 
 function Remove-FixtureRoot {
     param([Parameter(Mandatory)][string]$Path)
 
+    if (-not $script:InstallFixtureRoots.Contains($Path)) { throw "Refusing cleanup of an unowned fixture: $Path" }
     if (Test-Path -LiteralPath $Path) {
-        # Backed-up / installed items may be read-only symlinks or contain
-        # them; -Force recurses through everything disposably.
-        Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $Path -Recurse -Force
     }
 }
 
@@ -54,12 +56,74 @@ function Invoke-Install {
     param(
         [Parameter(Mandatory)][string]$TargetRoot,
         [string[]]$ExtraArgs = @(),
-        [string]$InstallScriptPath = $script:InstallScriptPath
+        [string]$InstallScriptPath = $script:InstallScriptPath,
+        [string]$WorkingDirectory = $script:InstallRepoRoot,
+        [hashtable]$Environment = @{},
+        [switch]$UseDefaultTarget
     )
 
-    $allArgs = @('-NoProfile', '-File', $InstallScriptPath, '-TargetRoot', $TargetRoot) + $ExtraArgs
-    $output = & pwsh @allArgs 2>&1 | Out-String
-    [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $output }
+    $control = New-FixtureRoot
+    $fixtureHome = Join-Path $control 'home'
+    $temp = Join-Path $control 'temp'
+    New-Item -ItemType Directory -Path $fixtureHome, $temp | Out-Null
+    $config = Join-Path $control 'empty.gitconfig'
+    Set-Content -LiteralPath $config -Value '' -NoNewline
+    $start = [System.Diagnostics.ProcessStartInfo]::new()
+    $start.FileName = (Get-Command pwsh -CommandType Application | Select-Object -First 1).Source
+    $start.WorkingDirectory = $WorkingDirectory
+    $start.UseShellExecute = $false
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $start.StandardOutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $start.StandardErrorEncoding = [System.Text.UTF8Encoding]::new($false)
+    foreach ($name in @($start.Environment.Keys)) {
+        if ($name -like 'GIT_*') { [void]$start.Environment.Remove($name) }
+    }
+    foreach ($name in @('HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME')) {
+        $start.Environment[$name] = $fixtureHome
+    }
+    foreach ($name in @('TEMP', 'TMP', 'TMPDIR')) { $start.Environment[$name] = $temp }
+    $start.Environment['COPILOT_HOME'] = Join-Path $fixtureHome '.copilot'
+    $start.Environment['GIT_CONFIG_GLOBAL'] = $config
+    $start.Environment['GIT_CONFIG_SYSTEM'] = $config
+    $start.Environment['GIT_CONFIG_NOSYSTEM'] = '1'
+    foreach ($name in $Environment.Keys) {
+        if ($null -eq $Environment[$name]) { [void]$start.Environment.Remove($name) }
+        else { $start.Environment[$name] = [string]$Environment[$name] }
+    }
+    $selectedTarget = if ($UseDefaultTarget) {
+        if ([string]::IsNullOrWhiteSpace($start.Environment['COPILOT_HOME'])) { Join-Path $start.Environment['USERPROFILE'] '.copilot' }
+        else { $start.Environment['COPILOT_HOME'] }
+    }
+    else { $TargetRoot }
+    foreach ($path in @($selectedTarget, $start.Environment['HOME'], $start.Environment['USERPROFILE'])) {
+        $fullPath = [System.IO.Path]::GetFullPath($path, $WorkingDirectory)
+        $owned = @($script:InstallFixtureRoots | Where-Object {
+            $fullPath -eq $_ -or $fullPath.StartsWith($_ + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
+        })
+        if ($owned.Count -eq 0) { throw "Installer test attempted to select an unowned home/target: $fullPath" }
+    }
+    $allArgs = @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', $InstallScriptPath)
+    if (-not $UseDefaultTarget) { $allArgs += @('-TargetRoot', $TargetRoot) }
+    $allArgs += $ExtraArgs
+    foreach ($argument in $allArgs) { $start.ArgumentList.Add($argument) }
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $start
+    try {
+        [void]$process.Start()
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(60000)) {
+            Stop-Process -Id $process.Id -Force
+            throw 'Isolated installer invocation timed out.'
+        }
+        $script:IsolatedInstallInvocations++
+        [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult() }
+    }
+    finally {
+        $process.Dispose()
+        Remove-FixtureRoot $control
+    }
 }
 
 function New-IsolatedSourceRoot {
@@ -80,8 +144,7 @@ function New-IsolatedSourceRoot {
         touched. This is read-only with respect to the real repo: every
         file is only ever copied out, never written back.
     #>
-    $isolatedRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-install-source-" + [guid]::NewGuid())
-    New-Item -ItemType Directory -Path $isolatedRoot | Out-Null
+    $isolatedRoot = New-FixtureRoot
 
     Copy-Item -LiteralPath $script:InstallScriptPath -Destination (Join-Path $isolatedRoot 'install.ps1') -Force
 
@@ -145,7 +208,7 @@ function Resolve-TestLinkTarget {
     if ([System.IO.Path]::IsPathRooted($rawTarget)) {
         return [System.IO.Path]::GetFullPath($rawTarget)
     }
-    return [System.IO.Path]::GetFullPath((Join-Path $Item.DirectoryName $rawTarget))
+    return [System.IO.Path]::GetFullPath($rawTarget, (Split-Path $Item.FullName -Parent))
 }
 
 function Test-IsSymlinkTo {

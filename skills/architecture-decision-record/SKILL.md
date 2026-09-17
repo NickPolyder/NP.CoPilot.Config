@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Create one Architecture Decision Record that explains the context, options, decision, and consequences for a significant architectural choice.
-> **Always:** evaluate at least two options; document positive and negative consequences; store the ADR under `docs/decisions/` with sequential numbering.
-> **Never:** use an ADR for trivial implementation choices or mutate an accepted ADR instead of superseding it.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are creating an Architecture Decision Record (ADR).
@@ -73,21 +69,9 @@ Before evaluating options, understand the landscape:
 3. **Constraints** — what limits the options? (technology, compliance, team expertise)
 4. **Quality attributes** — which "-ilities" matter most? (scalability, maintainability, performance, security)
 
-Consult relevant specialist agents for domain-specific context:
-
-| Decision Domain | Consult Agent |
-|---|---|
-| System structure, patterns | `architect` |
-| Frontend architecture | `frontend-developer` |
-| Backend patterns, .NET specifics | `backend-developer` |
-| Data modeling, database choice | `database-engineer` |
-| Service communication, integration | `systems-engineer` |
-| Deployment, infrastructure | `devops-engineer` |
-| Security implications | `security-engineer` |
-| Service Fabric specifics | `service-fabric-engineer` |
-| User experience impact | `ux-engineer` |
-| Testability | `qa-engineer` |
-| Business impact | `product-owner` |
+Use `investigator` only for substantial unresolved domain questions, supplying
+relevant sections of `skills/domain-guidance.md`. The workflow owns the ADR;
+analysis does not authorize implementation or replace stakeholder approval.
 
 ## Step 3: Enumerate options
 
@@ -279,7 +263,7 @@ When superseding an ADR:
 
 **Status:** Accepted
 **Date:** 2026-04-13
-**Decision Makers:** architect, backend-developer, systems-engineer
+**Decision Makers:** {authorized decision owner; investigator supplies analysis}
 
 ## Context
 
@@ -408,10 +392,3 @@ operational burden.
 - ADRs are immutable once accepted — to change a decision, create a new ADR that supersedes it.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Every ADR must have a clear decision statement — not just a discussion.
-2. Always present at least 2 options, even if one is "do nothing" or "keep current approach".
-3. ADRs are immutable once accepted — to change a decision, create a new ADR that supersedes it.
-> If anything above conflicts with these, **these win**.

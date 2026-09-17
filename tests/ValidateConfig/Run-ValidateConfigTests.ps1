@@ -22,6 +22,7 @@ $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $validatorPath = Join-Path $repoRoot 'scripts\Validate-Config.ps1'
 
 . (Join-Path $PSScriptRoot 'New-ValidateConfigFixture.ps1')
+. (Join-Path (Split-Path $PSScriptRoot -Parent) 'GitCommitReviewSkill\New-GitSnapshotFixture.ps1')
 
 function Write-TestPass {
     param([Parameter(Mandatory)][string]$Name)
@@ -53,31 +54,12 @@ function Invoke-Validator {
     $extraArgs = @()
     if ($SkipDockerCompose) { $extraArgs += '-SkipDockerCompose' }
 
-    if ($HideDocker) {
-        # Isolate the docker-absent branch deterministically: scrub PATH only
-        # for this child process, never for the test host or other tests.
-        $psi = [System.Diagnostics.ProcessStartInfo]::new()
-        $psi.FileName = (Get-Command pwsh).Source
-        $psi.ArgumentList.Add('-NoProfile')
-        $psi.ArgumentList.Add('-File')
-        $psi.ArgumentList.Add($validatorPath)
-        $psi.ArgumentList.Add('-RepositoryRoot')
-        $psi.ArgumentList.Add($RepositoryRoot)
-        foreach ($a in $extraArgs) { $psi.ArgumentList.Add($a) }
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
-        $psi.UseShellExecute = $false
-        $psi.EnvironmentVariables['PATH'] = ''
-        $proc = [System.Diagnostics.Process]::Start($psi)
-        $stdout = $proc.StandardOutput.ReadToEnd()
-        $stderr = $proc.StandardError.ReadToEnd()
-        $proc.WaitForExit()
-        return [pscustomobject]@{ ExitCode = $proc.ExitCode; Output = $stdout + $stderr }
-    }
-
+    $environment = @{}
+    if ($HideDocker) { $environment.PATH = '' }
     $allArgs = @('-NoProfile', '-File', $validatorPath, '-RepositoryRoot', $RepositoryRoot) + $extraArgs
-    $output = & pwsh @allArgs 2>&1 | Out-String
-    [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $output }
+    Invoke-IsolatedProcess -Context $script:ConfigFixtureContexts[$RepositoryRoot] `
+        -FilePath (Get-Command pwsh).Source -ArgumentList $allArgs -WorkingDirectory $RepositoryRoot `
+        -Environment $environment -AllowFailure
 }
 
 function Test-Case {
@@ -103,20 +85,14 @@ function Test-Case {
         Write-TestFail -Name $Name -Detail $_.Exception.Message
     }
     finally {
-        if ($arranged -and (Test-Path -LiteralPath $arranged -PathType Container)) {
-            Remove-FixtureRoot -Path $arranged
-        }
+        foreach ($owned in @($script:ConfigFixtureContexts.Keys)) { Remove-FixtureRoot -Path $owned }
+        foreach ($owned in @($script:GitFixtureContexts.Keys)) { Remove-TestPath -Path $owned }
     }
 }
 
 Write-Host ''
 Write-Host '🔍 Running Validate-Config.ps1 regression suite...' -ForegroundColor Cyan
 Write-Host ''
-
-# Sentinel used by the hermeticity guard at the end of the suite: fixture
-# names that must never legitimately exist in the active ~/.copilot tree.
-$copilotAgentsDir = Join-Path $HOME '.copilot\agents'
-$sentinelAgentPath = Join-Path $copilotAgentsDir 'sample-agent.md'
 
 # ---------------------------------------------------------------------------
 # Happy path
@@ -206,7 +182,7 @@ Test-Case -Name 'Validator_Should_ReportOrdinaryFindings_NotCrash_When_NoSkillDi
                 throw "expected Test-Orchestration to report a normal missing-skill finding: '$expectedFinding'. Output: $($r.Output)"
             }
         }
-        if ($r.Output -notmatch [regex]::Escape('README inventory includes every tracked agent and skill.')) {
+        if ($r.Output -notmatch [regex]::Escape('README inventory includes every on-disk agent and skill in the supported domain.')) {
             throw "expected Test-ReadmeInventory to pass (vacuously, for the empty skill set) rather than crash or fail. Output: $($r.Output)"
         }
         if ($r.ExitCode -eq 0) {
@@ -269,7 +245,7 @@ Test-Case -Name 'Validator_Should_Fail_When_AgentModelIsUnsupported' `
     -Act { param($root) Invoke-Validator -RepositoryRoot $root -SkipDockerCompose } `
     -Assert {
         param($r)
-        if ($r.Output -notmatch "uses unsupported model 'gpt-3.5-turbo'") {
+        if ($r.Output -notmatch "uses model 'gpt-3.5-turbo' outside the repository model policy") {
             throw "expected unsupported-model failure. Output: $($r.Output)"
         }
     }
@@ -284,7 +260,7 @@ foreach ($supportedModel in @('claude-opus-4.8', 'claude-sonnet-5', 'gpt-5.5')) 
         -Act { param($root) Invoke-Validator -RepositoryRoot $root -SkipDockerCompose } `
         -Assert {
             param($r)
-            if ($r.Output -match 'uses unsupported model') {
+            if ($r.Output -match 'outside the repository model policy') {
                 throw "did not expect an unsupported-model failure for '$supportedModel'. Output: $($r.Output)"
             }
         }
@@ -403,7 +379,7 @@ Test-Case -Name 'Validator_Should_Pass_ReadmeInventory_When_AllEntriesPresent' `
     -Act { param($root) Invoke-Validator -RepositoryRoot $root -SkipDockerCompose } `
     -Assert {
         param($r)
-        if ($r.Output -notmatch 'README inventory includes every tracked agent and skill') {
+        if ($r.Output -notmatch 'README inventory includes every on-disk agent and skill') {
             throw "expected README inventory pass. Output: $($r.Output)"
         }
     }
@@ -470,43 +446,15 @@ Test-Case -Name 'Validator_Should_Pass_When_McpConfigJsonIsWellFormed' `
     }
 
 # ---------------------------------------------------------------------------
-# Mutable runtime versions - now case-insensitive end to end (corrected)
+# Runtime references are tested in their actual parsed fields below.
 # ---------------------------------------------------------------------------
-
-$mutableVersionCases = @(
-    @{ Name = 'AtLatest_Lowercase'; Text = '"pkg@latest"'; Expect = $true }
-    @{ Name = 'ColonLatest_Lowercase'; Text = 'image: x:latest'; Expect = $true }
-    @{ Name = 'ColonLatest_MixedCase'; Text = 'image: x:Latest'; Expect = $true }
-    @{ Name = 'ColonLatest_AllCaps'; Text = 'image: x:LATEST'; Expect = $true }
-    @{ Name = 'AtLatest_Capitalized'; Text = '"pkg@Latest"'; Expect = $true }
-    @{ Name = 'AtLatest_AllCaps'; Text = '"pkg@LATEST"'; Expect = $true }
-    @{ Name = 'ColonLatestly_LongerIdentifier'; Text = 'image: x:latestly'; Expect = $false }
-    @{ Name = 'AtLatestish_LongerIdentifier'; Text = '"pkg@latestish"'; Expect = $false }
-)
-
-foreach ($case in $mutableVersionCases) {
-    Test-Case -Name "Validator_MutableVersionCheck_$($case.Name)" `
-        -Arrange {
-            $root = New-BaselineFixture
-            Set-Content -Path (Join-Path $root 'mcp-config.json') -Value ('{"note": "' + $case.Text + '"}') -Encoding utf8 -NoNewline
-            $root
-        } `
-        -Act { param($root) Invoke-Validator -RepositoryRoot $root -SkipDockerCompose } `
-        -Assert {
-            param($r)
-            $flagged = $r.Output -match 'contains a mutable runtime version'
-            if ($flagged -ne $case.Expect) {
-                throw "expected mutable-version flag=$($case.Expect) for '$($case.Text)', got $flagged. Output: $($r.Output)"
-            }
-        }
-}
 
 Test-Case -Name 'Validator_Should_Pass_MutableVersionCheck_When_AllVersionsArePinned' `
     -Arrange { New-BaselineFixture } `
     -Act { param($root) Invoke-Validator -RepositoryRoot $root -SkipDockerCompose } `
     -Assert {
         param($r)
-        if ($r.Output -notmatch 'Runtime MCP definitions use explicit versions') {
+        if ($r.Output -notmatch 'Runtime MCP definitions use explicit image versions/digests') {
             throw "expected mutable-version pass. Output: $($r.Output)"
         }
     }
@@ -514,7 +462,7 @@ Test-Case -Name 'Validator_Should_Pass_MutableVersionCheck_When_AllVersionsArePi
 Test-Case -Name 'Validator_Should_WarnButPass_ForUserApprovedPlaywrightLatest' `
     -Arrange {
         $root = New-BaselineFixture
-        Set-Content -Path (Join-Path $root 'mcp-config.json') -Value '{"mcpServers":{"playwright":{"args":["@playwright/mcp@latest"]}}}' -Encoding utf8 -NoNewline
+        Set-Content -Path (Join-Path $root 'mcp-config.json') -Value '{"mcpServers":{"playwright":{"type":"local","command":"npx","args":["-y","@playwright/mcp@latest"]}}}' -Encoding utf8 -NoNewline
         $root
     } `
     -Act { param($root) Invoke-Validator -RepositoryRoot $root -SkipDockerCompose } `
@@ -560,7 +508,7 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
             }
         }
 
-    Test-Case -Name 'Validator_Should_FailDockerCompose_When_ComposeFileIsInvalid' `
+    Test-Case -Name 'Validator_Should_FailComposeSyntax_When_ComposeFileIsInvalid' `
         -Arrange {
             $root = New-BaselineFixture
             Set-Content -Path (Join-Path $root 'mcps\docker-compose.yml') -Value 'not: [valid, compose' -Encoding utf8 -NoNewline
@@ -569,8 +517,53 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
         -Act { param($root) Invoke-Validator -RepositoryRoot $root } `
         -Assert {
             param($r)
-            if ($r.Output -notmatch 'failed docker compose config validation') {
-                throw "expected docker compose failure. Output: $($r.Output)"
+            if ($r.ExitCode -ne 1 -or $r.Output -notmatch 'is not valid supported repository YAML') {
+                throw "expected a nonzero Compose YAML failure before native parsing. Output: $($r.Output)"
+            }
+        }
+
+    Test-Case -Name 'Validator_Should_ValidateStructureWithoutPrivateEnvOrRequiredRuntimeSecret' `
+        -Arrange {
+            $root = New-BaselineFixture
+            $script:RequiredSecretVariable = 'NPCC_REQUIRED_SECRET_' + [guid]::NewGuid().ToString('N')
+            $compose = @'
+services:
+  example:
+    image: example/image:1.2.3
+    environment:
+      SEARXNG_SECRET: ${REQUIRED_FIXTURE_SECRET:?fixture-secret-required}
+'@
+            $compose = $compose.Replace('REQUIRED_FIXTURE_SECRET', $script:RequiredSecretVariable)
+            [IO.File]::WriteAllText((Join-Path $root 'mcps\docker-compose.yml'), $compose)
+            [IO.File]::WriteAllText((Join-Path $root 'mcps\.env'), "[invalid-env-syntax]`n")
+            $root
+        } `
+        -Act {
+            param($root)
+            $context = $script:ConfigFixtureContexts[$root]
+            $environment = @{ SEARXNG_SECRET = $null }
+            $environment[$script:RequiredSecretVariable] = $null
+            $envPath = Join-Path $root 'mcps\.env'
+            $before = (Get-FileHash -LiteralPath $envPath -Algorithm SHA256).Hash
+            $validation = Invoke-IsolatedProcess -Context $context -FilePath (Get-Command pwsh).Source `
+                -WorkingDirectory $root -Environment $environment -AllowFailure `
+                -ArgumentList @('-NoProfile', '-File', $validatorPath, '-RepositoryRoot', $root)
+            [IO.File]::Copy((Join-Path $root 'mcps\docker-compose.yml'), (Join-Path $context.Root 'compose.yml'))
+            $control = Invoke-IsolatedProcess -Context $context -FilePath (Get-Command docker -CommandType Application).Source `
+                -WorkingDirectory $context.Root -Environment $environment -AllowFailure `
+                -ArgumentList @('compose', '--env-file', 'empty.config', '-f', 'compose.yml', 'config', '--quiet')
+            if ((Get-FileHash -LiteralPath $envPath -Algorithm SHA256).Hash -cne $before) {
+                throw 'Read-only validation changed the owned private-env fixture.'
+            }
+            [pscustomobject]@{ Validation = $validation; InterpolationControl = $control }
+        } `
+        -Assert {
+            param($r)
+            if ($r.Validation.ExitCode -ne 0 -or $r.Validation.Output -notmatch 'passes docker compose config validation') {
+                throw "Structural validation required private runtime inputs: $($r.Validation.Output)"
+            }
+            if ($r.InterpolationControl.ExitCode -eq 0 -or $r.InterpolationControl.Output -notmatch 'fixture-secret-required') {
+                throw "The control without --no-interpolate did not reject the missing runtime secret: $($r.InterpolationControl.Output)"
             }
         }
 }
@@ -797,8 +790,8 @@ Test-Case -Name 'Validator_Should_Fail_When_GitCommitReviewSkillOmitsWorkflowOwn
         New-SkillFile -Root $root -DirName 'git-commit-review' -Body @'
 # git-commit-review
 
-Uses git write-tree to build a tree object, then git archive --format=tar
-to materialize an index-only snapshot for review.
+Uses New-GitReviewCandidate and New-GitTreeSnapshot to materialize an
+index-only snapshot for review.
 
 If the snapshot cannot be materialized, stop before launching any reviewer.
 '@
@@ -861,18 +854,28 @@ Test-Case -Name 'Validator_Should_ReportSuccessSummary_When_NoChecksFail' `
     }
 
 # ---------------------------------------------------------------------------
-# Hermeticity guard: this suite must never mutate the active Copilot home.
+# Hermeticity checks inspect only owned child state, never an ambient home.
 # ---------------------------------------------------------------------------
 
-Test-Case -Name 'Suite_Should_NeverWriteFixtureArtifacts_IntoActiveCopilotHome' `
-    -Arrange { $null } `
-    -Act { param($unused) [pscustomobject]@{ ExitCode = 0; Output = '' } } `
+Test-Case -Name 'Suite_Should_UseOnlyOwnedChildHomeAndGitControls' `
+    -Arrange { New-BaselineFixture } `
+    -Act {
+        param($root)
+        $context = $script:ConfigFixtureContexts[$root]
+        $result = Invoke-IsolatedProcess -Context $context -FilePath (Get-Command pwsh).Source -WorkingDirectory $root `
+            -ArgumentList @('-NoProfile', '-Command', '[pscustomobject]@{Home=$HOME; Profile=$env:USERPROFILE; Copilot=$env:COPILOT_HOME; Index=$env:GIT_INDEX_FILE; Dir=$env:GIT_DIR; WorkTree=$env:GIT_WORK_TREE} | ConvertTo-Json -Compress')
+        [pscustomobject]@{ ExpectedHome = $context.Home; Values = ($result.Stdout | ConvertFrom-Json) }
+    } `
     -Assert {
         param($r)
-        if (Test-Path -LiteralPath $sentinelAgentPath) {
-            throw "fixture artifact 'sample-agent.md' was found under the active Copilot home ($sentinelAgentPath); a fixture must have leaked outside `$env:TEMP."
+        if ($r.Values.Home -ne $r.ExpectedHome -or $r.Values.Profile -ne $r.ExpectedHome -or
+            $r.Values.Copilot -ne (Join-Path $r.ExpectedHome '.copilot') -or
+            $r.Values.Index -or $r.Values.Dir -or $r.Values.WorkTree) {
+            throw 'The child home or Git controls were not isolated.'
         }
     }
+
+. (Join-Path $PSScriptRoot 'Test-ConfigHardeningCases.ps1')
 
 # ---------------------------------------------------------------------------
 # Summary

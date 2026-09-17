@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Generate new code boilerplate that matches the project's existing architecture, conventions, and layer boundaries.
-> **Always:** discover conventions first; confirm files before writing; include relevant tests and wiring.
-> **Never:** overwrite existing files or use scaffolding as a full feature workflow.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are scaffolding new **application code** structures that follow the project's established architecture.
@@ -21,7 +17,7 @@ Your goals are to:
 - **Generate consistent boilerplate** that respects existing conventions.
 - **Enforce layer boundaries** — scaffolded code has correct dependencies from the start.
 - **Reduce manual setup** — let the developer focus on business logic, not plumbing.
-- **Include test infrastructure** — every scaffolded component gets a corresponding test file/project.
+- **Include applicable tests** — cover scaffolded behavior with the existing runner; do not create a test project merely for boilerplate with no behavior.
 
 ---
 
@@ -50,10 +46,26 @@ Do **not** use this skill for:
 
 Before generating anything, understand what already exists:
 
-1. **Read project config** — check `.github/instructions/project-config.instructions.md` for tech stack.
+1. **Read project contracts** — check `.github/instructions/project-config.instructions.md`,
+   `.github/copilot-instructions.md`, and relevant existing `AGENTS.md`,
+   `CLAUDE.md`, or `GEMINI.md` for the target's stack and commands.
 2. **Identify patterns** — look at existing code for naming, folder structure, namespace conventions.
 3. **Detect architecture style** — Clean Architecture layers, vertical slices, or project-specific layout.
 4. **Find templates** — check if the project has its own scaffolding templates or item templates.
+5. **Select target verification** — resolve the component/workspace being changed,
+   its command entry points, and working directories from project contracts,
+   manifests, and existing CI/scripts. Record the exact command, cwd, and coverage
+   before generation. In a mixed repo, choose the changed component, not an
+   unrelated root project just because its toolchain is available.
+
+Examples are conditional on repository evidence, not language-triggered defaults:
+
+| Target | Applicable verification |
+|---|---|
+| .NET project/solution | `dotnet build` for the identified project/solution from its declared cwd, plus relevant existing tests |
+| Node/Angular workspace | The declared package-manager check/build/test script and workspace selector, from its required cwd |
+| Python or another stack | The target's existing test/type/lint/build entry point from its declared cwd; no .NET requirement |
+| No applicable runner | State the missing verification and any direct checks; do not invent a command or report a build pass |
 
 ## Phase 2: Confirm Scope
 
@@ -74,6 +86,8 @@ Present what will be scaffolded and ask for approval:
 - {Naming pattern}
 - {DI registration pattern}
 
+**Verification:** {command + working directory + target covered, or explicit no-runner limitation}
+
 Proceed? (yes / no / adjust)
 ```
 
@@ -88,7 +102,11 @@ Create all files in one pass:
 5. **Tests** — unit test classes with arrange-act-assert structure, using the project's test framework.
 6. **DI registration** — add to the appropriate service registration extension method.
 
-Only generate layers relevant to the component type. Don't scaffold infrastructure for a pure domain object.
+Only generate existing or explicitly approved layers relevant to the component
+type. Do not introduce CQRS, MediatR, FluentValidation or repository abstractions
+merely because an example lists them. The .NET layer and file
+examples below are not templates for every stack: use the discovered target's
+language, generators, and layout. Don't scaffold infrastructure for a pure domain object.
 
 ## Phase 4: Wire Up
 
@@ -96,7 +114,12 @@ After file generation:
 
 1. **Register services** — add DI registrations where the project expects them.
 2. **Update imports** — if the project uses barrel files or module registrations, update them.
-3. **Verify build** — run `dotnet build` to confirm the scaffolded code compiles.
+3. **Verify the target** — run the selected commands from their recorded working
+   directories after all wiring changes. Report each command/cwd, target,
+   result, and missing checks. Missing required commands or a failed target check
+   block successful verification; never fall back to an unrelated .NET/root
+   build. If no applicable runner exists, retain that explicit limitation rather
+   than claiming compilation or tests passed.
 
 ---
 
@@ -143,9 +166,9 @@ Files:
 
 # Coordination
 
-- **Consult `architect`** — for pattern validation when scaffolding something that doesn't match existing patterns.
-- **Consult `backend-developer`** — for .NET-specific implementation questions.
-- **Consult `database-engineer`** — when scaffolding includes EF migrations or data model.
+- Keep ordinary generation inline; use `implementer` for substantial approved
+  scaffolding. Consult `investigator` only for unresolved pattern, data or
+  framework questions that need separate research.
 
 ---
 
@@ -157,10 +180,3 @@ Files:
 - **Application code only** — this skill generates source/test boilerplate, not repo-level Copilot config or docs working-memory structure.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Never scaffold over existing files — if a file exists at the target path, stop and ask.
-2. Match existing style — use the same formatting, naming, and patterns as neighboring code.
-3. Don't over-scaffold — only generate what's needed.
-> If anything above conflicts with these, **these win**.

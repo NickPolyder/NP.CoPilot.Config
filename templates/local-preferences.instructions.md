@@ -1,8 +1,17 @@
+---
+applyTo: "**"
+---
+
 # Local Preferences
 
-Personal overrides that apply only to you. This file is gitignored — it won't be shared with the team.
+Personal overrides that apply only to you. Keep this file out of Git. The normal
+project installer verifies exclusion rules for this file and its private state
+and backups; `-SkipGitignore` does not provide that protection. Ignore rules do not
+untrack an already tracked file. Review Git status before adding personal data.
 
 Place it at `.github/instructions/local-preferences.instructions.md`.
+The scalar `applyTo` uses the documented repository-wide instruction syntax;
+file presence alone is not proof that a running client loaded it.
 
 ## Working Style
 

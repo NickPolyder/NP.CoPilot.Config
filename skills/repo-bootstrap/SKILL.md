@@ -10,10 +10,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Bootstrap one repository with a tailored Copilot agent contract and durable docs working-memory skeleton.
-> **Always:** analyze the repo before interviewing; tailor templates with verified commands; get approval before writing or overwriting files.
-> **Never:** copy raw templates verbatim or commit generated files.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are bootstrapping a repository so that any Copilot agent working in it has a
@@ -39,6 +35,9 @@ Your goals:
   global `~/.copilot/` config. Reference global conventions; don't restate them.
 - **Be safe and idempotent.** Never overwrite existing files without explicit
   approval. Augment a partial structure instead of clobbering it.
+- **Preserve continuity ownership.** Existing project/cross-agent records and a
+  configured session-memory provider coexist; a docs skeleton is not permission
+  to generate duplicate per-session handover exports.
 
 ---
 
@@ -82,6 +81,22 @@ source → target (in the user's repo):
 | `docs/reviews/README.md` | `docs/reviews/README.md` |
 | `docs/retrospectives/README.md` | `docs/retrospectives/README.md` |
 
+Before any target mutation, record two separate roots:
+
+- **Target root:** the repository being bootstrapped.
+- **Source root:** the verified NP.CoPilot.Config checkout containing the selected
+  `skills\repo-bootstrap\SKILL.md` and sibling `templates\repo-bootstrap` assets.
+  Resolve it from the selected skill's known installation/source location or an
+  explicitly supplied checkout path, not the target's cwd or a guessed home.
+
+Verify that each template needed for the approved outputs exists and is readable
+under that source root before creating directories/files. The normal
+whole-repository installation supplies these sibling assets. A skill-directory-only
+copy is not self-contained and is unsupported unless a compatible source/asset
+root is explicitly supplied and verified. Missing assets or unknown provenance
+are a bootstrap blocker; do not substitute unrelated target templates, search
+other Copilot homes, or silently manufacture replacement templates.
+
 ---
 
 # How it works
@@ -93,7 +108,11 @@ the equivalents) from the repo root and read the results:
 
 - **Is it a git repo, and what's the root?** `git rev-parse --show-toplevel`.
 - **What already exists?** Check for `.github/copilot-instructions.md`,
-  `.github/instructions/`, `docs/`, `README.md`, `CONTRIBUTING.md`.
+  `.github/instructions/`, `docs/`, `README.md`, `CONTRIBUTING.md`, and existing
+  `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md` at the root and relevant scoped paths.
+  Read their roles, scope, ownership, and references; they are existing project
+  contracts, not disposable placeholders. Absence of a Copilot-named file does
+  not mean there is no project contract.
 - **Tech stack & build:** detect manifests — `*.sln`/`*.csproj` (.NET),
   `package.json` (Node), `pyproject.toml`/`requirements.txt` (Python),
   `go.mod`, `Cargo.toml`, etc. Read scripts/targets to infer real build/test/
@@ -101,10 +120,67 @@ the equivalents) from the repo root and read the results:
 - **Conventions:** skim a few source files for naming, layout, and test
   locations. Note CI config (`.github/workflows/`, `azure-pipelines.yml`).
 - **Project-config:** if `.github/instructions/project-config.instructions.md`
-  is missing, note that `install-project.ps1` (in this config repo) can drop it.
+  declares capabilities, treat it as canonical and preserve its values and
+  repository-specific rules. If only a root contract declares them, that remains
+  the source until an approved migration/reference change. Note the source path
+  and any conflicts before recommending `install-project.ps1`.
 
-Summarize findings concisely. Carry verified build/test/lint commands into the
-contract — never guess them.
+Summarize findings concisely. Carry repository-evidenced build/test/lint commands
+and their working directories into the contract; distinguish inspected commands
+from actually executed/passing checks. Never guess a runner or claim an unrun check.
+
+### Capability Owner Protocol
+
+Resolve capability ownership during discovery, before mutating any target
+artifact. The generated Copilot contracts use one of these exact owner markers:
+
+```html
+<!-- np-copilot-capabilities-owner: .github/instructions/project-config.instructions.md -->
+<!-- np-copilot-capabilities-owner: .github/copilot-instructions.md -->
+```
+
+These are alternatives, not two markers to emit together. Each participating
+capability section carries exactly one marker identifying the same selected
+owner. **Only the owner contains the capability table**; a non-owner contains
+that marker and a relative reference, never another table or disabled defaults.
+
+- **Existing project-config declaration:** preserve its capability section,
+  verified values, and repository-specific rules; update only as approved.
+  Use the project-config owner marker there. Fill the root template's
+  `{{DELIVERY_CAPABILITIES_SECTION}}` with the same marker and this reference
+  (relative to the generated `.github/copilot-instructions.md`):
+
+  ```markdown
+  <!-- np-copilot-capabilities-owner: .github/instructions/project-config.instructions.md -->
+  See [Agent Delivery Capabilities](instructions/project-config.instructions.md).
+  ```
+
+- **Otherwise, root-owned declaration:** preserve an existing verified root
+  table, including a legacy table without a marker, or generate the approved
+  verified declaration in `.github/copilot-instructions.md`. Fill
+  `{{DELIVERY_CAPABILITIES_SECTION}}` with the root owner marker followed by that
+  table. If project-config has a participating capability section, it contains
+  only the following reference, relative to that file; do not create an otherwise
+  unnecessary project-config file just for a pointer:
+
+  ```markdown
+  <!-- np-copilot-capabilities-owner: .github/copilot-instructions.md -->
+  See [Delivery capabilities](../copilot-instructions.md).
+  ```
+
+Conflicting explicit owners, duplicate/malformed markers, a table in a marked
+non-owner, an existing reference to a missing owner file/declaration, or
+unresolved contradictory declarations are preflight conflicts: stop before
+mutation and identify the affected paths. Do not manufacture default values to
+repair a dangling reference, reset verified values, or silently choose a
+different marker to hide the conflict. Marker additions and approved
+legacy-table reconciliation must appear in the write plan.
+
+Keep discovered `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` contracts intact.
+If they own capability facts not yet represented by this two-path marker
+protocol, resolve an explicit preservation/reference or migration plan before
+generation; do not invent a third owner marker or override those facts with
+defaults.
 
 ## Phase 2: Interview
 
@@ -123,10 +199,12 @@ at a time. Cover:
    them).
 6. **Delivery capabilities** — confirm issue tracking, isolated worktrees,
    remote delivery, protected branches, integration queue, and deployment
-   evidence from repository configuration and host rules; default unknown
-   capabilities to disabled.
-7. **Commit grouping & handover mechanism** — phase prefixes? where do session
-   handovers go?
+    evidence from existing declarations and host rules. Preserve declared values;
+    use disabled/unknown defaults only for genuinely undeclared optional
+    capabilities, never to reset an existing enabled rule.
+7. **Commit grouping & continuity mechanism** — phase prefixes? Which existing
+    project/cross-agent artifacts must stay current, and which provider owns
+    per-session persistence? Do not assume Markdown session exports are needed.
 8. **PLAN seed** — the problem, the high-level approach, the major components.
 9. **TASKS seed** — the first few phases and their dependencies.
 10. **Decided-up-front items** — locked decisions to record so they aren't
@@ -146,7 +224,11 @@ Present the full plan and get explicit approval before writing anything:
 - docs/{features,handoffs,reviews,retrospectives}/README.md
 
 **Already exists (will NOT overwrite without your OK):**
-- {list any conflicts found}
+- {existing Copilot/AGENTS/CLAUDE/GEMINI contracts, plans, and other conflicts}
+
+**Source/target roots:** {verified config source and target repository}
+**Capability owner:** {selected marker; sole table path; preserved values; all marker/reference/migration edits}
+**Continuity:** {existing records to maintain; provider; explicitly requested new artifacts}
 
 **Tailored from:**
 - Mission: {…}   Role: {…}   Hard rules: {…}   Build/test: {…}
@@ -154,6 +236,7 @@ Present the full plan and get explicit approval before writing anything:
 
 **Also recommended (run separately):**
 - install-project.ps1 → .github/instructions/project-config (if missing)
+  preserving/referencing existing capability declarations, not defaulting them off
 
 Proceed? (yes / adjust / cancel)
 ```
@@ -162,8 +245,9 @@ If files already exist, ask per-file: overwrite, merge, or skip.
 
 ## Phase 4: Generate
 
-For each target file: read the source template, replace every `{{PLACEHOLDER}}`
-with tailored content, and create the file. Then:
+For each approved target file: read its verified source template, replace every
+`{{PLACEHOLDER}}` with tailored content, and create or apply the approved merge.
+Skip unapproved existing files. Then:
 
 - Ensure the `docs/` subfolders exist (creating a folder requires a file in it —
   the `README.md` seeds serve that purpose).
@@ -171,11 +255,28 @@ with tailored content, and create the file. Then:
   background and design detail into `docs/PLAN.md`.
 - Make `PLAN.md`/`TASKS.md` real: use the interview answers, not the placeholder
   prose. An empty PLAN is worse than no PLAN.
+- Fill `{{DELIVERY_CAPABILITIES_SECTION}}` using the capability owner protocol
+  above: a marker plus reference for a non-owner, or the selected owner marker
+  plus its preserved/approved verified table. Apply approved marker/reference
+  edits consistently; never emit both owner markers or a second table.
+- Reuse existing plan/task/handoff locations instead of creating competing
+  records. Maintain their truthful state under `session-awareness.instructions.md`.
+  An approved handoffs index can describe project coordination, but does not
+  require unsolicited per-session Markdown exports or replacement of plugin
+  persistence. Do not vendor or modify an external continuity provider.
 
 ## Phase 5: Verify & hand back
 
 - Confirm every intended file exists and links resolve.
 - Confirm nothing in the generated config contradicts the global instructions.
+- Confirm discovered project contracts remain intact, links name the actual
+  capability owner, and no conflicting default-disabled declaration was added.
+- Confirm each participating capability section has one matching owner marker,
+  only the selected owner contains the table, and references resolve relative
+  to their generated files. Compare capability values/rules with the approved
+  source declaration; a correct marker alone does not prove preservation.
+- Confirm existing continuity requirements remain usable without duplicate
+  session exports; missing provider tools are reported, not assumed available.
 - Summarize what was created and the recommended next steps (e.g. "run
   `install-project.ps1` for project-config", "create your first ADR with the
   `architecture-decision-record` skill", "fill in the first feature doc").
@@ -186,14 +287,10 @@ with tailored content, and create the file. Then:
 
 # Agent coordination
 
-Consult specialists for content quality — they advise; this skill writes:
-
-| Need | Consult agent |
-|---|---|
-| PLAN architecture, component boundaries, hard rules | `architect` |
-| Problem framing, scope, decided-up-front items | `product-owner` |
-| Build/test/lint accuracy for the detected stack | `backend-developer` / `frontend-developer` / `devops-engineer` |
-| Security-relevant hard rules / Don'ts | `security-engineer` |
+Use repository evidence directly. A substantial unresolved question about
+boundaries, scope, the detected stack or security can go to `investigator` with
+only relevant domain notes. The caller supplies command evidence; this skill
+retains file ownership and all source/target approval gates.
 
 ---
 
@@ -202,7 +299,9 @@ Consult specialists for content quality — they advise; this skill writes:
 - **`install-project.ps1`** (this config repo) drops `project-config` +
   `local-preferences` into `.github/instructions/` — tech-stack *facts*. This
   skill produces the agent *contract* + docs *memory*. They are complementary;
-  recommend running the installer if project-config is missing.
+  when recommending installation, require preservation/reference or coordinated
+  migration of any existing root capability declaration. Bootstrap and template
+  installation must not create competing default-disabled capability values.
 - **ADRs / features / retros** are seeded as templates + indexes only. Detailed
   content belongs in separate runs of `architecture-decision-record`,
   `feature-planning` / `prd-workflow`, and `retrospective`; recommend those
@@ -226,10 +325,3 @@ Consult specialists for content quality — they advise; this skill writes:
 - **Don't commit** — leave the user to review and commit.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Never overwrite without explicit approval — surface conflicts in the approval gate and ask per file.
-2. Tailor every file — no `{{PLACEHOLDER}}` token may survive into a generated file.
-3. Do not commit generated files; leave review and delivery to the repository's configured process.
-> If anything above conflicts with these, **these win**.

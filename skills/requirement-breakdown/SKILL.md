@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Convert one high-level requirement into an epic, user stories, acceptance criteria, agent assignments, and dependencies.
-> **Always:** ask clarifying questions before decomposing ambiguous work; use INVEST and Given/When/Then; surface cross-cutting concerns.
-> **Never:** make architectural decisions or start implementation.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are breaking down a high-level requirement into actionable development work.
@@ -71,21 +67,24 @@ Before breaking anything down, fully understand what's being asked:
 
 ## Step 2: Identify affected domains
 
-Map the requirement to the specialist agents who will be involved:
+Identify the domain focus and likely future owner. This is a plan, not a
+mandatory dispatch list; research uses `investigator`, approved changes use
+`implementer`, and independent review uses `code-reviewer`.
 
 | Domain | Agent | Signals |
 |---|---|---|
-| UI/Frontend | `frontend-developer` | Page, form, component, display, responsive |
-| Full-stack feature | `fullstack-developer` | End-to-end, spanning UI and API |
-| Backend/API | `backend-developer` | Endpoint, service, domain logic, data processing |
-| Database | `database-engineer` | Schema, migration, data model, query |
-| Integration | `systems-engineer` | External service, messaging, API contract |
-| Infrastructure | `devops-engineer` | Pipeline, deployment, environment, monitoring |
-| Service Fabric | `service-fabric-engineer` | Actor, reliable service, partition, cluster |
-| Security | `security-engineer` | Auth, encryption, access control, compliance |
-| UX Design | `ux-engineer` | User flow, wireframe, usability, research |
-| Testing | `qa-engineer` | Test strategy, coverage, E2E |
-| Architecture | `architect` | Structure, patterns, cross-cutting |
+| UI/Frontend | `implementer` | Page, form, component, display, responsive |
+| Full-stack feature | `implementer` | End-to-end, spanning UI and API |
+| Backend/API | `implementer` | Endpoint, service, domain logic, data processing |
+| Database | `implementer` | Schema, migration, data model, query |
+| Integration | `implementer` | External service, messaging, API contract |
+| Infrastructure | `implementer` | Pipeline, deployment, environment, monitoring |
+| Service Fabric | `implementer` | Actor, reliable service, partition, cluster |
+| Security changes | `implementer` | Auth, encryption, access control, compliance |
+| UX Design | `investigator` | User flow, wireframe, usability, research |
+| Test strategy | `investigator` | Coverage, risks, scenarios |
+| Test implementation | `implementer` | Approved unit, integration and E2E tests |
+| Architecture | `investigator` | Structure, patterns, cross-cutting |
 
 ## Step 3: Create the epic
 
@@ -180,17 +179,19 @@ When a story is too large, split using:
 
 For every feature, check these cross-cutting areas and create stories if needed:
 
-| Concern | Question | If Yes → Story For |
-|---|---|---|
-| Security | Does this need auth/authz? Data protection? | `security-engineer` |
-| Accessibility | Does this have UI? WCAG compliance needed? | `frontend-developer` + `ux-engineer` |
-| Performance | Will this handle high load? Large data sets? | `backend-developer` or `database-engineer` |
-| Monitoring | Does this need dashboards/alerts? | `devops-engineer` + `systems-engineer` |
-| Documentation | Does this need user/developer docs? | Use `documentation` skill |
-| Testing | What's the test strategy? | `qa-engineer` |
-| UX Research | Is user behavior validated? | `ux-engineer` |
-| Data migration | Does this change the schema? | `database-engineer` |
-| Infrastructure | Does this need new infra/config? | `devops-engineer` |
+| Concern | Question |
+|---|---|
+| Security | Does this need auth/authz or data protection? |
+| Accessibility | Does the UI meet required access needs? |
+| Performance | What load/data constraints actually apply? |
+| Monitoring | Are additional dashboards/alerts needed for the promised behavior? |
+| Documentation | Which existing user/developer docs are affected? |
+| Testing | What behavior and risks need coverage? |
+| UX Research | Is relevant user behavior supported by evidence? |
+| Data migration | Does this change the schema or stored data? |
+| Infrastructure | Does the outcome actually need new infrastructure/config? |
+
+Create only justified stories, not a generic infrastructure checklist.
 
 ## Step 6: Map dependencies
 
@@ -287,13 +288,13 @@ Reduces support tickets for order history requests and gives users self-service 
 
 | ID | Title | Agent | Dependencies | Priority |
 |---|---|---|---|---|
-| S1 | API: Export order history endpoint | `backend-developer` | None | Must |
-| S2 | PDF generation service | `backend-developer` | S1 | Must |
-| S3 | CSV generation service | `backend-developer` | S1 | Must |
-| S4 | UI: Export button and date filter | `frontend-developer` | S1 | Must |
-| S5 | UX: Export flow wireframe | `ux-engineer` | None | Must |
-| S6 | Test strategy for export | `qa-engineer` | S1 | Should |
-| S7 | Security: Authorize export access | `security-engineer` | S1 | Must |
+| S1 | API: Export order history endpoint | `implementer` | None | Must |
+| S2 | PDF generation service | `implementer` | S1 | Must |
+| S3 | CSV generation service | `implementer` | S1 | Must |
+| S4 | UI: Export button and date filter | `implementer` | S1 | Must |
+| S5 | UX: Export flow wireframe | `investigator` | None | Must |
+| S6 | Test strategy for export | `investigator` | S1 | Should |
+| S7 | Security: Authorize export access | `implementer` | S1 | Must |
 
 ### S1 — API: Export order history endpoint
 
@@ -321,8 +322,8 @@ Reduces support tickets for order history requests and gives users self-service 
 **When** I request the export endpoint
 **Then** I receive a 401 Unauthorized response
 
-**Primary:** `backend-developer`
-**Consult:** `security-engineer` (authorization), `database-engineer` (query optimization for large order sets)
+**Primary:** `implementer`
+**Consult:** `investigator` if authorization or large-query behavior remains uncertain
 
 ## Dependency Graph
 
@@ -369,10 +370,3 @@ S1 (API endpoint) ──→ S2 (PDF service)
 - Present the breakdown for review before considering it final.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Never break down a requirement you don't fully understand — ask questions first.
-2. Every story must have a clear "so that" value statement.
-3. Acceptance criteria must be specific and testable — no vague adjectives.
-> If anything above conflicts with these, **these win**.

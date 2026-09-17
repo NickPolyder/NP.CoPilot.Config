@@ -1,7 +1,14 @@
 #!/usr/bin/env sh
 set -eu
 
-repo_root="$(git rev-parse --show-toplevel)"
+if ! repo_root="$(git rev-parse --show-toplevel)"; then
+    printf '%s\n' 'Cannot discover the repository for the configuration pre-commit gate.' >&2
+    exit 1
+fi
 cd "$repo_root"
 
-pwsh -NoProfile -File "$repo_root/scripts/Invoke-ConfigPreCommitHook.ps1"
+if ! command -v pwsh >/dev/null 2>&1; then
+    printf '%s\n' 'PowerShell 7 (pwsh) is required by the configuration pre-commit gate.' >&2
+    exit 127
+fi
+exec pwsh -NoProfile -File "$repo_root/scripts/Invoke-ConfigPreCommitHook.ps1"

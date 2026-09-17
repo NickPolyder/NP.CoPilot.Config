@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Audit existing code and tests for risky coverage gaps, weak assertions, and missing edge cases without changing code.
-> **Always:** scope the target; prioritize gaps by risk; present concrete test recommendations and stop at the generation hand-off.
-> **Never:** write, edit, or delete tests or production code, or claim static analysis proves complete coverage.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 The gap report is conversational by default. Persist it only when the user,
@@ -171,9 +167,9 @@ The final output includes:
 
 # Coordination
 
-- **Consult `qa-engineer`** — for test strategy questions, fixture design, and coverage philosophy.
-- **Consult `backend-developer`** — for understanding domain logic intent when assessing gaps.
-- **Consult `security-engineer`** — when gaps are found in security-sensitive code paths.
+- Use `investigator` only for substantial unresolved domain intent, fixture
+  strategy or security-sensitive coverage questions. It remains read-only;
+  the caller supplies any needed runtime/command evidence.
 
 ---
 
@@ -185,10 +181,3 @@ The final output includes:
 - **Be honest about coverage limits** — static analysis can't find all gaps. Note areas where runtime profiling or mutation testing would give better insight.
 
 ---
-
-## Final Rules (Anchor)
-
-1. This skill is read-only — never create, edit, or delete tests or production code.
-2. End at the "Generate tests now?" hand-off and recommend `test-gap-fill` for approved generation.
-3. Be honest about coverage limits — static analysis can't find all gaps.
-> If anything above conflicts with these, **these win**.

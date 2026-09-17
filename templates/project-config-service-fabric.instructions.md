@@ -1,7 +1,13 @@
+---
+applyTo: "**"
+---
+
 # Project Configuration — Service Fabric
 
 This file tells Copilot agents and skills about your project's technology choices.
-Place it at `.github/instructions/project-config.instructions.md` so Copilot loads it automatically.
+Place it at `.github/instructions/project-config.instructions.md`. The scalar
+`applyTo` uses the documented repository-wide instruction syntax; discovery still
+depends on the client's supported instruction locations and active session.
 
 ## Technology Stack
 
@@ -66,6 +72,13 @@ deploy-local:  Connect-ServiceFabricCluster; Publish-ServiceFabricApplication
 
 ## Agent Delivery Capabilities
 
+<!-- np-copilot-capabilities-owner: .github/instructions/project-config.instructions.md -->
+
+This is the single capability declaration. Other project contracts reference it
+rather than repeat defaults. If the root project contract already owns verified
+capabilities, keep that owner and replace this section with a reference to it.
+Declare only capabilities supported by repository evidence.
+
 | Capability | Enabled | Repository-specific rule |
 |---|---:|---|
 | Issue tracking | No | Configure only after repository evidence confirms this capability. |
@@ -79,8 +92,12 @@ deploy-local:  Connect-ServiceFabricCluster; Publish-ServiceFabricApplication
 
 When agents encounter technology choices in this file, they should:
 
-- Service Fabric engineer agent is the primary authority for SF-specific decisions.
-- Backend developer should implement services as standard ASP.NET Core within SF hosting.
-- Architect should consider partition boundaries as part of aggregate/bounded context design.
-- DevOps engineer handles cluster management, deployment scripts, and upgrade policies.
+- When delegation is warranted, use `investigator` for analysis, `implementer`
+  for approved changes, or `code-reviewer` for independent review, with Service
+  Fabric domain focus.
+- Follow the existing SF service/actor model; use the established ASP.NET Core
+  hosting convention for HTTP services, not for every service type.
+- Include partition boundaries and state ownership in relevant design decisions.
+- Cluster changes, deployment scripts and upgrade policies retain their
+  target-specific authorization, health and recovery requirements.
 - Use the build/test commands listed above instead of guessing.

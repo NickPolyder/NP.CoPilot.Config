@@ -7,10 +7,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Convert an approved feature design into an ordered, dependency-aware `tasks.md` that implementation can execute safely.
-> **Always:** read the design thoroughly; group work into phases; order by dependency; mark independent work as parallelizable; include paired test work.
-> **Never:** implement code, silently redesign the feature, or skip dependencies.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are translating an approved design into executable work that can be implemented in dependency order.
@@ -80,10 +76,9 @@ The `tasks.md` must include:
 
 # Coordination
 
-- **Architect agent** — consult when task ordering depends on architectural boundaries or cross-cutting design choices.
-- **Backend/Frontend developer agents** — consult for implementation sequencing and realistic complexity estimates.
-- **QA engineer agent** — consult for paired test tasks and acceptance criteria coverage.
-- **Security engineer agent** — consult when tasks affect authentication, authorization, input validation, secrets, or data protection.
+- Use `investigator` only when substantial uncertainty about boundaries,
+  sequencing, tests or security needs independent research. Proposed future
+  changes belong to bounded `implementer` assignments after approval.
 - **Next step** — after approval, recommend `implementation-runner`.
 
 ---
@@ -96,10 +91,3 @@ The `tasks.md` must include:
 - **Tests travel with work** — every implementation task must include or depend on test work.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Generate `docs/features/{feature-name}/tasks.md` with phases, task details, dependency ordering, parallelizable markers, and test work.
-2. Do not implement code or change feature scope while generating tasks.
-3. Do not proceed into implementation without explicit approval.
-> If anything above conflicts with these, **these win**.

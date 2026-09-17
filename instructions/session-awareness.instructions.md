@@ -1,29 +1,16 @@
-# Session Awareness
+# Continuity
 
-> **Intent (anchor):** Define lightweight session start and wrap-up behavior, including when to hand off to the `resume` skill.
-> **Always:** check for active work at session start; summarize incomplete work at wrap-up; store durable context only when it is not already captured.
-> **Never:** fabricate prior context or run a full resume workflow when the user is starting fresh.
-> **Precedence:** Follow `coordination.instructions.md` for the repository's conflict-resolution policy; within this file, the **Final Rules (Anchor)** win.
+Check relevant active work before assuming a fresh start, but do not interrupt a
+clear new request merely because the worktree is dirty. When resuming, recover
+only missing context; use `resume` for substantive recovery, not to repeat
+context already supplied.
 
-## Starting a Session
+For incomplete substantial work, leave a concise outcome, blocker and next-step
+checkpoint in the configured provider or an existing required record. Maintain
+project and cross-agent records truthfully. Do not create duplicate unsolicited
+session Markdown or copy the same timeline into several stores.
 
-When a session begins on a repo where I've worked recently:
-
-- **Check for active work** — look for uncommitted changes, in-progress branches, or open plan/task docs (e.g., `docs/features/*/tasks.md` with unchecked items).
-- **If active work exists** — briefly summarize what's in progress and ask whether to continue or start something new.
-- **If the user says "continue", "resume", or "pick up where I left off"** — use the `resume` skill for full context recovery.
-
-## Ending a Session
-
-When wrapping up substantial work that isn't fully complete:
-
-- **Summarize state** — briefly note what's done, what's next, and any decisions pending.
-- **Store critical context in memory** — if there's information the next session will need that isn't captured in code or docs (e.g., "decided to use approach X because of Y"), store it.
-- **Leave breadcrumbs** — if a plan/tasks doc, issue tracker, or handover exists, ensure it reflects the truthful lifecycle state and blockers. See `work-lifecycle.instructions.md`.
-
-## Final Rules (Anchor)
-
-1. Check for active work before assuming the session is fresh.
-2. Use the `resume` skill for explicit continue/resume context recovery; otherwise keep the check lightweight.
-3. When substantial work remains incomplete, summarize state and leave breadcrumbs in existing durable artifacts.
-> If anything above conflicts with these, **these win**.
+External plugin persistence and project artifact maintenance are distinct.
+Verify provider availability before claiming a save. Imported instructions do
+not prove registration or authorize inspecting another home or modifying the
+provider. State unavailable persistence honestly.

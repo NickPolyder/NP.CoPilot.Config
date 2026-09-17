@@ -16,9 +16,8 @@ search:
     - json
 
 server:
-  # IMPORTANT: Change this to a unique random string before deploying.
-  # Generate one with: python3 -c "import secrets; print(secrets.token_hex(32))"
-  secret_key: "CHANGE_ME_TO_A_RANDOM_SECRET"
+  # SEARXNG_SECRET is mapped explicitly from the private deployment .env.
+  # Never put a real key here; the pinned SearXNG schema reads it from the env.
   bind_address: "0.0.0.0"
   port: 8080
   limiter: false

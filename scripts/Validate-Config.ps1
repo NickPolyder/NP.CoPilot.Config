@@ -4,9 +4,10 @@
     Validates structural invariants for the Copilot configuration repository.
 
 .DESCRIPTION
-    Checks tracked configuration files without modifying them. The validator
-    intentionally reports legacy metadata and documentation drift until the
-    corresponding hardening phases remove them.
+    Checks the supported on-disk configuration domain, including hidden and
+    ignored definitions, without following links. Uses the strict repository
+    YAML subset and runtime-reference policy documented in scripts\README.md.
+    This is not a full YAML parser or a Copilot runtime compatibility test.
 #>
 
 [CmdletBinding()]
@@ -18,12 +19,15 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'ConfigurationParsing.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'IsolatedProcess.psm1') -ErrorAction Stop
 
 $script:Failures = [System.Collections.Generic.List[string]]::new()
 $script:Warnings = [System.Collections.Generic.List[string]]::new()
 $script:Passes = 0
+$script:FrontmatterCache = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
 
-$supportedModels = [System.Collections.Generic.HashSet[string]]::new(
+$repositoryModels = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
         'claude-opus-4.8',
         'claude-sonnet-5',
@@ -36,7 +40,7 @@ $reviewInvariants = @(
     @{
         Path = 'skills/git-commit-review/SKILL.md'
         Name = 'Git commit review materializes an index-only snapshot'
-        Pattern = '(?s)git write-tree.*git archive --format=tar'
+        Pattern = '(?s)New-GitReviewCandidate.*New-GitTreeSnapshot'
     }
     @{
         Path = 'skills/git-commit-review/SKILL.md'
@@ -99,70 +103,53 @@ function Add-Warning {
 function Get-Frontmatter {
     param([Parameter(Mandatory)][string]$Path)
 
-    $content = Get-Content -LiteralPath $Path -Raw -Encoding utf8
-    $match = [regex]::Match($content, '\A---\r?\n(?<frontmatter>.*?)\r?\n---\r?\n', 'Singleline')
+    if ($script:FrontmatterCache.ContainsKey($Path)) { return $script:FrontmatterCache[$Path] }
+    try {
+        $content = [IO.File]::ReadAllText($Path, [Text.UTF8Encoding]::new($false, $true))
+    }
+    catch {
+        Add-Failure "$Path cannot be read as definition text: $($_.Exception.Message)"
+        return $null
+    }
+    $match = [regex]::Match($content, '\A---\r?\n(?<frontmatter>.*?)\r?\n---(?:\r?\n|\z)', 'Singleline')
 
     if (-not $match.Success) {
         Add-Failure "$Path does not start with a closed YAML frontmatter block."
         return $null
     }
 
-    $keys = [System.Collections.Generic.List[string]]::new()
-    foreach ($line in $match.Groups['frontmatter'].Value -split '\r?\n') {
-        if ($line -match '^(?<key>[A-Za-z][A-Za-z0-9-]*):') {
-            $keys.Add($matches['key'])
+    try {
+        $values = ConvertFrom-RepositoryYaml -Text $match.Groups['frontmatter'].Value -SourceName $Path
+        $frontmatter = [pscustomobject]@{
+            Content = $content
+            Values = $values
         }
+        $script:FrontmatterCache.Add($Path, $frontmatter)
+        $frontmatter
     }
-
-    [pscustomobject]@{
-        Content = $content
-        Keys = $keys
-        Text = $match.Groups['frontmatter'].Value
+    catch {
+        Add-Failure "$Path has invalid repository YAML frontmatter: $($_.Exception.Message)"
+        return $null
     }
 }
 
-function Get-FrontmatterList {
+function Test-RequiredMetadataString {
     param(
-        [Parameter(Mandatory)][string]$Frontmatter,
+        [Parameter(Mandatory)]$Frontmatter,
+        [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$Key
     )
 
-    $escapedKey = [regex]::Escape($Key)
-    $inlineMatch = [regex]::Match(
-        $Frontmatter,
-        "(?m)^$escapedKey\s*:\s*\[(?<items>[^\]]*)\]\s*$"
-    )
-    if ($inlineMatch.Success) {
-        $values = @(
-            $inlineMatch.Groups['items'].Value -split ',' |
-                ForEach-Object { $_.Trim().Trim('"', "'") } |
-                Where-Object { $_ }
-        )
-        return [pscustomobject]@{
-            Present = $true
-            Values = [string[]]$values
-        }
+    if (-not $Frontmatter.Values.ContainsKey($Key)) {
+        Add-Failure "$Path has no $Key frontmatter value."
+        return $false
     }
-
-    $blockMatch = [regex]::Match(
-        $Frontmatter,
-        "(?ms)^$escapedKey\s*:\s*\r?\n(?<items>(?:[ \t]+-\s*[^\r\n]+\r?\n?)*)"
-    )
-    if ($blockMatch.Success) {
-        $values = @(
-            [regex]::Matches($blockMatch.Groups['items'].Value, '(?m)^[ \t]+-\s*(?<item>[^\r\n]+)\s*$') |
-                ForEach-Object { $_.Groups['item'].Value.Trim().Trim('"', "'") }
-        )
-        return [pscustomobject]@{
-            Present = $true
-            Values = [string[]]$values
-        }
+    $value = $Frontmatter.Values[$Key]
+    if ($value -isnot [string] -or [string]::IsNullOrWhiteSpace($value)) {
+        Add-Failure "$Path frontmatter '$Key' must be a nonempty string."
+        return $false
     }
-
-    [pscustomobject]@{
-        Present = $false
-        Values = [string[]]@()
-    }
+    return $true
 }
 
 function Test-DefinitionFrontmatter {
@@ -179,37 +166,39 @@ function Test-DefinitionFrontmatter {
         return
     }
 
-    foreach ($key in $frontmatter.Keys | Select-Object -Unique) {
-        $keyCount = @($frontmatter.Keys | Where-Object { $_ -eq $key }).Count
-        if ($keyCount -gt 1) {
-            Add-Failure "$Path defines the '$key' frontmatter key $keyCount times."
-        }
-        if ($key -notin $AllowedKeys) {
+    foreach ($key in $frontmatter.Values.Keys) {
+        if ($key -cnotin $AllowedKeys) {
             Add-Failure "$Path uses unsupported $Kind frontmatter key '$key'."
         }
     }
-
-    $nameMatch = [regex]::Match($frontmatter.Text, '(?m)^name:\s*(?<name>[^\r\n]+)\s*$')
-    if (-not $nameMatch.Success) {
-        Add-Failure "$Path has no name frontmatter value."
-        return
+    $null = Test-RequiredMetadataString -Frontmatter $frontmatter -Path $Path -Key 'description'
+    if (Test-RequiredMetadataString -Frontmatter $frontmatter -Path $Path -Key 'name') {
+        $actualName = $frontmatter.Values['name']
+        if ($actualName -cne $ExpectedName) {
+            Add-Failure "$Path declares name '$actualName' but its expected name is '$ExpectedName'."
+        }
+        if ($actualName -cnotmatch '^[a-z][a-z0-9-]*$') {
+            Add-Failure "$Path name '$actualName' is outside the repository's lowercase kebab-case policy."
+        }
     }
-
-    $actualName = $nameMatch.Groups['name'].Value.Trim().Trim('"', "'")
-    if ($actualName -ne $ExpectedName) {
-        Add-Failure "$Path declares name '$actualName' but its expected name is '$ExpectedName'."
+    if ($frontmatter.Values.ContainsKey('license')) {
+        $null = Test-RequiredMetadataString -Frontmatter $frontmatter -Path $Path -Key 'license'
+    }
+    if ($frontmatter.Values.ContainsKey('tools')) {
+        $tools = $frontmatter.Values['tools']
+        if ($tools -isnot [array] -or $tools.Count -eq 0 -or @($tools | Where-Object {
+            $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_)
+        }).Count -gt 0) {
+            Add-Failure "$Path frontmatter 'tools' must be a nonempty string sequence."
+        }
     }
 
     if ($Kind -eq 'agent') {
-        $modelMatch = [regex]::Match($frontmatter.Text, '(?m)^model:\s*(?<model>[^\r\n]+)\s*$')
-        if (-not $modelMatch.Success) {
-            Add-Failure "$Path has no model frontmatter value."
-            return
-        }
-
-        $model = $modelMatch.Groups['model'].Value.Trim().Trim('"', "'")
-        if (-not $supportedModels.Contains($model)) {
-            Add-Failure "$Path uses unsupported model '$model'."
+        if (Test-RequiredMetadataString -Frontmatter $frontmatter -Path $Path -Key 'model') {
+            $model = $frontmatter.Values['model']
+            if (-not $repositoryModels.Contains($model)) {
+                Add-Failure "$Path uses model '$model' outside the repository model policy (not a CLI support claim)."
+            }
         }
     }
 
@@ -328,32 +317,165 @@ function Test-ReadmeInventory {
     }
 
     if ($script:Failures.Count -eq $failureCount) {
-        Write-Pass 'README inventory includes every tracked agent and skill.'
+        Write-Pass 'README inventory includes every on-disk agent and skill in the supported domain.'
     }
 }
 
-function Test-MutableRuntimeVersions {
-    param([Parameter(Mandatory)][string[]]$Paths)
+function Test-ImageReference {
+    param($Reference, [string]$Location)
 
-    $failureCount = $script:Failures.Count
-    foreach ($path in $Paths) {
-        $content = Get-Content -LiteralPath $path -Raw -Encoding utf8
-        $mutableVersions = @([regex]::Matches($content, '(?i)(@latest|:latest)(?!\w)') | ForEach-Object Value)
-        $approvedPlaywrightLatest = @(
-            [regex]::Matches($content, '(?i)@playwright/mcp@latest(?!\w)') |
-                ForEach-Object Value
-        )
-
-        if ($mutableVersions.Count -gt $approvedPlaywrightLatest.Count) {
-            Add-Failure "$path contains a mutable runtime version."
+    if ($Reference -isnot [string] -or [string]::IsNullOrWhiteSpace($Reference)) {
+        Add-Failure "$Location must contain a nonempty image reference."
+        return
+    }
+    $parts = $Reference.Split('@')
+    $nameAndTag = $parts[0]
+    $tag = ''
+    $colon = $nameAndTag.LastIndexOf(':')
+    if ($colon -gt $nameAndTag.LastIndexOf('/')) {
+        $tag = $nameAndTag.Substring($colon + 1)
+        $nameAndTag = $nameAndTag.Substring(0, $colon)
+    }
+    if ($parts.Count -gt 2 -or $nameAndTag -cnotmatch '^(?:[a-z0-9.-]+(?::[0-9]+)?/)?[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*$' -or
+        ($colon -gt $parts[0].LastIndexOf('/') -and $tag -cnotmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$')) {
+        Add-Failure "$Location has an unsupported or malformed image reference '$Reference'."
+        return
+    }
+    if ($parts.Count -eq 2) {
+        if ($parts[1] -cnotmatch '^sha256:[0-9a-f]{64}$') {
+            Add-Failure "$Location requires a complete SHA-256 image digest, not '$Reference'."
         }
-        elseif ($approvedPlaywrightLatest.Count -gt 0) {
-            Add-Warning "$path intentionally uses @playwright/mcp@latest under the documented user-approved waiver."
+        return
+    }
+    if ($tag -cnotmatch '^v?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:[-._][A-Za-z0-9][A-Za-z0-9_.-]*)?$') {
+        Add-Failure "$Location requires an explicit three-part image version or SHA-256 digest; untagged/moving reference '$Reference' is not approved."
+    }
+}
+
+function Test-PackageReference {
+    param([string]$Reference, [string]$ServerName, [string]$Location)
+
+    if ($ServerName -ceq 'playwright' -and $Reference -ceq '@playwright/mcp@latest') {
+        Add-Warning "$Location intentionally uses @playwright/mcp@latest under the documented user-approved waiver."
+        return
+    }
+    if ($Reference -cnotmatch '^(?:@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*|[a-z0-9][a-z0-9._-]*)@(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$') {
+        Add-Failure "$Location requires an exact package version; unversioned/range/moving reference '$Reference' is not approved."
+        return
+    }
+    foreach ($identifier in ($Matches.prerelease -split '\.')) {
+        if ($identifier -match '^0[0-9]+$') {
+            Add-Failure "$Location has an invalid semantic-version prerelease '$Reference'."
         }
     }
+}
 
+function Test-LocalRuntimeArguments {
+    param([string]$Command, [string[]]$Arguments, [string]$ServerName, [string]$Location)
+
+    if ($Command -cin @('docker', 'docker.exe')) {
+        if ($Arguments.Count -eq 0 -or $Arguments[0] -cne 'run') {
+            Add-Failure "$Location supports only explicit 'docker run' runtime arguments."
+            return
+        }
+        $valueFlags = @('-e', '--env', '--env-file', '-p', '--publish', '-v', '--volume', '--mount',
+            '--network', '--name', '-u', '--user', '-w', '--workdir', '--entrypoint', '--platform', '--label')
+        for ($i = 1; $i -lt $Arguments.Count; $i++) {
+            $argument = $Arguments[$i]
+            if ($argument -ceq '--') { $i++; break }
+            if (-not $argument.StartsWith('-')) { break }
+            if ($argument -cin @('-i', '--interactive', '--rm', '--init', '-t', '--tty', '-it')) { continue }
+            $flag = $argument.Split('=', 2)
+            if ($flag[0] -cnotin $valueFlags) {
+                Add-Failure "$Location uses unsupported Docker option '$argument'; image discovery cannot be established."
+                return
+            }
+            if ($flag.Count -eq 1) {
+                $i++
+                if ($i -ge $Arguments.Count -or [string]::IsNullOrEmpty($Arguments[$i])) {
+                    Add-Failure "$Location has a Docker option without its required value."
+                    return
+                }
+            }
+            elseif (-not $flag[1]) {
+                Add-Failure "$Location has an empty Docker option value."
+                return
+            }
+        }
+        if ($i -ge $Arguments.Count) { Add-Failure "$Location is missing its Docker runtime image."; return }
+        Test-ImageReference -Reference $Arguments[$i] -Location "$Location image"
+        return
+    }
+    if ($Command -cin @('npx', 'npx.cmd', 'npx.exe')) {
+        $packages = [Collections.Generic.List[string]]::new()
+        for ($i = 0; $i -lt $Arguments.Count; $i++) {
+            $argument = $Arguments[$i]
+            if ($argument -ceq '--') { $i++; break }
+            if (-not $argument.StartsWith('-')) { break }
+            if ($argument -cin @('-y', '--yes', '--no', '--no-install', '-q', '--quiet')) { continue }
+            $flag = $argument.Split('=', 2)
+            if ($flag[0] -cnotin @('-p', '--package')) {
+                Add-Failure "$Location uses unsupported npx option '$argument'; package discovery cannot be established."
+                return
+            }
+            if ($flag.Count -eq 2 -and $flag[1]) { $packages.Add($flag[1]) }
+            elseif ($flag.Count -eq 1 -and ++$i -lt $Arguments.Count -and $Arguments[$i]) { $packages.Add($Arguments[$i]) }
+            else { Add-Failure "$Location has an npx package option without its required value."; return }
+        }
+        if ($packages.Count -eq 0) {
+            if ($i -ge $Arguments.Count) { Add-Failure "$Location is missing its npx runtime package."; return }
+            $packages.Add($Arguments[$i])
+        }
+        foreach ($package in $packages) {
+            Test-PackageReference -Reference $package -ServerName $ServerName -Location "$Location package"
+        }
+        return
+    }
+    Add-Failure "$Location uses unsupported local runtime launcher '$Command'; explicit runtime versions cannot be established."
+}
+
+function Test-MutableRuntimeVersions {
+    param($McpConfig, $Compose)
+
+    $failureCount = $script:Failures.Count
+    if ($McpConfig -isnot [Collections.IDictionary] -or $McpConfig['mcpServers'] -isnot [Collections.IDictionary] -or
+        $McpConfig['mcpServers'].Count -eq 0) {
+        Add-Failure 'mcp-config.json must define a nonempty mcpServers object for runtime validation.'
+    }
+    else {
+        foreach ($entry in $McpConfig['mcpServers'].GetEnumerator()) {
+            $location = "mcp-config.json mcpServers.$($entry.Key)"
+            $server = $entry.Value
+            if ($server -isnot [Collections.IDictionary]) { Add-Failure "$location must be an object."; continue }
+            if ($server['type'] -cin @('http', 'sse')) { continue }
+            if ($server['type'] -cne 'local' -or $server['command'] -isnot [string] -or
+                $server['args'] -isnot [array] -or @($server['args'] | Where-Object { $_ -isnot [string] }).Count -gt 0) {
+                Add-Failure "$location requires a local type, command string, and string-array args for runtime validation."
+                continue
+            }
+            Test-LocalRuntimeArguments -Command $server['command'] -Arguments $server['args'] -ServerName $entry.Key -Location $location
+        }
+    }
+    if ($Compose -isnot [Collections.IDictionary] -or $Compose['services'] -isnot [Collections.IDictionary] -or
+        $Compose['services'].Count -eq 0) {
+        Add-Failure 'mcps\docker-compose.yml must define a nonempty services mapping with explicit runtime images.'
+    }
+    else {
+        if ($Compose.ContainsKey('include')) { Add-Failure 'Compose include resolution is outside the supported static runtime domain.' }
+        foreach ($entry in $Compose['services'].GetEnumerator()) {
+            $location = "mcps\docker-compose.yml services.$($entry.Key)"
+            $service = $entry.Value
+            if ($service -isnot [Collections.IDictionary]) { Add-Failure "$location must be a mapping."; continue }
+            foreach ($unsupported in @('extends', 'build', 'env_file')) {
+                if ($service.ContainsKey($unsupported)) {
+                    Add-Failure "$location uses unsupported '$unsupported' resolution in the static runtime domain."
+                }
+            }
+            Test-ImageReference -Reference $service['image'] -Location "$location.image"
+        }
+    }
     if ($script:Failures.Count -eq $failureCount) {
-        Write-Pass 'Runtime MCP definitions use explicit versions or documented waivers.'
+        Write-Pass 'Runtime MCP definitions use explicit image versions/digests and exact package versions or documented waivers.'
     }
 }
 
@@ -367,8 +489,9 @@ function Test-Json {
             return
         }
 
-        $content | ConvertFrom-Json -ErrorAction Stop | Out-Null
+        $parsed = $content | ConvertFrom-Json -AsHashtable -ErrorAction Stop
         Write-Pass "$Path contains valid JSON."
+        return $parsed
     }
     catch {
         Add-Failure "$Path is not valid JSON: $($_.Exception.Message)"
@@ -387,17 +510,20 @@ function Test-DockerCompose {
         return
     }
 
-    Push-Location (Split-Path $Path -Parent)
+    $context = New-IsolatedProcessContext
     try {
-        & docker compose -f (Split-Path $Path -Leaf) config --quiet
-        if ($LASTEXITCODE -ne 0) {
-            Add-Failure "$Path failed docker compose config validation."
+        [IO.File]::Copy($Path, (Join-Path $context.Root 'compose.yml'))
+        $result = Invoke-IsolatedProcess -Context $context -FilePath (Get-Command docker -CommandType Application).Source `
+            -WorkingDirectory $context.Root `
+            -ArgumentList @('compose', '--env-file', 'empty.config', '-f', 'compose.yml', 'config', '--no-interpolate', '--quiet') -AllowFailure
+        if ($result.ExitCode -ne 0) {
+            Add-Failure "$Path failed docker compose config validation (exit $($result.ExitCode)): $($result.Output)"
             return
         }
         Write-Pass "$Path passes docker compose config validation."
     }
     finally {
-        Pop-Location
+        Remove-IsolatedProcessContext -Context $context
     }
 }
 
@@ -431,13 +557,13 @@ function Test-ReviewerCapabilityBoundary {
         return
     }
 
-    $tools = Get-FrontmatterList -Frontmatter $frontmatter.Text -Key 'tools'
-    if (-not $tools.Present) {
+    $tools = $frontmatter.Values['tools']
+    if (-not $frontmatter.Values.ContainsKey('tools')) {
         Add-Failure 'agents/code-reviewer.md is missing its reviewer tools list.'
     }
-    else {
+    elseif ($tools -is [array] -and @($tools | Where-Object { $_ -isnot [string] }).Count -eq 0) {
         $actualTools = [System.Collections.Generic.HashSet[string]]::new(
-            [string[]]$tools.Values,
+            [string[]]$tools,
             [System.StringComparer]::Ordinal
         )
         foreach ($tool in $actualTools) {
@@ -450,9 +576,12 @@ function Test-ReviewerCapabilityBoundary {
                 Add-Failure "agents/code-reviewer.md is missing required reviewer tool '$tool'."
             }
         }
-        if ($tools.Values.Count -ne $reviewerExpectedTools.Count) {
+        if ($tools.Count -ne $reviewerExpectedTools.Count) {
             Add-Failure 'agents/code-reviewer.md must declare each required reviewer tool exactly once.'
         }
+    }
+    else {
+        Add-Failure 'agents/code-reviewer.md must declare a valid reviewer tools string sequence.'
     }
 
     if (-not $frontmatter.Content.Contains('Do not create reports, directories, or any other artifacts.')) {
@@ -482,13 +611,84 @@ function Test-ReviewerCapabilityBoundary {
     }
 }
 
+function Assert-PhysicalConfigPath {
+    param([string]$Path, [switch]$AllowMissing)
+
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    $current = [IO.Path]::GetPathRoot($fullPath)
+    $parts = @('') + @($fullPath.Substring($current.Length).Split([char[]]@('\', '/'), [StringSplitOptions]::RemoveEmptyEntries))
+    foreach ($part in $parts) {
+        if ($part) { $current = Join-Path $current $part }
+        try { $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop }
+        catch [System.Management.Automation.ItemNotFoundException] {
+            if ($AllowMissing) { return $false }
+            throw
+        }
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "Linked configuration input or ancestor is unsupported; contents were not followed: $current"
+        }
+    }
+    return $true
+}
+
+function Get-ConfigurationInputs {
+    $null = Assert-PhysicalConfigPath -Path $RepositoryRoot
+    $agentPaths = [Collections.Generic.List[object]]::new()
+    $skillPaths = [Collections.Generic.List[string]]::new()
+    foreach ($directory in @('agents', 'skills')) {
+        $path = Join-Path $RepositoryRoot $directory
+        if (-not (Assert-PhysicalConfigPath -Path $path -AllowMissing)) {
+            Add-Failure "Missing required definition directory '$directory'."
+            continue
+        }
+        if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "Definition root '$directory' is not a directory." }
+        foreach ($item in Get-ChildItem -LiteralPath $path -Force) {
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "Linked definition is unsupported; contents were not followed: $($item.FullName)"
+            }
+            if ($directory -eq 'agents' -and $item.PSIsContainer -and $item.Name -notlike '*.md') {
+                throw "Nested agent definition directories are unsupported; contents were not traversed: $($item.FullName)"
+            }
+            if ($directory -eq 'agents' -and $item.Name -like '*.md') {
+                if ($item.PSIsContainer) { throw "Agent definition is a directory, not a file: $($item.FullName)" }
+                $agentPaths.Add($item)
+            }
+            elseif ($directory -eq 'skills' -and $item.PSIsContainer) {
+                $skillPath = Join-Path $item.FullName 'SKILL.md'
+                if (-not (Assert-PhysicalConfigPath -Path $skillPath -AllowMissing)) {
+                    Add-Failure "Skill directory '$($item.Name)' is missing SKILL.md."
+                    continue
+                }
+                if (-not (Test-Path -LiteralPath $skillPath -PathType Leaf)) { throw "Skill definition is not a regular file: $skillPath" }
+                $skillPaths.Add($skillPath)
+            }
+        }
+    }
+    foreach ($relative in @('README.md', 'mcp-config.json', 'mcps\docker-compose.yml')) {
+        $path = Join-Path $RepositoryRoot $relative
+        if (-not (Assert-PhysicalConfigPath -Path $path -AllowMissing)) {
+            Add-Failure "Missing required validator input '$relative'."
+        }
+        elseif (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Validator input '$relative' must be a regular file."
+        }
+    }
+    [pscustomobject]@{ AgentPaths = $agentPaths.ToArray(); SkillPaths = $skillPaths.ToArray() }
+}
+
 Write-Host ''
 Write-Host '🔍 Validating Copilot configuration...' -ForegroundColor Cyan
 
-$agentPaths = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'agents') -File -Filter '*.md')
-$skillPaths = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'skills') -Directory |
-    ForEach-Object { Join-Path $_.FullName 'SKILL.md' } |
-    Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+try {
+    $inputs = Get-ConfigurationInputs
+}
+catch {
+    Add-Failure "Configuration input-domain violation: $($_.Exception.Message)"
+    Write-Host "❌ $($script:Failures.Count) configuration checks failed; $script:Passes passed." -ForegroundColor Red
+    exit 1
+}
+$agentPaths = @($inputs.AgentPaths)
+$skillPaths = @($inputs.SkillPaths)
 
 $knownAgents = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@($agentPaths | ForEach-Object BaseName),
@@ -515,14 +715,25 @@ Test-ReferenceIntegrity -DefinitionPaths @(
 ) `
     -KnownAgents $knownAgents -KnownSkills $knownSkills
 Test-Orchestration -KnownSkills $knownSkills
-Test-ReadmeInventory -Path (Join-Path $RepositoryRoot 'README.md') `
-    -AgentNames @($knownAgents) -SkillNames @($knownSkills)
-Test-Json -Path (Join-Path $RepositoryRoot 'mcp-config.json')
-Test-MutableRuntimeVersions -Paths @(
-    (Join-Path $RepositoryRoot 'mcp-config.json'),
-    (Join-Path $RepositoryRoot 'mcps/docker-compose.yml')
-)
-Test-DockerCompose -Path (Join-Path $RepositoryRoot 'mcps/docker-compose.yml')
+if (Test-Path -LiteralPath (Join-Path $RepositoryRoot 'README.md') -PathType Leaf) {
+    Test-ReadmeInventory -Path (Join-Path $RepositoryRoot 'README.md') `
+        -AgentNames @($knownAgents) -SkillNames @($knownSkills)
+}
+$mcpConfig = Test-Json -Path (Join-Path $RepositoryRoot 'mcp-config.json')
+$composePath = Join-Path $RepositoryRoot 'mcps\docker-compose.yml'
+$compose = $null
+try {
+    $composeText = [IO.File]::ReadAllText($composePath, [Text.UTF8Encoding]::new($false, $true))
+    $compose = ConvertFrom-RepositoryYaml -Text $composeText -SourceName $composePath
+}
+catch {
+    Add-Failure "$composePath is not valid supported repository YAML: $($_.Exception.Message)"
+}
+$runtimeFailureCount = $script:Failures.Count
+Test-MutableRuntimeVersions -McpConfig $mcpConfig -Compose $compose
+if ($script:Failures.Count -eq $runtimeFailureCount -and $null -ne $compose) {
+    Test-DockerCompose -Path $composePath
+}
 Test-ReviewInvariants
 Test-ReviewerCapabilityBoundary
 

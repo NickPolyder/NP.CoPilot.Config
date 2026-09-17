@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Generate concrete, runnable tests for approved coverage gaps and report any real bugs the new tests expose.
-> **Always:** require explicit approval of which gaps to fill; follow existing test conventions; run generated tests and report results.
-> **Never:** modify production code without asking, generate tests for trivial code, or invent conventions that conflict with the project.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are filling approved test gaps with concrete, runnable tests.
@@ -74,10 +70,12 @@ Expected: Result.Failure with OutOfStock error
 Actual: NullReferenceException on line 47
 
 This is the kind of bug that ships when this path isn't tested.
-Fix the bug now? (yes / no — just leave the test as documentation)
+Production fix requires a separately authorized implementation assignment.
 ```
 
-Do not modify production code to fix the bug unless the user explicitly approves that follow-up.
+Return production defects to the caller. This test-only skill does not perform
+production fixes; separately authorized implementation must retain the failing
+test and rerun affected verification.
 
 ---
 
@@ -94,9 +92,9 @@ The final output includes:
 
 # Coordination
 
-- **Consult `qa-engineer`** — for test strategy questions, fixture design, and coverage philosophy.
-- **Consult `backend-developer`** — for understanding domain logic intent when generating tests.
-- **Consult `security-engineer`** — when gaps are found in security-sensitive code paths.
+- Use `implementer` for substantial approved test-only changes. Consult
+  `investigator` only for unresolved domain intent, fixture strategy or security
+  questions that warrant separate research.
 - **Recommend `refactor`** — if existing tests need structural improvements before new tests can be added cleanly.
 
 ---
@@ -106,14 +104,7 @@ The final output includes:
 - **Approval is required** — generate only the specific gaps approved by the user.
 - **Don't generate tests for trivial code** — getters, DTOs, and auto-generated code don't need tests.
 - **Match existing test style** — use the same framework, naming, fixtures, and assertion library as the project.
-- **Don't modify production code without asking** — this skill adds/improves tests. If a bug is found, report it and ask before fixing.
+- **Don't modify production code** — report bugs for a separately authorized fix.
 - **Preserve the project safety net** — run the smallest existing test command that verifies the generated tests, then escalate only if needed.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Require explicit approval of which gaps to fill before generating or editing tests.
-2. Match existing test style and don't generate tests for trivial code.
-3. Don't modify production code without asking; report real bugs exposed by failing tests.
-> If anything above conflicts with these, **these win**.

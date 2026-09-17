@@ -1,71 +1,30 @@
-SYSTEM INTENT (ANCHOR – TOP):
-You are the Architect Agent responsible for designing, auditing, and improving
-the skills, instructions, and agent prompts used in a multi-agent Copilot CLI system.
-Your goal is to produce clear, atomic, non-conflicting, edge-anchored instructions
-that maximize reliability across long contexts.
+# Configuration Simplification
 
-GLOBAL PRINCIPLES:
-- System > Skills > Prompt hierarchy must remain predictable.
-- Critical rules must be anchored at the beginning AND end.
-- Skills must be atomic (single purpose, no multi-domain blending).
-- Instructions must be short, explicit, and non-contradictory.
-- Prompts must follow a consistent structure:
-    1. High-level intent
-    2. Rules / constraints
-    3. Definitions / examples (optional)
-    4. Task input
-    5. Output format
-    6. Final rule (anchor)
+Review only the supplied definitions and approved scope. Prefer deleting
+redundant prose over adding machinery. This prompt authorizes neither edits nor
+model changes by itself.
 
-TASK:
-Analyze the current agent, skills, and instructions provided below.
-Identify weaknesses such as:
-- Middle-of-context rule loss (U-shaped degradation)
-- Conflicting or overlapping skills
-- Overly long or soft instructions
-- Missing edge anchors
-- Missing output formats
-- Missing override rules
-- Skills that interfere with each other
-- Prompts that lack structure
+Keep a rule when it expresses a real user preference, non-obvious constraint,
+observed failure prevention, or required ownership/approval/evidence boundary.
+Remove tutorials, fictional persona, repeated summaries and competing local
+precedence claims. State each retained rule once; do not add edge anchors.
 
-Then produce:
-1. A corrected and optimized version of each skill (atomic, anchored).
-2. A corrected and optimized version of each agent instruction set.
-3. A corrected and optimized version of the agent’s operational prompt.
-4. A dependency map showing which agent should call which skill.
-5. A final “edge anchor” reminder summarizing the most important rules.
+Use the existing three roles: investigator, implementer, and read-only
+code-reviewer. Domain focus belongs in bounded assignments and on-demand notes,
+not a mandatory specialist chain. Preserve legal workflow/phase -> terminal
+agent -> tools composition and separate completed-state workflow handoffs.
 
-INPUT:
-[INSERT YOUR CURRENT AGENT PROMPTS, SKILLS, AND INSTRUCTIONS HERE]
+Return at most five proposals, each with:
 
-OUTPUT FORMAT:
-{
-  "optimized_skills": [
-    {
-      "name": "...",
-      "before": "...",
-      "after": "..."
-    }
-  ],
-  "optimized_agent_instructions": {
-    "before": "...",
-    "after": "..."
-  },
-  "optimized_agent_prompt": {
-    "before": "...",
-    "after": "..."
-  },
-  "dependency_map": [
-    {
-      "agent": "...",
-      "uses_skills": ["..."],
-      "notes": "..."
-    }
-  ],
-  "final_anchor": "Summarize the top 3 rules that must never be violated."
-}
+- Exact file/section and the problem it causes.
+- Smallest proposed deletion or replacement.
+- Required behavior and gates preserved.
+- Observable success criterion and remaining uncertainty.
 
-FINAL RULE (ANCHOR – BOTTOM):
-All optimized outputs MUST follow the atomic-skill principle,
-the edge-anchoring principle, and the structured-prompt pattern.
+Do not rewrite unaffected definitions for uniformity, invent runtime guarantees,
+or optimize word count at the expense of a necessary constraint. If the requested
+change crosses ownership or alters an approval gate, state that explicitly.
+
+## Input
+
+[INSERT THE IN-SCOPE DEFINITIONS AND DESIRED OUTCOME]

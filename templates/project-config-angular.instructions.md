@@ -1,7 +1,13 @@
+---
+applyTo: "**"
+---
+
 # Project Configuration — Angular + .NET API
 
 This file tells Copilot agents and skills about your project's technology choices.
-Place it at `.github/instructions/project-config.instructions.md` so Copilot loads it automatically.
+Place it at `.github/instructions/project-config.instructions.md`. The scalar
+`applyTo` uses the documented repository-wide instruction syntax; discovery still
+depends on the client's supported instruction locations and active session.
 
 ## Technology Stack
 
@@ -76,6 +82,13 @@ e2e:           ng e2e
 
 ## Agent Delivery Capabilities
 
+<!-- np-copilot-capabilities-owner: .github/instructions/project-config.instructions.md -->
+
+This is the single capability declaration. Other project contracts reference it
+rather than repeat defaults. If the root project contract already owns verified
+capabilities, keep that owner and replace this section with a reference to it.
+Declare only capabilities supported by repository evidence.
+
 | Capability | Enabled | Repository-specific rule |
 |---|---:|---|
 | Issue tracking | No | Configure only after repository evidence confirms this capability. |
@@ -90,6 +103,6 @@ e2e:           ng e2e
 When agents encounter technology choices in this file, they should:
 
 - Skip guidance for technologies not listed (e.g., skip Blazor advice if Frontend is Angular).
-- Frontend agent should use Angular patterns, not Blazor.
-- Backend agent should generate API endpoints that match the Angular client's expectations.
+- Frontend implementation uses Angular patterns, not Blazor.
+- Backend implementation keeps API contracts aligned with the Angular client.
 - Use the build/test commands listed above instead of guessing.

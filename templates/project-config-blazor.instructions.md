@@ -1,7 +1,13 @@
+---
+applyTo: "**"
+---
+
 # Project Configuration — Blazor + .NET
 
 This file tells Copilot agents and skills about your project's technology choices.
-Place it at `.github/instructions/project-config.instructions.md` so Copilot loads it automatically.
+Place it at `.github/instructions/project-config.instructions.md`. The scalar
+`applyTo` uses the documented repository-wide instruction syntax; discovery still
+depends on the client's supported instruction locations and active session.
 
 ## Technology Stack
 
@@ -61,6 +67,13 @@ watch:         dotnet watch run --project src/{BlazorProject}
 
 ## Agent Delivery Capabilities
 
+<!-- np-copilot-capabilities-owner: .github/instructions/project-config.instructions.md -->
+
+This is the single capability declaration. Other project contracts reference it
+rather than repeat defaults. If the root project contract already owns verified
+capabilities, keep that owner and replace this section with a reference to it.
+Declare only capabilities supported by repository evidence.
+
 | Capability | Enabled | Repository-specific rule |
 |---|---:|---|
 | Issue tracking | No | Configure only after repository evidence confirms this capability. |
@@ -75,6 +88,6 @@ watch:         dotnet watch run --project src/{BlazorProject}
 When agents encounter technology choices in this file, they should:
 
 - Skip guidance for technologies not listed (e.g., skip Angular advice).
-- Frontend agent should use Blazor/Razor component patterns.
+- Frontend implementation uses Blazor/Razor component patterns.
 - Consider the render mode implications for every component (especially state and interactivity).
 - Use the build/test commands listed above instead of guessing.

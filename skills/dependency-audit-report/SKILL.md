@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Audit project dependencies for version, vulnerability, deprecation, and license risk, then produce a prioritized upgrade plan.
-> **Always:** discover manifests first; categorize risk before recommending upgrades; include vulnerability exposure and minimum fix version when responding to advisories.
-> **Never:** edit manifests, update lock files, run package upgrades, or mix dependency audit work with feature work.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 The audit report is conversational by default. Persist it only when the user,
@@ -24,6 +20,9 @@ Your goals are to:
 
 - **Identify outdated packages** — find dependencies behind current stable versions.
 - **Surface vulnerabilities** — check for known CVEs and security advisories.
+- **Assess licenses** — identify licenses for all direct and transitive
+  dependencies and compare them with declared policy, without inventing legal
+  approval or treating unknown evidence as clean.
 - **Assess upgrade risk** — categorize each update by breaking-change potential.
 - **Plan safe upgrades** — propose incremental batches and hand off execution to `dependency-upgrade-execution` only after explicit approval.
 
@@ -44,7 +43,7 @@ Do **not** use this skill for:
 - Executing approved dependency upgrades — use `dependency-upgrade-execution` after the user approves the plan.
 - Adding new dependencies — just add them directly.
 - Debugging dependency conflicts during development — investigate directly.
-- Framework upgrades (e.g., .NET 8 → .NET 9) — those are architectural changes requiring the Full tier workflow.
+- Framework upgrades (e.g., .NET 8 → .NET 9) — those require explicit architectural scope and approval.
 
 ---
 
@@ -52,14 +51,23 @@ Do **not** use this skill for:
 
 ## Phase 1: Discovery
 
-Scan the project for dependency manifests and current state:
+Scan the target repository's manifests, lock files, workspace/project files, and
+declared dependency/license policy. Record the revision and each command's
+working directory. Include resolved direct **and transitive** dependencies across
+runtime, development, build, and test scopes; state any agreed exclusions.
 
-### .NET Projects
+Prefer existing lock files, resolved graphs, package metadata, and repository
+reports. Package-manager queries must be supported by the installed toolchain
+and must not restore/install packages or rewrite manifests/lock files. If a
+query would do so, use available read-only evidence and report the missing
+assessment rather than running it or installing a scanner.
+
+### .NET Projects (read-only queries where supported)
 
 ```powershell
-dotnet list package --outdated
-dotnet list package --vulnerable
-dotnet list package --deprecated
+dotnet list package --outdated --include-transitive
+dotnet list package --vulnerable --include-transitive
+dotnet list package --deprecated --include-transitive
 ```
 
 ### Node.js Projects
@@ -69,10 +77,26 @@ npm outdated
 npm audit
 ```
 
-### Both
+### Graph and License Evidence
 
-- Check for lock file freshness (packages.lock.json, package-lock.json).
-- Identify transitive dependency risks.
+- Check lock-file freshness without updating it. Deduplicate by ecosystem,
+  package identity, and exact resolved version, retaining direct/transitive
+  classification, introducing dependency paths, and affected projects/scopes.
+- For each package/version, identify its declared license expression and evidence:
+  package metadata (`license`, NuGet license expression/file, etc.), included
+  LICENSE/NOTICE files, or authoritative version-specific upstream metadata.
+  Cite the file/path or URL and version; distinguish fetched metadata from
+  inspected package contents. An upstream default branch is not proof for a
+  different released version.
+- Preserve compound `AND`/`OR` expressions, `WITH` exceptions, and custom
+  `LicenseRef` terms. Do not replace a dual-license choice or unresolved custom
+  text with a guessed permissive license. Disagreement, missing license text, or
+  an unresolved transitive graph is an explicit evidence gap.
+- Read the repository/organization's declared license rules and intended use
+  (distribution, linking, hosted-only use, required notices/source obligations).
+  Cite the policy owner/path/rule. The repository's own LICENSE is not by itself
+  an allowlist for dependencies. When policy or use context is absent, identify
+  available licenses but mark policy compatibility **not assessed**.
 
 ## Phase 2: Risk Assessment
 
@@ -99,6 +123,44 @@ Present a summary table:
 **Summary:** {N} packages reviewed, {critical} critical, {high} high priority
 ```
 
+## Phase 3: License Assessment (independent of version/CVE status)
+
+Assess **every inventoried package/version**, not only outdated or vulnerable
+ones, against the declared policy and use context:
+
+| Status | Required meaning |
+|---|---|
+| **Allowed by declared policy** | Version-specific license evidence satisfies the cited rule and all currently required obligations; cite fulfillment evidence and note ongoing/future obligations. This is not independent legal certification. |
+| **Policy conflict** | Evidence conflicts with a specific declared rule or an unmet required obligation; cite both. An up-to-date, vulnerability-free package still appears here. |
+| **Unknown** | License identity, version evidence, custom terms, or relevant dependency data is missing, conflicting, or ambiguous. |
+| **Not assessed** | License evidence may exist, but policy/use context or a required assessment is unavailable or explicitly out of scope. State why. |
+
+Always include this output, even when no upgrades or vulnerabilities were found:
+
+```markdown
+### License Assessment
+
+**Policy and use:** {source/rules + distribution/use context, or absent}
+**Inventory:** {revision; projects/scopes; direct/transitive counts; exclusions}
+**Coverage:** {resolved graph evidence; missing scopes/unknown total if graph is incomplete}
+
+| Package@resolved version / ecosystem | Direct/transitive; introducer; scope | License expression | Version-specific source evidence | Policy rule and obligations | Status | Required action |
+|---|---|---|---|---|---|---|
+| {package} | {classification/path} | {expression or unknown} | {path/URL + version} | {rule or absent; obligations/evidence} | {status} | {remediation, decision, or missing input} |
+
+**Totals:** {allowed}, {conflicts}, {unknown}, {not assessed}; {unresolved graph gaps}
+```
+
+Include a row for every inventoried package/version or reference a complete
+caller-readable inventory with the same fields. Summaries must not hide current
+packages or transitives. Unknown/not-assessed entries and missing graph scopes
+prevent an unqualified "license clean/compliant" conclusion.
+
+Separate license remediation from upgrade batches. Removal, replacement, choice
+of a license option, fulfillment of obligations, or a policy-owner decision may
+be needed even when no newer version exists. Report that need without silently
+changing policy or treating approval to upgrade as acceptance of license risk.
+
 ## Vulnerability-Specific Mode (read-only)
 
 When responding to a specific CVE or security advisory:
@@ -107,7 +169,10 @@ When responding to a specific CVE or security advisory:
 2. **Assess exposure** — is the vulnerable code path actually reachable in this project?
 3. **Find the fix version** — what's the minimum version that patches the vulnerability?
 
-Ask:
+## Audit Completion and Handoff
+
+After the version, vulnerability, and license sections are complete (including
+explicit evidence gaps), ask:
 
 > **Audit complete. How would you like to proceed?**
 > 1. Upgrade all (incremental, safest-first)
@@ -115,7 +180,11 @@ Ask:
 > 3. Let me pick which ones
 > 4. Just the report — I'll handle upgrades manually
 
-If the user chooses an upgrade option, recommend `dependency-upgrade-execution` for the actual upgrades and provide it the audit table, selected scope, risk categories, fix versions, and any migration notes.
+If the user chooses an upgrade option, return the audit table, selected scope,
+risk categories, fix versions, migration notes, license evidence/policy
+constraints, and unresolved decisions. In a `dependency-audit` phase, return to
+that coordinator for its approval gate. Standalone, finish this report phase and
+recommend `dependency-upgrade-execution` as a separate approved action.
 
 Do not edit dependency manifests or lock files in this skill.
 
@@ -123,10 +192,9 @@ Do not edit dependency manifests or lock files in this skill.
 
 # Coordination
 
-- **Consult `security-engineer`** — for CVE impact assessment and exposure analysis.
-- **Consult `backend-developer`** — for .NET-specific migration patterns when major packages change.
-- **Consult `frontend-developer`** — for Angular/npm ecosystem upgrade patterns.
-- **Consult `devops-engineer`** — if dependency updates affect Docker images or CI pipelines.
+- Use `investigator` only for substantial unresolved CVE exposure, license,
+  ecosystem migration or infrastructure questions. Supply relevant domain notes
+  and caller-executed command evidence; this remains an audit, not an upgrade.
 
 ---
 
@@ -139,11 +207,3 @@ Do not edit dependency manifests or lock files in this skill.
 - **Don't mix dependency audits with feature work** — keep dependency findings separate from feature work.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Never edit manifests or lock files — this skill is read-only and ends at an upgrade hand-off.
-2. Always discover manifests and categorize risk before proposing any upgrade plan.
-3. For vulnerabilities, identify affected packages, assess project exposure, and state the minimum fix version.
-4. If upgrades are approved, recommend `dependency-upgrade-execution`; do not perform execution here.
-> If anything above conflicts with these, **these win**.

@@ -3,6 +3,14 @@
 **Date:** 2026-08-17
 **Status:** Implemented on 2026-08-17.
 
+This is a historical comparison and adoption record. Baseline gaps, counts, and
+size estimates below describe the recorded comparison, not current measurements
+or missing features in the implemented configuration. The canonical policy files
+own current behavior. The later approved [lean revision](../../README.md#lean-operating-model)
+replaces tier labels and the 17-agent catalogue with proportional stopping rules,
+three role cards and on-demand domain notes. Tier/agent-count tables below remain
+historical, not current routing guidance.
+
 ## Decision Summary
 
 Keep the current layered configuration, user approval, bounded delegation, and index-only commit-review safeguards.
@@ -26,9 +34,10 @@ Agent and skill definitions are consolidated separately to remove repeated globa
 ## Scope and Evidence
 
 This comparison evaluates the supplied excerpt only, not the friend's complete configuration.
-It compares that excerpt with the active configuration repository:
+It compares that excerpt with repository observations recorded for the original
+comparison:
 
-| Area | Current evidence |
+| Area | Recorded comparison evidence (not remeasured) |
 |---|---|
 | Root contract | `copilot-instructions.md` is a short routing index. |
 | Global policy | `instructions/` has 13 scoped files covering workflow, coordination, Git, session behavior, style, and communication. |
@@ -39,7 +48,9 @@ It compares that excerpt with the active configuration repository:
 | Repository onboarding | `repo-bootstrap` and `templates/repo-bootstrap/` create a project-local operating manual and durable plan/task records. |
 
 The size is not independently a defect.
-The relevant signal is that global rules are repeated in many definitions: precedence, orchestration prohibitions, delegation limits, approval gates, and final-rule anchors.
+The baseline concern was repetition of global rules in many definitions:
+precedence, orchestration prohibitions, delegation limits, approval gates, and
+final-rule anchors.
 Repeated policy creates drift risk and forces users and agents to reconstruct the real operating contract from many files.
 
 ## Comparison Model
@@ -59,7 +70,7 @@ The two systems are assessed against the following criteria:
 
 ## What the Friend's Excerpt Does Well
 
-| Principle | Why it is strong | Current coverage | Gap to address |
+| Principle | Why it is strong | Baseline coverage | Proposed gap correction |
 |---|---|---|---|
 | Starts from a mission | Links process to quality and cycle time rather than listing isolated rules. | The root has an intent, but no delivery mission. | Add a one-sentence mission to the root contract. |
 | Uses a visible end-to-end loop | Intake, ownership, execution, review, integration, and verification are sequenced in one place. | Our workflow is distributed among `workflow`, `git-conventions`, skills, and templates. | Add a compact operating loop with links to canonical owners. |
@@ -84,11 +95,11 @@ The two systems are assessed against the following criteria:
 | Drive inventory to zero | Can incentivize hiding or closing work prematurely despite the stated caveat. | Reject as a global target; prioritize accurate status and agreed service levels. |
 | Prescriptive tool and process coupling | The workflow assumes issue bindings, authority data, isolated worktree infrastructure, and deployment observability. | Keep these as capability-gated repository extensions. |
 
-## Where Our Current System Is Stronger
+## Strengths Preserved from the Comparison
 
 | Strength | Evidence | Preserve |
 |---|---|---|
-| Configuration precedence | Root and coordination instructions define global → project → local precedence. | Yes; make `coordination.instructions.md` its sole canonical owner. |
+| Configuration precedence | Coordination defines repository conflict resolution for loaded guidance, not CLI discovery order. | Preserve project authority and personal preferences without allowing local delivery-policy waivers. |
 | Proportionate process | `workflow.instructions.md` distinguishes Trivial, Standard, and Full work. | Yes; use this tiering to gate issue, worktree, and RCA requirements. |
 | Direct-action bias | Coordination discourages reflexive delegation and needless process. | Yes; retain as a root-level operating principle. |
 | Bounded delegation | Coordination establishes hierarchy and a hard handoff depth cap. | Yes; retain, but reference it from agents instead of copying it. |
@@ -98,7 +109,7 @@ The two systems are assessed against the following criteria:
 | Safe review scope | Full review is explicit-only; normal commit review is time-bounded. | Yes; retain the distinction. |
 | Reusable domain expertise | Specialists and skills separate planning, execution, review, security, testing, and documentation. | Yes; preserve domain ownership while removing global process duplication. |
 
-## Where Our Current System Needs Improvement
+## Baseline Gaps and Adopted Improvements
 
 | Concern | Impact | Target change |
 |---|---|---|
@@ -155,7 +166,7 @@ The root must not repeat detailed precedence, delegation caps, commit mechanics,
 | Commit and delivery-path safety | `instructions/git-conventions.instructions.md` | Root, commit-review skill, bootstrap template. |
 | Exact-revision review workflow | `skills/git-commit-review/SKILL.md` | Git policy and other skills link only. |
 | Session continuation and durable handoff | `instructions/session-awareness.instructions.md` | Root, bootstrap template, resume workflow. |
-| Project capability declarations | `templates/project-config*.instructions.md` and generated `.github/instructions/project-config.instructions.md` | All workflow policy reads capabilities from this file. |
+| Project capability declarations | A present declaration in `.github/instructions/project-config.instructions.md`; otherwise the existing declaring root project contract until approved migration | Templates are sources, not competing runtime authorities; bootstrap and other contracts preserve/update/reference the chosen declaration. |
 | Domain-specific implementation expertise | `agents/*.md` | Coordination policy, not individual agents, owns cross-agent rules. |
 
 ### New Capability-Gated Work Lifecycle
@@ -204,7 +215,8 @@ Skills should replace repeated global wording with direct references:
 
 - `codebase-research`, `feature-design-doc`, `task-breakdown`, and `implementation-runner` reference the work lifecycle for ownership, dependencies, and blocked work;
 - `git-commit-review` remains the canonical exact-revision review implementation;
-- `repo-bootstrap` generates the project capability declarations and lifecycle references instead of another broad operating manual.
+- `repo-bootstrap` preserves or updates the canonical capability declaration and
+  generates references to it instead of another broad operating manual.
 
 ### Project and Bootstrap Configuration
 
@@ -221,8 +233,18 @@ Extend project-config templates with an optional `## Agent Delivery Capabilities
 | Deployment evidence | No | |
 ```
 
-The generated repo-level operating manual should state repository-specific facts and capability values only.
-It should link to global policy instead of reproducing global workflow, commit, and handoff rules.
+The example is for a single canonical declaration, not a default table to copy
+into every contract. If project-config already declares capabilities, the
+generated root manual references it. If only an existing root contract declares
+them, later template installation must preserve/reference those values or
+migrate them and their references together, never introduce competing `No` defaults.
+Existing `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are relevant discovery inputs,
+not guessed overwrite targets.
+
+The generated manual states repository-specific facts and links to global policy
+instead of reproducing workflow, commit, and handoff rules. Existing required
+project/cross-agent handovers remain maintained even when a plugin owns session
+persistence; bootstrap does not mandate duplicate per-session Markdown exports.
 
 ## File-by-File Change Map
 
@@ -254,7 +276,8 @@ It should link to global policy instead of reproducing global workflow, commit, 
 2. **Make project capabilities explicit**
    - Extend project-config templates.
    - Update repo-bootstrap templates and skill behavior.
-   - Preserve empty or `No` defaults so existing repositories retain current behavior.
+   - Use empty or `No` defaults only for genuinely undeclared optional capabilities;
+     preserve existing enabled values and their repository-specific rules.
 
 3. **Remove duplicated global process**
    - Update agent definitions in one consistent pass.
@@ -274,7 +297,8 @@ Do not delete legacy duplicated text until its canonical owner is present and ev
 
 ## Compatibility and Risk Controls
 
-- Existing project configuration remains valid because every new capability defaults to disabled.
+- Existing declarations remain authoritative; new optional capabilities default
+  to disabled only when no prior project contract declares them.
 - Existing branch and PR policy takes precedence over global delivery guidance.
 - A repository without issues, worktrees, deployments, or remote authority continues to use the current tiered workflow.
 - Direct-to-main instructions are never generated; delivery follows project configuration and host protection.
@@ -288,7 +312,8 @@ Do not delete legacy duplicated text until its canonical owner is present and ev
 - Each cross-cutting rule has exactly one canonical owner in the ownership table.
 - `rg` finds no copied precedence or anti-loop boilerplate in agent definitions after consolidation.
 - Every root-level operational statement links to an owner rather than redefines it.
-- All template placeholders and generated examples provide valid disabled defaults for optional capabilities.
+- Template placeholders/examples provide safe defaults only for undeclared
+  optional capabilities and preserve/reference existing declarations.
 - README paths and installer behavior still match the resulting repository layout.
 
 ### Scenario Walkthroughs
@@ -303,6 +328,9 @@ Do not delete legacy duplicated text until its canonical owner is present and ev
 | Fix after review | Affected validation and review evidence are refreshed for the changed revision. |
 | Deployment or incident fix | CI/deployment evidence and original-observation verification are captured when configured. |
 | No remote write authority | Local validation can proceed; remote delivery routes through pull request or explicit human handoff. |
+| Bootstrap after project-config | Existing capability values/rules remain canonical; generated root contract references them. |
+| Templates installed after a root-only declaration | Preserve/reference the declaration or migrate it consistently; no competing default-disabled values. |
+| Existing project handover plus session-memory provider | Maintain truthful project/cross-agent records without duplicate unsolicited session exports. |
 
 ### Acceptance Criteria
 

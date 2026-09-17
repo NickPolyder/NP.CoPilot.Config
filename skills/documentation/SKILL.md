@@ -2,16 +2,12 @@
 name: documentation
 description: >
   Guides the creation and maintenance of project documentation in the docs/
-  folder, ensuring consistency in structure, style, and coverage whenever
-  functionality changes. Coordinates with specialist agents to produce
-  accurate, domain-specific documentation.
+  folder for requested documentation work. Keeps structure, factual accuracy,
+  indexes and code references consistent without requiring a writing handoff
+  for a small related edit.
 ---
 
 # Purpose
-
-> **Intent (anchor):** Create or update project documentation in `docs/` so it stays synchronized with code, decisions, APIs, and user-visible behavior.
-> **Always:** follow the existing docs structure; update indexes when adding documents; consult the relevant specialist for domain accuracy.
-> **Never:** duplicate specialist workflows or override markdown-style instructions.
 
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
@@ -19,17 +15,19 @@ You are helping maintain project documentation in the `docs/` folder.
 
 Your goals are to:
 
-- Keep documentation in sync with code changes — every feature addition, modification, or removal should be reflected in docs.
+- Update affected documentation when user-visible behavior or operational contracts change.
 - Own docs placement, index maintenance, cross-references, and synchronization with code/user-visible behavior.
 - Follow the established docs structure and the applicable markdown-style instruction instead of redefining style here.
 - Ensure documentation is comprehensive and actionable.
-- **Consult specialist agents** for domain-specific accuracy and recommend specialist skills for deep ADR, test, or security work (see Agent Consultation below).
+- Resolve factual uncertainty proportionally; recommend separate deep ADR, test, or security work only when needed.
 
 ---
 
 # When to use this skill
 
-Use this skill whenever:
+Use this skill for a requested substantial documentation task or a workflow's
+explicit documentation deliverable. Small related edits stay inline.
+Examples of documentation work include:
 
 - You add, change, or remove functionality in the codebase.
 - The user asks to document something.
@@ -39,30 +37,17 @@ Use this skill whenever:
 - A feature plan is finalized (coordinate with the `feature-planning` skill).
 - UX specifications or wireframes need to be documented.
 
-**Rule: Always update docs/ when adding, changing, or removing functionality.**
+Do not create a document solely because an internal implementation detail changed.
 
 ---
 
 # Agent consultation
 
-Different documentation types benefit from specialist agent input. Follow the proportional delegation policy in `instructions/coordination.instructions.md`: make small, evidence-backed documentation edits inline; consult specialists when domain uncertainty or substantial writing work needs separate context.
-
-**Substantial writing work is owned by the `technical-writer` agent.** Specialists below supply domain *accuracy* (correct endpoints, schema, threats, flows); the `technical-writer` supplies *craft* — audience analysis, document type (tutorial / how-to / reference / explanation), structure, clarity, and worked examples. Reuse facts already established by the implementing specialist; a small documentation update does not require a second accuracy review and a writing handoff.
-
-| Document Type | Primary Agent | Supporting Agents |
-|---|---|---|
-| Feature documentation | **product-owner** (requirements, acceptance criteria) | fullstack-developer, frontend-developer, backend-developer |
-| API reference | **backend-developer** (endpoints, contracts, payloads) | architect (patterns, versioning) |
-| Architecture decisions (ADRs) | **architect** (options, trade-offs, patterns) | systems-engineer, security-engineer |
-| Infrastructure / deployment | **devops-engineer** (pipelines, IaC, environments) | systems-engineer (integration, networking) |
-| Database / data model | **database-engineer** (schema, migrations, indexing) | backend-developer (EF Core mappings) |
-| Security documentation | **security-engineer** (threats, controls, compliance) | architect (trust boundaries) |
-| UX specifications | **ux-engineer** (user flows, wireframes, accessibility) | frontend-developer (implementation feasibility) |
-| Test strategy / coverage | **qa-engineer** (test plans, coverage analysis) | product-owner (acceptance criteria) |
-| Service Fabric topology | **service-fabric-engineer** (cluster config, services) | devops-engineer (deployment), systems-engineer (integration) |
-| Writing quality / editing (any type) | **technical-writer** (audience, structure, clarity, examples) | the domain specialist above for factual accuracy |
-
-**How to consult:** Route unresolved domain questions to the relevant specialist and substantial drafting or restructuring to `technical-writer`. Select only the expertise needed; the table is not a mandatory two-agent sequence for each edit.
+Reuse facts already established by the implementation and repository evidence.
+When separate context is useful, assign unresolved domain questions to
+`investigator`, or substantial authorized drafting/restructuring to `implementer`.
+Include only relevant `skills/domain-guidance.md` sections and the document's
+audience, purpose and write scope. Neither assignment requires the other.
 
 ---
 
@@ -97,19 +82,19 @@ If the project already has a `docs/` folder, follow its existing structure. If n
 
 ### Placement rules
 
-| Change Type | Document Location | Agent to Consult |
-|---|---|---|
-| New feature or module | `docs/features/{feature}.md` | product-owner, relevant developer |
-| Bug fix | `docs/bugs/{bug}.md` | backend-developer or relevant developer |
-| API changes | `docs/api/{service-or-area}.md` | backend-developer |
-| Domain model changes | `docs/features/domain-model.md` | database-engineer, architect |
-| Architecture decision | `docs/decisions/{NNN}-{title}.md` | architect (use `architecture-decision-record` skill) |
-| UX specification | `docs/ux/{feature-or-flow}.md` | ux-engineer |
-| Deployment changes | `docs/infra/deployment.md` | devops-engineer |
-| Service Fabric topology | `docs/infra/service-fabric.md` | service-fabric-engineer |
-| Server/network config | `docs/infra/` (appropriate file) | systems-engineer |
-| Security controls | `docs/infra/security.md` | security-engineer |
-| Test strategy | `docs/features/{feature}-test-strategy.md` | qa-engineer (use `test-strategy` skill) |
+| Change Type | Document Location |
+|---|---|
+| New feature or module | `docs/features/{feature}.md` |
+| Bug fix requiring durable documentation | `docs/bugs/{bug}.md` |
+| API changes | `docs/api/{service-or-area}.md` |
+| Domain model changes | `docs/features/domain-model.md` |
+| Architecture decision | `docs/decisions/{NNN}-{title}.md` |
+| UX specification | `docs/ux/{feature-or-flow}.md` |
+| Deployment changes | `docs/infra/deployment.md` |
+| Service Fabric topology | `docs/infra/service-fabric.md` |
+| Server/network config | `docs/infra/` (appropriate file) |
+| Security controls | `docs/infra/security.md` |
+| Test strategy | `docs/features/{feature}-test-strategy.md` |
 
 ---
 
@@ -239,9 +224,9 @@ Use this template for UX documentation in `docs/ux/`:
 
 # Writing style
 
-Follow the repository's markdown-style instruction (global `instructions/markdown-style.instructions.md`, or project/local overrides when more specific). This skill does not redefine markdown style; it owns docs placement, index updates, cross-references, and synchronization with code/user-visible behavior.
-
-When a project has existing docs conventions, follow them unless they contradict a more specific local instruction.
+Follow the applicable markdown style and project's existing documentation
+conventions. Placement and ownership follow the canonical coordination policy,
+not a competing local-precedence rule.
 
 ---
 
@@ -255,7 +240,7 @@ When modifying an existing feature:
 4. Update any tables or reference data that changed.
 5. Update the index (`docs/README.md`) if a new document was added.
 6. Check if an existing ADR is affected — if so, recommend `architecture-decision-record` for superseding ADR content, then update indexes and cross-references.
-7. Consult the relevant specialist agent (see Agent Consultation) if the changes affect their domain.
+7. Resolve remaining factual uncertainty from evidence; delegate only when justified.
 
 ---
 
@@ -263,8 +248,8 @@ When modifying an existing feature:
 
 1. Create `docs/features/{feature}.md`.
 2. Follow the standard document template above.
-3. Consult the **product-owner** agent for requirements and acceptance criteria.
-4. Consult the relevant **developer agent** (fullstack, frontend, backend) for technical details.
+3. Use the approved requirements and acceptance criteria.
+4. Verify technical details from the implementation or its existing evidence.
 5. Include:
    - Overview of the feature and its purpose.
    - User workflows (browsing, creating, editing, deleting).
@@ -281,8 +266,8 @@ When modifying an existing feature:
 # Creating a new infrastructure doc
 
 1. Create `docs/infra/{topic}.md`.
-2. Consult the **devops-engineer** agent for pipeline/deployment details.
-3. Consult the **systems-engineer** agent for integration and networking aspects.
+2. Verify pipeline/deployment details from the actual configuration and evidence.
+3. Resolve integration/networking uncertainty before claiming operational readiness.
 4. Include:
    - Purpose and context.
    - Scripts or tools involved (with usage examples).
@@ -338,10 +323,3 @@ This skill works alongside other skills in the workflow:
 10. ☐ API documentation updated if endpoints changed
 
 ---
-
-## Final Rules (Anchor)
-
-1. Always update `docs/` when adding, changing, or removing functionality.
-2. If the project already has a `docs/` folder, follow its existing structure.
-3. Update the index (`docs/README.md`) if a new document was added.
-> If anything above conflicts with these, **these win**.

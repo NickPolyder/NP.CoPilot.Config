@@ -1,25 +1,34 @@
 # Agent Coordination Reference
 
-`instructions/coordination.instructions.md` is the canonical policy for configuration precedence, invocation hierarchy, delegation, and handoffs.
+[Coordination policy](../instructions/coordination.instructions.md) owns
+precedence, delegation and legal composition. This reference explains the
+three-role design without introducing another protocol.
 
-Use it when authoring or changing agents and skills.
-This document intentionally contains no competing protocol.
+| Activity | Role | Boundary |
+|---|---|---|
+| Research, diagnosis, requirements or design | `investigator` | Read/search/web; no commands or edits |
+| Approved code, tests, configuration or writing | `implementer` | Assignment-scoped changes and applicable verification |
+| Independent assessment | `code-reviewer` | Read/search only; immutable intake; no artifacts |
 
-## Policy Corrections (2026-09-15)
+Ordinary work remains inline. A role is not a mandatory handoff, and a long list
+of affected technologies does not require an agent per technology. The caller
+supplies only the relevant [domain notes](../skills/domain-guidance.md).
+Test-only implementation still cannot edit production code.
 
-The canonical policy now makes specialist delegation terminal: additional-domain
-needs return to the orchestrator instead of spawning sideways agent chains.
-Small regression tests and evidence-backed documentation edits stay inline;
-substantial test or writing work still belongs to the appropriate specialist.
-Required independent-review gates are unchanged.
+Required independent reviews remain independent: commit review keeps one core
+reviewer and its bounded, signal-driven domain assignments. Explicit exhaustive
+review keeps three separately assigned hats and up to three domain specialists.
+These are distinct assignments of the reviewer role, not retired dispatch names.
+The workflow owns immutable inputs, executed checks, consolidation and reports.
+Missing evidence is not a clean review.
 
-Agent guidance now verifies the promised outcome rather than requiring every
-UI action to persist data, and assigns completeness findings by demonstrated
-impact rather than TODO/stub markers.
-Tests may use multiple assertions for one behavior.
-Database guidance diagnoses blocking instead of prescribing `NOLOCK`, and
-Node/Python guidance respects established repository ownership instead of
-assuming domain work must move to .NET.
+Only documented workflow-to-atomic-phase composition is allowed. Terminal agents
+return needs to their caller instead of invoking skills or creating sideways
+agent chains. A phase completing does not end its parent; a separate workflow
+handoff waits for the owning workflow to finish or be explicitly aborted.
 
-The trivial auto-commit preference is unchanged.
-These corrections do not introduce new hooks, agents, or a metadata framework.
+[Lifecycle](../instructions/work-lifecycle.instructions.md) owns delivery
+capabilities and revision-bound evidence. [Session policy](../instructions/session-awareness.instructions.md)
+preserves existing continuity ownership without taking over the external memory
+plugin. The three cards preserve the established judgment, implementation and
+review model families; disk defaults are not proof of runtime resolution.

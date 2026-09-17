@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Recover recent repository and session context so work can resume from an accurate next step.
-> **Always:** gather git, docs, session history, and memory signals; synthesize concise status; identify the most likely next action.
-> **Never:** fabricate context or expose another user's session data.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Follow `instructions/session-awareness.instructions.md` for session continuity.
 
 You are recovering context from previous work sessions so the user can continue seamlessly.
@@ -61,6 +57,9 @@ Check these sources in parallel:
 ### Project Docs
 
 - **Active plans** — follow repository-declared plan/task locations. Check existing `docs/PLAN.md`, `docs/TASKS.md`, and `docs/features/*/design.md` / `docs/features/*/tasks.md` for incomplete work; these are discovery candidates, not required files to create.
+- **Continuity records** — read relevant existing project/cross-agent handovers
+  within the authorized repository scope. Provider session persistence and
+  maintenance of these records coexist; do not create duplicate session exports.
 - **Bug docs** — check `docs/bugs/` for in-progress investigations.
 - **Retrospectives** — recent entries in `docs/retrospectives/` for context on what just wrapped up.
 
@@ -130,7 +129,10 @@ artifacts and the current Git state determine the next workflow phase.
 
 Based on the user's choice:
 
-- **Continue** — hand off to the appropriate workflow, skill, or direct task after the user confirms. Load the relevant plan/task doc if one exists, but do not implement inside `resume`.
+- **Continue** — after the user confirms, finish this informational skill's state,
+  then hand off to the appropriate workflow, skill, or direct task with its own
+  gates. Load the relevant plan/task doc if one exists, but do not implement or
+  invoke an entry/coordinator workflow inside `resume`.
 - **Different task** — acknowledge the context but pivot to what the user wants.
 - **Show more context** — provide deeper detail from session history, including specific decisions, code snippets discussed, or full task lists.
 
@@ -163,10 +165,3 @@ Adjust detail based on how long since the last session:
 - **Respect privacy** — don't surface information from other users' sessions if the session store contains multi-user data.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Don't guess — if session history is empty or unclear, say so.
-2. Be concise — the user wants to get back to work quickly, not read an essay.
-3. Respect privacy — don't surface information from other users' sessions.
-> If anything above conflicts with these, **these win**.

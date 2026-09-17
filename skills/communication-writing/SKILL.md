@@ -1,11 +1,14 @@
+---
+name: communication-writing
+description: >
+  Draft or revise emails, workplace messages, public posts and articles with
+  reader-first structure, concise openings and evidence-grounded claims.
+license: MIT
+---
+
 # Communication Writing
 
-> **Intent (anchor):** Keep outbound communications immediately relevant, credible, and easy to act on.
-> **Always:** help the reader grasp what matters and why within the opening; use an adaptive what -> why -> consequence -> reinforcement -> action flow.
-> **Never:** manufacture urgency, invent evidence, or pad a simple message to expose every stage mechanically.
-> **Precedence:** Copilot combines applicable global, project, and local guidance. When guidance conflicts, follow the most repository-specific instruction unless a higher-priority system or safety constraint prevents it; within a file, the **Final Rules (Anchor)** win.
-
-Apply this instruction when drafting or revising content for another person or
+Use this atomic skill when drafting or revising content for another person or
 audience, including:
 
 - Email.
@@ -18,6 +21,10 @@ audience, including:
 Do not apply it mechanically to ordinary CLI chat answers, code, commit
 messages, or technical documentation unless the user is explicitly drafting one
 of the communication types above.
+
+Return the requested draft or edit the user-selected artifact. Do not send or
+publish it without authorization. Small drafts stay inline; substantial
+authorized editing may use `implementer` with a writing-focused assignment.
 
 ## Start With the Reader
 
@@ -185,12 +192,3 @@ and deadline with verified source information.
 - Is reinforcement based on supplied evidence rather than invention?
 - Is the next action, recommendation, or takeaway clear?
 - Can anything be removed without losing meaning?
-
-## Final Rules (Anchor)
-
-1. Lead with what matters and why it matters to this reader.
-2. Use consequence and reinforcement only when they are factual and useful.
-3. End with a clear action, recommendation, next step, or takeaway.
-4. Treat 50/72 as a brevity heuristic and clarity as the higher priority.
-5. Make the opening useful within a six-second skim.
-> If anything above conflicts with these, **these win**.

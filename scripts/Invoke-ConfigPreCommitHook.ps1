@@ -4,9 +4,9 @@
     Validates staged Copilot configuration changes before commit.
 
 .DESCRIPTION
-    Materializes the Git index into a temporary snapshot and runs the structural
-    validator against that snapshot. Unstaged worktree changes never affect the
-    hook result.
+    Validates the complete captured index tree, including deletions and both
+    sides of renames. The launcher, this driver, and its helper are worktree
+    bootstrap code; validation inputs and the validator are snapshot-resident.
 #>
 
 [CmdletBinding()]
@@ -15,52 +15,46 @@ param()
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = Split-Path $PSScriptRoot -Parent
-$gitRoot = (& git -C $repositoryRoot rev-parse --show-toplevel).Trim()
-if ([string]::IsNullOrWhiteSpace($gitRoot)) {
-    throw 'The configuration pre-commit hook source must be inside a Git repository.'
-}
-
-$changedPaths = @(
-    & git -C $repositoryRoot diff --cached --name-only --diff-filter=ACMR |
-        Where-Object {
-            $_ -match '^(?:\.githooks/|\.github/|agents/|instructions/|skills/|scripts/|tests/ValidateConfig/|mcp-config\.json$|mcps/|README\.md$)'
-        }
-)
-
-if ($changedPaths.Count -eq 0) {
-    exit 0
-}
-
-$snapshotPath = Join-Path ([System.IO.Path]::GetTempPath()) "np-copilot-config-index-$([guid]::NewGuid())"
-$archivePath = "$snapshotPath.zip"
+Import-Module (Join-Path $PSScriptRoot 'GitSnapshot.psm1') -ErrorAction Stop
+$candidate = $null
+$exitCode = 0
 
 try {
-    New-Item -ItemType Directory -Path $snapshotPath -Force | Out-Null
-
-    $tree = (& git -C $repositoryRoot write-tree).Trim()
-    if ([string]::IsNullOrWhiteSpace($tree)) {
-        throw 'Unable to resolve the staged Git tree for configuration validation.'
+    $capture = @{ RepositoryRoot = $repositoryRoot; AllowEmpty = $true }
+    if ($env:GIT_INDEX_FILE) {
+        $capture.IndexPath = [IO.Path]::GetFullPath($env:GIT_INDEX_FILE, $repositoryRoot)
     }
-
-    & git -C $repositoryRoot archive --format=zip --output=$archivePath $tree
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Unable to materialize the staged Git tree for configuration validation.'
+    $candidate = New-GitReviewCandidate @capture
+    foreach ($control in @(
+        @{ Name = 'GIT_DIR'; Expected = $candidate.GitDirectory },
+        @{ Name = 'GIT_WORK_TREE'; Expected = $repositoryRoot }
+    )) {
+        $value = [Environment]::GetEnvironmentVariable($control.Name)
+        if ($value -and [IO.Path]::GetFullPath($value, $repositoryRoot) -ne [IO.Path]::GetFullPath($control.Expected)) {
+            throw "Inherited $($control.Name) does not identify this hook's repository."
+        }
     }
-
-    Expand-Archive -LiteralPath $archivePath -DestinationPath $snapshotPath -Force
-
-    Write-Host '🔍 Validating staged Copilot configuration...' -ForegroundColor Cyan
-    & pwsh -NoProfile -File (Join-Path $snapshotPath 'scripts/Validate-Config.ps1') -RepositoryRoot $snapshotPath
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Staged Copilot configuration validation failed. Fix the reported findings before committing.'
+    $relevantPaths = @($candidate.ChangedPaths | Where-Object {
+        $_ -match '^(?:\.githooks/|\.github/|agents/|instructions/|skills/|scripts/|tests/(?:ValidateConfig|GitCommitReviewSkill)/|mcps/|(?:\.gitattributes|\.gitmodules|mcp-config\.json|copilot-instructions\.md|README\.md)$)'
+    })
+    if ($relevantPaths.Count -gt 0) {
+        $snapshot = New-GitTreeSnapshot -Candidate $candidate
+        Write-Host '🔍 Validating staged Copilot configuration...' -ForegroundColor Cyan
+        $result = Invoke-GitSnapshotCheck -Snapshot $snapshot -Name 'Configuration validation' `
+            -FilePath (Get-Command pwsh -CommandType Application -ErrorAction Stop).Source `
+            -ArgumentList @('-NoProfile', '-File', (Join-Path $snapshot.Path 'scripts\Validate-Config.ps1'), '-RepositoryRoot', $snapshot.Path) `
+            -RequiredPaths @('scripts\Validate-Config.ps1')
+        Write-Host $result.Output
+        Assert-GitSnapshotIntegrity -Snapshot $snapshot
+        Assert-GitCandidateCurrent -Candidate $candidate
     }
+}
+catch {
+    Write-Host "❌ Configuration pre-commit gate failed: $($_.Exception.Message)" -ForegroundColor Red
+    $exitCode = 1
 }
 finally {
-    Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
-
-    if (Test-Path -LiteralPath $snapshotPath) {
-        Remove-Item -LiteralPath $snapshotPath -Recurse -Force
-    }
+    if ($null -ne $candidate) { Remove-GitReviewCandidate -Candidate $candidate }
 }
 
-exit 0
+exit $exitCode

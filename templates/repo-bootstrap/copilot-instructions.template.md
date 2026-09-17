@@ -52,18 +52,12 @@ lint:    {{LINT_CMD}}
 
 ## Delivery capabilities
 
-Project delivery facts override global defaults. Complete only capabilities supported by repository evidence.
+{{DELIVERY_CAPABILITIES_SECTION}}
 
-| Capability | Enabled | Repository-specific rule |
-|---|---:|---|
-| Issue tracking | {{ISSUE_TRACKING_ENABLED}} | {{ISSUE_TRACKING_RULE}} |
-| Isolated worktrees | {{ISOLATED_WORKTREES_ENABLED}} | {{ISOLATED_WORKTREES_RULE}} |
-| Remote delivery | {{REMOTE_DELIVERY_ENABLED}} | {{REMOTE_DELIVERY_RULE}} |
-| Protected branches | {{PROTECTED_BRANCHES_ENABLED}} | {{PROTECTED_BRANCHES_RULE}} |
-| Integration queue | {{INTEGRATION_QUEUE_ENABLED}} | {{INTEGRATION_QUEUE_RULE}} |
-| Deployment evidence | {{DEPLOYMENT_EVIDENCE_ENABLED}} | {{DEPLOYMENT_EVIDENCE_RULE}} |
-
-Follow the global work lifecycle and delivery policies; this table declares only repository-specific capabilities and evidence.
+Follow the global work lifecycle and delivery policies. Keep one capability
+owner: preserve/update an existing project-config declaration and reference it
+here; otherwise this contract owns the verified declaration. Never repeat a
+second default-disabled table over an existing owner's verified values.
 
 ## Commits
 
@@ -78,8 +72,19 @@ When you wrap substantial work in this repo:
 
 - Update [`docs/TASKS.md`](../docs/TASKS.md) status so the next session sees
   current progress.
-- {{HANDOVER_MECHANISM — e.g. "Write a handover in docs/handoffs/" or "use the
-  agent-memory handover_save tool".}}
+- **Session-continuity owner:** {{HANDOVER_OWNER — the repository's declared
+  mechanism or plugin, for example np-agent-memory.}}
+- {{HANDOVER_MECHANISM — use the declared owner's available tools; verify
+  registration and report a blocker if required capabilities are unavailable.}}
+- Maintain existing required project/cross-agent records truthfully, including
+  blockers and delivery state. These are not duplicate session exports.
+- When `np-agent-memory` owns session continuity, use it without creating an
+  unsolicited parallel Markdown handover. Create a new Markdown handoff only
+  when requested or required for a concrete project/cross-agent exchange.
+- Imported plugin instructions or retained backups do not prove that the
+  plugin's tools are registered or its instructions are active. Preserve the
+  declared owner and report unavailable capabilities; do not vendor the plugin,
+  modify another home, or silently switch persistence mechanisms.
 
 ## Don't
 

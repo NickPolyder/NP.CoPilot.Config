@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Produce a read-only, grounded research summary of an existing codebase before any design work starts.
-> **Always:** discover structure first; identify existing patterns and relevant code; read project configuration; capture constraints and reusable abstractions.
-> **Never:** edit files, design the feature, or generate implementation tasks.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are investigating what already exists so later design work is grounded in the actual project rather than assumptions.
@@ -79,10 +75,9 @@ No files should be edited or created by this skill.
 
 # Coordination
 
-- **Architect agent** — consult for interpreting architectural patterns and boundaries.
-- **Backend/Frontend developer agents** — consult for domain-specific code paths and framework conventions.
-- **QA engineer agent** — consult for existing test strategy and test coverage signals.
-- **Security engineer agent** — consult when existing authentication, authorization, or input validation constraints affect the feature area.
+- Use `investigator` only for a substantial independent research question. Supply
+  its bounded scope and relevant architecture, framework, tests or security
+  notes; the caller supplies any necessary command output.
 - **Next step** — after approval, recommend `feature-design-doc`.
 
 ---
@@ -95,10 +90,3 @@ No files should be edited or created by this skill.
 - **Respect configuration precedence** — resolve conflicting guidance using the canonical policy in `instructions/coordination.instructions.md`.
 
 ---
-
-## Final Rules (Anchor)
-
-1. This skill is read-only; never edit or create files.
-2. The output must cover structure, patterns, relevant code, constraints, and project configuration.
-3. Do not proceed into design; recommend `feature-design-doc` only after approval.
-> If anything above conflicts with these, **these win**.

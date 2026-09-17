@@ -1,14 +1,16 @@
+name: np-copilot-mcp
+
 services:
   searxng:
     image: searxng/searxng:2026.8.22-9fea41204
-    container_name: searxng
     restart: unless-stopped
     ports:
       - "${SEARXNG_PORT:-8080}:8080"
     volumes:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
     environment:
-      - SEARXNG_BASE_URL=http://${SEARXNG_HOSTNAME:-localhost}:${SEARXNG_PORT:-8080}/
+      SEARXNG_BASE_URL: "http://${SEARXNG_HOSTNAME:-localhost}:${SEARXNG_PORT:-8080}/"
+      SEARXNG_SECRET: "${SEARXNG_SECRET:?Initialize a private .env with Initialize-Environment.ps1}"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
       interval: 30s
@@ -22,13 +24,9 @@ services:
         limits:
           memory: 512m
 
-  # NOTE: The SearXNG MCP bridge (isokoliuk/mcp-searxng) is a stdio-only MCP
-  # server. It cannot run as a persistent Docker service — it must be launched
-  # by the MCP client (Copilot CLI) as a subprocess. See docs/mcps.md for the
-  # correct MCP client configuration. Only SearXNG itself runs on the host;
-  # the bridge runs locally on your workstation.
+  # This repository chooses a local stdio bridge, not upstream's optional HTTP
+  # transport. Only SearXNG runs here; no remote browser-control service.
 
 networks:
   mcp-network:
-    name: mcp-network
     driver: bridge

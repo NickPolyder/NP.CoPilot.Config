@@ -1,127 +1,105 @@
 #Requires -Version 7.0
-<#
-.SYNOPSIS
-    Builds isolated, disposable real Git repositories used to verify the
-    staged-index snapshot procedure documented in
-    skills\git-commit-review\SKILL.md sections 2 and 7.
-.DESCRIPTION
-    No side effects outside $env:TEMP. Every helper here only ever operates
-    against a caller-supplied isolated repo root created by
-    New-IsolatedGitRepo; the real repository's own Git state is never
-    touched. Callers must remove the returned repo root (and any snapshot/
-    archive paths returned alongside it) when done.
-#>
 
 $ErrorActionPreference = 'Stop'
+$script:SnapshotRepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$script:SnapshotHelper = Join-Path $script:SnapshotRepoRoot 'scripts\GitSnapshot.psm1'
+Import-Module (Join-Path $script:SnapshotRepoRoot 'scripts\IsolatedProcess.psm1') -ErrorAction Stop
+Import-Module $script:SnapshotHelper -ErrorAction Stop
+$script:GitFixtureContexts = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
 
 function New-IsolatedGitRepo {
-    <#
-    .SYNOPSIS
-        Creates a fresh, empty temp directory, initializes it as a Git
-        repository with a local-only identity, and disables autocrlf so
-        blob content comparisons stay byte-exact. Caller is responsible for
-        cleanup via Remove-TestPath.
-    #>
-    $path = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-gcr-git-test-" + [guid]::NewGuid())
-    New-Item -ItemType Directory -Path $path | Out-Null
+    param([ValidateSet('sha1', 'sha256')][string]$ObjectFormat = 'sha1')
 
-    $null = Invoke-Git -RepoRoot $path -GitArgs @('init', '-q', '-b', 'main')
-    $null = Invoke-Git -RepoRoot $path -GitArgs @('config', 'user.name', 'Test Engineer')
-    $null = Invoke-Git -RepoRoot $path -GitArgs @('config', 'user.email', 'test-engineer@example.invalid')
-    $null = Invoke-Git -RepoRoot $path -GitArgs @('config', 'core.autocrlf', 'false')
-
-    $path
+    $context = New-IsolatedProcessContext
+    $path = Join-Path $context.Root 'repo'
+    $null = New-Item -ItemType Directory -Path $path
+    $script:GitFixtureContexts.Add($path, $context)
+    try {
+        $null = Invoke-Git $path @('init', '-q', '-b', 'main', "--object-format=$ObjectFormat")
+        $null = Invoke-Git $path @('config', '--local', 'user.name', 'Snapshot Fixture')
+        $null = Invoke-Git $path @('config', '--local', 'user.email', 'snapshot@example.invalid')
+        $null = Invoke-Git $path @('config', '--local', 'core.autocrlf', 'false')
+        $path
+    }
+    catch {
+        Remove-TestPath -Path $path
+        throw
+    }
 }
 
 function Remove-TestPath {
-    <#
-    .SYNOPSIS
-        Removes exactly one disposable temp path (a repo root, snapshot
-        directory, or archive file) created by this fixture. Never touches
-        anything outside $env:TEMP.
-    #>
     param([Parameter(Mandatory)][string]$Path)
 
-    if (Test-Path -LiteralPath $Path) {
-        Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
+    if (-not $script:GitFixtureContexts.ContainsKey($Path)) {
+        throw "Refusing to remove an unregistered Git fixture: $Path"
     }
+    Remove-IsolatedProcessContext -Context $script:GitFixtureContexts[$Path]
+    $null = $script:GitFixtureContexts.Remove($Path)
 }
 
 function Set-RepoFile {
     param(
         [Parameter(Mandatory)][string]$RepoRoot,
         [Parameter(Mandatory)][string]$RelativePath,
-        [Parameter(Mandatory)][string]$Content
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Content
     )
 
-    Set-Content -LiteralPath (Join-Path $RepoRoot $RelativePath) -Value $Content -Encoding utf8 -NoNewline
+    if (-not $script:GitFixtureContexts.ContainsKey($RepoRoot)) { throw 'Not an owned Git fixture.' }
+    $path = Join-Path $RepoRoot $RelativePath
+    $null = [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path))
+    [IO.File]::WriteAllText($path, $Content, [Text.UTF8Encoding]::new($false))
+}
+
+function Invoke-FixtureGit {
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string[]]$GitArgs,
+        [AllowEmptyCollection()][byte[]]$InputBytes = @(),
+        [hashtable]$Environment = @{},
+        [switch]$AllowFailure
+    )
+
+    if (-not $script:GitFixtureContexts.ContainsKey($RepoRoot)) { throw 'Not an owned Git fixture.' }
+    Invoke-IsolatedProcess -Context $script:GitFixtureContexts[$RepoRoot] -FilePath 'git' `
+        -ArgumentList (@('--no-pager', '-C', $RepoRoot) + $GitArgs) -WorkingDirectory $RepoRoot `
+        -InputBytes $InputBytes -Environment $Environment -AllowFailure:$AllowFailure
 }
 
 function Invoke-Git {
-    <#
-    .SYNOPSIS
-        Runs one git command against an isolated repo root and returns its
-        combined stdout/stderr, throwing on a non-zero exit code.
-    #>
+    param([Parameter(Mandatory)][string]$RepoRoot, [Parameter(Mandatory)][string[]]$GitArgs)
+
+    (Invoke-FixtureGit -RepoRoot $RepoRoot -GitArgs $GitArgs).Stdout
+}
+
+function Add-FixtureIndexBlob {
     param(
         [Parameter(Mandatory)][string]$RepoRoot,
-        [Parameter(Mandatory)][string[]]$GitArgs
+        [Parameter(Mandatory)][string]$GitPath,
+        [Parameter(Mandatory)][AllowEmptyCollection()][byte[]]$Bytes,
+        [string]$Mode = '100644'
     )
 
-    $output = & git -C $RepoRoot @GitArgs 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
-        throw "git $($GitArgs -join ' ') failed with exit $LASTEXITCODE in ${RepoRoot}: $output"
+    $oid = (Invoke-FixtureGit $RepoRoot @('hash-object', '-w', '--stdin') -InputBytes $Bytes).Stdout.Trim()
+    $record = [Text.Encoding]::UTF8.GetBytes("$Mode $oid`t$GitPath`0")
+    $null = Invoke-FixtureGit $RepoRoot @('update-index', '-z', '--index-info') -InputBytes $record
+    $paths = (Invoke-FixtureGit $RepoRoot @('ls-files', '-z')).Stdout.Split([char]0)
+    if ($paths -cnotcontains $GitPath) {
+        throw "Git did not stage the exact fixture path '$GitPath'; native update-index may ignore unsupported names even with exit 0."
     }
-    $output
+    $oid
 }
 
-function Get-GitBlobContent {
-    <#
-    .SYNOPSIS
-        Returns the raw blob content of one path as recorded inside a given
-        tree object (never the working tree), via git show <tree>:<path>.
-    #>
-    param(
-        [Parameter(Mandatory)][string]$RepoRoot,
-        [Parameter(Mandatory)][string]$Tree,
-        [Parameter(Mandatory)][string]$Path
+function Get-DocumentedSnapshot {
+    param([Parameter(Mandatory)][string]$RepoRoot, [string]$Content)
+
+    if (-not $Content) {
+        $Content = Get-Content -LiteralPath (Join-Path $script:SnapshotRepoRoot 'skills\git-commit-review\SKILL.md') -Raw
+    }
+    $match = [regex]::Match($Content, '(?s)<!-- tested-snapshot:start -->\r?\n```powershell\r?\n(?<code>.*?)\r?\n```\r?\n<!-- tested-snapshot:end -->')
+    if (-not $match.Success) { throw 'The tested snapshot procedure block is missing or malformed.' }
+    $procedure = [scriptblock]::Create(
+        "param(`$repositoryRoot, `$snapshotHelper)`n`$candidate = `$null`n`$snapshot = `$null`n`$baseSnapshot = `$null`ntry {`n" + $match.Groups['code'].Value +
+        "`n[pscustomobject]@{ Candidate = `$candidate; Snapshot = `$snapshot; BaseSnapshot = `$baseSnapshot }`n} catch { if (`$candidate) { Remove-GitReviewCandidate -Candidate `$candidate }; throw }"
     )
-
-    (Invoke-Git -RepoRoot $RepoRoot -GitArgs @('show', "${Tree}:${Path}")).TrimEnd("`r", "`n")
-}
-
-function New-Snapshot {
-    <#
-    .SYNOPSIS
-        Materializes a tree object into a fresh temp directory using the
-        exact git archive + tar sequence documented in SKILL.md section 2.
-        Returns an object with SnapshotPath and ArchivePath so the caller
-        can clean both up.
-    #>
-    param(
-        [Parameter(Mandatory)][string]$RepoRoot,
-        [Parameter(Mandatory)][string]$Tree
-    )
-
-    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-gcr-git-archive-" + [guid]::NewGuid() + '.tar')
-    $snapshotPath = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-gcr-git-snapshot-" + [guid]::NewGuid())
-    New-Item -ItemType Directory -Path $snapshotPath | Out-Null
-
-    Invoke-Git -RepoRoot $RepoRoot -GitArgs @('archive', '--format=tar', "--output=$archivePath", $Tree)
-    tar -xf $archivePath -C $snapshotPath
-    if ($LASTEXITCODE -ne 0) { throw "tar extraction of the candidate snapshot failed with exit $LASTEXITCODE." }
-
-    [pscustomobject]@{ SnapshotPath = $snapshotPath; ArchivePath = $archivePath }
-}
-
-function Get-SnapshotFileList {
-    <#
-    .SYNOPSIS
-        Returns the materialized snapshot's file paths as forward-slash
-        relative paths, for direct comparison against git ls-tree output.
-    #>
-    param([Parameter(Mandatory)][string]$SnapshotPath)
-
-    Get-ChildItem -LiteralPath $SnapshotPath -Recurse -File |
-        ForEach-Object { $_.FullName.Substring($SnapshotPath.Length + 1) -replace '\\', '/' }
+    & $procedure $RepoRoot $script:SnapshotHelper
 }

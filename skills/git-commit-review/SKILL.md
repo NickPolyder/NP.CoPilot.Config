@@ -8,16 +8,14 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Review one staged, logical diff quickly and create one safe, approved, atomic Git commit.
-> **Always:** validate an index-only snapshot before reviewers; use direct validation before reviewer speculation; require manual user verification and an approved commit message; write one concise final report.
-> **Never:** invoke `full-code-review` automatically; commit unresolved Critical or High findings; run more than two review cycles without explicit user approval.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs; `instructions/workflow.instructions.md` for proportional verification; and `instructions/git-conventions.instructions.md` for delivery and commit safety.
 
 This is the default pre-commit workflow.
 It is intentionally bounded to approximately ten minutes of reviewer time.
 
 Use `full-code-review` only when the user explicitly requests exhaustive analysis.
+Recommendations for `full-code-review` or `security-audit` are separate handoffs after this owning workflow ends, never nested invocations.
+Never mark a blocked workflow complete merely to start another workflow.
 
 ## When to use this skill
 
@@ -46,29 +44,27 @@ Do not review unstaged changes or a mixture of candidates.
 
 Review the index, not the mutable worktree.
 
-1. Require a non-empty `git diff --cached`. Record the base revision (HEAD, or the empty tree for an unborn branch); capture the review diff from that base and the immutable tree in step 5.
-2. Create a temporary directory outside the repository and choose an archive path outside that directory.
-3. Capture the candidate tree ID and materialize that immutable tree into the directory, for example:
+1. Require a non-empty index diff against the recorded base: HEAD, or the empty tree for an unborn branch.
+2. Resolve `$snapshotHelper` to `scripts\GitSnapshot.psm1` in **this configuration's source repository**, not the target project. The whole-repository installation provides it; do not assume a standalone copied skill includes it. If unavailable, stop and report the missing capability rather than inventing an archive fallback.
+3. Run the shared executable procedure below with `$repositoryRoot` identifying the target worktree root. `New-GitReviewCandidate` uses `git write-tree` only on a disposable index copy; it records the exact candidate tree, base identity, ordered parent list, unborn/detached/symbolic ref state, and destination ref. The snapshot and isolated child home are outside the target repository.
 
-   ```powershell
-   $tree = git write-tree
-   if ($LASTEXITCODE -ne 0) { throw 'Cannot capture the index tree.' }
-   git archive --format=tar --output="$archivePath" $tree
-   if ($LASTEXITCODE -ne 0) { throw 'Cannot archive the candidate tree.' }
-   tar -xf $archivePath -C $snapshotPath
-   if ($LASTEXITCODE -ne 0) { throw 'Cannot extract the candidate snapshot.' }
-   ```
+<!-- tested-snapshot:start -->
+```powershell
+Import-Module $snapshotHelper -ErrorAction Stop
+$candidate = New-GitReviewCandidate -RepositoryRoot $repositoryRoot
+$snapshot = New-GitTreeSnapshot -Candidate $candidate
+$baseSnapshot = New-GitTreeSnapshot -Candidate $candidate -Base
+Assert-GitSnapshotIntegrity -Snapshot $snapshot -Exact
+Assert-GitSnapshotIntegrity -Snapshot $baseSnapshot -Exact
+Assert-GitCandidateCurrent -Candidate $candidate
+```
+<!-- tested-snapshot:end -->
 
-   Avoid a binary archive pipeline through PowerShell. If `export-ignore` or
-   `export-subst` attributes would omit or transform tracked inputs, instead use
-   `git read-tree $tree` with an isolated temporary `GIT_INDEX_FILE` and
-   `GIT_WORK_TREE` set to `$snapshotPath`, then
-   `git checkout-index --all --prefix="$snapshotPath\"`. Checkout attributes must
-   come from the captured tree, not unstaged files. Restore both previous
-   environment values afterwards; never rewrite the repository index to build a snapshot.
-4. Verify snapshot paths, file types, and contents against the captured tree using `git ls-tree -r --full-tree $tree` and its blob contents, accounting explicitly for checkout filters and platform mode handling. The snapshot includes unchanged tracked files and excludes deleted files. Resolve required submodules or LFS content at their recorded revisions, or stop if a faithful validation input cannot be produced.
-5. Use changed paths only for review scope, not snapshot completeness. Capture the diff between the recorded base revision and `$tree`, including deletions, renames, and binary changes; use NUL-delimited path output when processing names programmatically. Re-run `git write-tree` and require it to equal `$tree` before accepting the captured diff and snapshot as one candidate.
-6. Keep the snapshot and tree ID for validation and review, then remove only the workflow's temporary snapshot, archive, and temporary index after the workflow.
+4. Verify snapshot paths, file types, modes, and bytes against the captured tree with the helper's `git ls-tree -r -z --full-tree` manifest and raw `git cat-file blob` output. It includes unchanged tracked files, excludes deletions, and ignores archive/checkout transformations (`export-ignore`, `export-subst`, smudge filters, EOL conversion, and ident substitution). It never uses archive success as proof of completeness. Its initial `-Exact` gate rejects extra paths as well as missing or altered inputs.
+5. Use changed paths only for review scope, not snapshot completeness. `$candidate.DiffBytes` is the binary-capable base-to-tree diff; `$candidate.ChangedPaths` comes from NUL-delimited, rename-disabled discovery so both rename sides, deletions, and type changes are in scope. `Assert-GitCandidateCurrent` rechecks the full tuple, not just the index tree, before accepting these as one candidate.
+6. Follow the supported raw-tree/filesystem contract in `scripts\README.md`. Symlinks, submodules, LFS pointers, unrepresentable names/modes, and in-progress history rewrites fail closed. Windows cannot faithfully represent Git executable mode 100755; use a capable POSIX environment for such candidates. If validation needs transformed checkout inputs, stop rather than silently substituting bytes.
+7. `$baseSnapshot` supplies readable context at the captured base tree, including deleted files and old rename paths; an unborn base has an empty manifest. Both snapshots expose `Tree`, `Role`, `Path`, and `Manifest` (paths, modes, and blob IDs). Base context is read-only review evidence, never a substitute validation target.
+8. Keep the candidate and both snapshots for all checks and review. In a `finally` block at workflow termination, call `Remove-GitReviewCandidate -Candidate $candidate` to remove only its owned snapshots, index copies, and isolated child state.
 
 Never substitute the working tree for this snapshot.
 Unstaged changes must not affect validation or reviewer conclusions.
@@ -81,10 +77,10 @@ Before dispatching a reviewer, run the repository's applicable import, restore, 
 - Prefer the narrowest checks that exercise the staged behavior.
 - Run imports or compilation before tests so direct failures are surfaced first.
 - Run the commands from the snapshot or point them at snapshot paths, never at the working tree.
-- When the staged snapshot contains Copilot configuration files, run
-  `pwsh -NoProfile -File "$snapshotPath\scripts\Validate-Config.ps1" -RepositoryRoot $snapshotPath`
-  before launching reviewers. Run its focused regression suite separately from
-  the snapshot root when the staged changes affect the validator or its tests.
+- Discover repository-declared validation capabilities from the captured documentation and manifests. The presence of Copilot configuration alone does **not** imply that the target has `scripts\Validate-Config.ps1`. Do not require another project to copy this repository's validator.
+- **For NP.CoPilot.Config**, the declared required configuration check remains `pwsh -NoProfile -File .\scripts\Validate-Config.ps1 -RepositoryRoot <snapshot-path>`, executed in the snapshot. Run its focused regression suite when the validator or its tests change. In any project, a declared required command or input that is missing must fail explicitly; never fall back to the mutable worktree.
+- Run each potentially writing preflight, restore, build, lint, or test command through `Invoke-GitSnapshotCheck`, with its executable, argument array, name, and snapshot-relative `-RequiredPaths` (if any). It checks tracked input integrity and candidate identity before and after the command, and checks the native exit code. Ordinary untracked files/directories produced by builds are allowed after materialization; linked outputs are not.
+- Before reviewer dispatch, call `Assert-GitSnapshotIntegrity -Snapshot $snapshot`, `Assert-GitSnapshotIntegrity -Snapshot $baseSnapshot -Exact`, and `Assert-GitCandidateCurrent -Candidate $candidate` again. Tracked input mutation invalidates the snapshot's evidence even if the command exits zero. Do not run checks against mutated inputs and then restore bytes to claim evidence for the originals. An observed failure is latched: restoring bytes does not clear it. Restage intended fixes, rematerialize, and rerun affected checks on the new candidate; do not hide mutation with cleanup inside a validation command.
 
 If the snapshot cannot be materialized, imports/build/type checks fail, or targeted tests fail, stop.
 Report the concrete failure and fix it before launching any reviewer.
@@ -93,17 +89,20 @@ One proven clean-index failure is more valuable than speculative reviewer feedba
 ## 4. Select reviewers and escalate risk
 
 Start with exactly one core reviewer: `code-reviewer`.
-Select at most one relevant specialist based on the staged snapshot.
+Select at most one relevant specialist in ordinary review (zero or one); signal-driven expertise is required when a risk signal applies.
 
-| Staged-change signal | Specialist |
+| Staged-change signal | Specialist assignment |
 |---|---|
-| Authentication, authorization, cryptography, secrets | `security-engineer` |
-| Destructive or irreversible database migration; safety-critical data integrity | `database-engineer` |
-| External production writes; integration-side data integrity | `systems-engineer` |
-| Deployment or infrastructure change with broad blast radius | `devops-engineer` |
-| Safety-critical concurrency | `systems-engineer` or the primary affected domain specialist |
+| Authentication, authorization, cryptography, secrets | `code-reviewer`, security focus |
+| Destructive or irreversible database migration; safety-critical data integrity | `code-reviewer`, data/migration focus |
+| External production writes; integration-side data integrity | `code-reviewer`, integration focus |
+| Deployment or infrastructure change with broad blast radius | `code-reviewer`, infrastructure focus |
+| Safety-critical concurrency | `code-reviewer`, concurrency and affected-domain focus |
 
 These signals automatically add the appropriate specialist; they never invoke `full-code-review`.
+Each specialist uses a separate `code-reviewer` assignment with a domain focus and the same immutable intake and read/search-only boundary.
+Supply only the relevant sections of `skills/domain-guidance.md`. Sharing a role
+card does not merge the core and specialist scopes or waive required expertise.
 
 Add a second specialist only when two distinct high-risk domains directly interact in the same candidate, such as authorization plus destructive migration or production writes plus broad deployment changes.
 Do not add a second specialist merely because a large diff touches multiple ordinary domains.
@@ -121,6 +120,20 @@ Concurrent reviewers must never edit the worktree, the index, or the snapshot.
 Run the core reviewer and selected specialists against the materialized snapshot and staged diff.
 Timebox the review stage to approximately ten minutes total.
 
+Before dispatch, this active caller must supply the complete reviewer intake:
+
+| Required input | Captured evidence |
+|---|---|
+| Repository and scope | Repository root, commit-review mode, included/excluded paths, and the assigned bounded reviewer scope. |
+| Resolved identities | Base commit/empty-tree identity, resolved base tree `$baseSnapshot.Tree`, candidate tree `$candidate.Tree`, and the complete parent/ref approval tuple. Branch names alone are insufficient. |
+| Complete diff and frozen context | `$candidate.DiffBytes`, including deletions, renames, binary/type changes; readable base/candidate paths and both path/mode/blob-ID manifests; immutable context for directly affected contracts. Supply manifests in the dispatch or an owned readable bundle. |
+| Locked requirements | Applicable requirements, acceptance criteria, locked decisions, and explicitly unresolved questions, tied to the captured inputs. |
+| Validation evidence | Exact validation commands, working directories, outcomes, coverage limits, and the covered candidate identity. Distinguish caller-executed checks from reviewer reading. |
+
+Missing or unreadable required intake means **Incomplete - missing evidence**: name the missing inputs and bounded coverage, and stop dispatch or acceptance as a complete review.
+Never substitute current files for missing immutable review evidence.
+`code-reviewer` has `read` and `search` only; it returns bounded findings and evidence gaps to this active caller, without artifacts or workflow restart.
+
 Each reviewer must:
 
 - Return only concrete findings with file and line references plus a proposed correction.
@@ -129,7 +142,8 @@ Each reviewer must:
 - Avoid style, formatting, and speculative concerns.
 
 Do not add replacement reviewers to extend the timebox.
-If review coverage is incomplete when the timebox expires, say so in the final report and let the user decide whether to continue or invoke `full-code-review`.
+If review coverage is incomplete when the timebox expires, report that limitation and let the user decide whether to continue this workflow. A requested `full-code-review` is a separate handoff only after this owning workflow has genuinely ended or been explicitly aborted; a blocked workflow is not complete.
+Before accepting reviewer output, recheck both snapshots' integrity (base with `-Exact`) and the current candidate tuple; changed inputs require a newly identified intake.
 
 Reviewers return findings only.
 They must not create report files, directories, or other artifacts; this workflow owns consolidation and persistence.
@@ -152,7 +166,7 @@ Never silently discard a concrete finding.
 ## 7. Fix and scope re-review
 
 After a fix, stage only the approved fix hunks and confirm the candidate still contains no unrelated changes.
-Record the new tree ID with `git write-tree`, rematerialize the snapshot using section 2, and bind affected validation and re-review to that new candidate.
+Record the new tree ID through `New-GitReviewCandidate`, rematerialize the snapshot using section 2, and bind affected validation and re-review to that new candidate and its full base/parent/ref tuple.
 Never validate an old snapshot after a fix or treat worktree-only results as evidence for the staged candidate.
 Re-run direct validation for the changed files and affected targeted tests against the new snapshot.
 Re-review only:
@@ -171,20 +185,25 @@ The cycle count never resets during a candidate's workflow.
 
 ## 8. Final validation gate
 
-Once no unaccepted Critical or High finding remains, run the repository's full existing test suite once against the final staged snapshot.
+Once no unaccepted Critical or High finding remains and a suite applies, run the repository's full existing test suite once against the final staged snapshot.
 Do not run the full suite after every review or minor fix.
 
-If the full suite fails, return to the relevant fix and targeted re-review scope.
+If no applicable suite exists, record **Not run - no applicable suite** and the coverage limitation, never a 0/0 pass.
+Missing declared required checks remain blockers; this not-run case does not waive required validation.
+
+Use `Invoke-GitSnapshotCheck` for each final-suite command. After final validation and before final acceptance, require `Assert-GitSnapshotIntegrity -Snapshot $snapshot` and `Assert-GitCandidateCurrent -Candidate $candidate` to pass again. Ordinary untracked outputs may remain, but tracked paths/types/modes/bytes must still match the captured tree.
+Also require `Assert-GitSnapshotIntegrity -Snapshot $baseSnapshot -Exact` so accepted review evidence still refers to the same immutable base context.
+If the full suite or an integrity gate fails, invalidate the affected evidence and return to the relevant fix and targeted re-review scope. Restoring inputs is not a substitute for rerunning checks.
 
 ## 9. User verification and commit
 
 Before committing:
 
-1. Present the staged candidate summary, validation results, final blocker state, accepted risks, and delayed follow-ups.
+1. Present the staged candidate summary, validation results, final blocker state, accepted risks, and delayed follow-ups, plus the exact approval tuple: repository/index source, base identity, ordered parent list, unborn/detached/symbolic ref state, destination ref, and candidate tree.
 2. Require the user to manually verify the changes.
-3. After confirmation, use `ask_user` to obtain approval for the proposed conventional commit message.
-4. Immediately before committing, require `git write-tree` to equal the final validated tree ID. If it differs, stop and refresh the snapshot, affected checks, review, and approvals for the changed candidate.
-5. Create the commit only after approval. Verify the resulting commit tree equals the validated tree ID; if a commit hook changed it, report the mismatch and stop delivery rather than claiming the commit was reviewed or amending it automatically.
+3. After confirmation, use `ask_user` to obtain approval for the proposed conventional commit message **and that exact tuple**. Evidence and approvals do not transfer to a different base, parent list, ref state, destination, or tree.
+4. Immediately before committing, require `Assert-GitCandidateCurrent -Candidate $candidate` and `Assert-GitSnapshotIntegrity -Snapshot $snapshot` to pass. A same-tree HEAD advance, branch switch, unborn-to-born transition, detached/symbolic transition, or changed merge parent list invalidates approval. Stop and refresh the snapshot, affected checks, review, and approvals; tree equality alone is insufficient.
+5. Create the commit only after approval, check its native exit status, and obtain its exact object ID with checked Git discovery. Verify the resulting commit tree, ordered parent list, destination ref, and ref state using `Assert-GitCandidateCommit -Candidate $candidate -CommitId <new-commit-id>`. An unborn candidate must produce a parentless commit at its approved branch; a detached candidate must remain detached. If a hook or concurrent operation changed the result, report the mismatch and stop delivery rather than claiming the commit was reviewed or amending it automatically. These pre/post gates detect mismatches, not an atomic lock against concurrent Git writers.
 
 The commit message must use imperative mood, keep its subject to 72 characters or fewer, and include the required trailers:
 
@@ -206,9 +225,10 @@ After consolidating reviewer findings and recording their dispositions, write on
 
 Include:
 
-- Candidate summary, base revision, validated tree ID, and resulting commit SHA, or `ABORTED`.
-- Snapshot preflight and final-suite outcomes.
-- Reviewers used, selection rationale, and cycle count.
+- Candidate summary, complete approval tuple (including base, ordered parents, ref state, destination, and tree), and resulting commit SHA, or `ABORTED`.
+- Snapshot preflight, tracked-integrity gates, final-suite outcomes (including explicit not-run/coverage limitations), and post-commit tree/parent/ref verification.
+- Intake identities, readable base/candidate context and manifests, locked requirements, caller validation evidence, and any missing-evidence limitation.
+- Reviewers used, selection rationale, and cycle count: exactly one core, zero or one ordinary relevant specialist, required signal-driven expertise, and a second specialist only for directly interacting distinct high-risk domains.
 - Deduplicated findings grouped by the four decision statuses.
 - User approvals and the final outcome.
 - Any timebox limitation.
@@ -219,15 +239,6 @@ If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 
 ## Related skills and agents
 
-- Use `full-code-review` only by explicit user invocation for release candidates, major architectural changes, security audits, schema redesigns, or exhaustive review requests.
-- Use `security-audit` for a dedicated STRIDE and OWASP assessment.
+- After this owning workflow ends, use `full-code-review` only by separate explicit user invocation for release candidates, major architectural changes, security audits, schema redesigns, or exhaustive review requests.
+- After this owning workflow ends, use `security-audit` only as a separate authorized workflow for a dedicated STRIDE and OWASP assessment.
 - Use `code-reviewer` for an ad-hoc review that is not preparing a commit.
-
-## Final Rules (Anchor)
-
-1. Materialize and validate the captured index tree before launching reviewers; restaged fixes require a new snapshot and affected evidence, and the committed tree must match the validated tree ID.
-2. Use one `code-reviewer`, at most one ordinary specialist, and a second specialist only for high-risk cross-domain changes.
-3. Never commit unresolved Critical or High findings unless the user explicitly accepts the risk and directs the commit.
-4. Never auto-invoke `full-code-review`.
-5. Never exceed two review cycles without explicit user approval for each additional cycle.
-6. Never amend a previous commit unless the user explicitly asks.

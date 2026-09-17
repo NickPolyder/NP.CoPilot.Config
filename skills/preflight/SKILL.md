@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Validate the local toolchain, project configuration, build, and test baseline before development starts.
-> **Always:** check only relevant tools; report restore/build/test results; end with a clear GO or NO-GO verdict.
-> **Never:** treat a failing baseline as safe to proceed.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are running a preflight check to verify the environment is ready for development.
@@ -64,7 +60,11 @@ Skip tools that aren't relevant to the current project.
 
 - **Git status** — clean working tree? Uncommitted changes?
 - **Branch** — which branch are we on? Is it up to date with remote?
-- **Project config** — does `.github/instructions/project-config.instructions.md` exist? If yes, read it and summarize key settings. If no, suggest running `install-project.ps1` from the NP.CoPilot.Config repo to scaffold project templates.
+- **Project contracts** — read `.github/instructions/project-config.instructions.md`
+  and relevant existing Copilot/`AGENTS.md`/`CLAUDE.md`/`GEMINI.md` contracts.
+  Missing project-config alone is not unhealthy. If recommending templates,
+  use the verified NP.CoPilot.Config source and preserve/reference existing
+  capability declarations rather than introducing default-disabled conflicts.
 - **Solution/project files** — can you find .sln, .csproj, package.json, or equivalent entry points?
 
 ## 3. Dependency Restore
@@ -93,6 +93,12 @@ Run the existing test suite:
 - Node: `npm test` (if test script exists)
 
 Report: total tests, passed, failed, skipped. This establishes the baseline — any new failures after your changes are regressions.
+Report the command, working directory, and revision covered. If no applicable
+test runner exists, say **not run - no applicable runner** and describe available
+direct evidence; never report `0/0` as a passing suite. A declared required
+command that is missing or cannot run is a blocking failure, not an inapplicable
+check. Apply the same distinction to restore/build in configuration-only or
+documentation-only targets.
 
 ---
 
@@ -127,10 +133,3 @@ If any check fails, end with:
 > **Verdict: ❌ NO-GO** — {N} blocking issue(s). Fix the items marked ❌ above before proceeding.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Skip tools that aren't relevant to the current project.
-2. Report success or failure with error details.
-3. If any check fails, end with a NO-GO verdict and actionable fix instructions.
-> If anything above conflicts with these, **these win**.

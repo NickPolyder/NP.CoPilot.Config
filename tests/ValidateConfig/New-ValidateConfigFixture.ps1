@@ -9,6 +9,9 @@
 #>
 
 $ErrorActionPreference = 'Stop'
+$script:ConfigFixtureRepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+Import-Module (Join-Path $script:ConfigFixtureRepoRoot 'scripts\IsolatedProcess.psm1') -ErrorAction Stop
+$script:ConfigFixtureContexts = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
 
 # Every skill name referenced by Validate-Config.ps1's hardcoded $orchestration
 # map. A "fully green" fixture must include stub SKILL.md files for all of
@@ -26,17 +29,19 @@ function New-FixtureRoot {
     .SYNOPSIS
         Creates a fresh temp directory. Caller is responsible for cleanup.
     #>
-    $path = Join-Path ([System.IO.Path]::GetTempPath()) ("npcc-validate-test-" + [guid]::NewGuid())
+    $context = New-IsolatedProcessContext
+    $path = Join-Path $context.Root 'fixture'
     New-Item -ItemType Directory -Path $path | Out-Null
+    $script:ConfigFixtureContexts.Add($path, $context)
     $path
 }
 
 function Remove-FixtureRoot {
     param([Parameter(Mandatory)][string]$Path)
 
-    if (Test-Path -LiteralPath $Path) {
-        Remove-Item -LiteralPath $Path -Recurse -Force
-    }
+    if (-not $script:ConfigFixtureContexts.ContainsKey($Path)) { throw "Not an owned configuration fixture: $Path" }
+    Remove-IsolatedProcessContext -Context $script:ConfigFixtureContexts[$Path]
+    $null = $script:ConfigFixtureContexts.Remove($Path)
 }
 
 function New-AgentFile {
@@ -49,7 +54,8 @@ function New-AgentFile {
         [string]$Body = '# Fixture Agent',
         [string[]]$ExtraFrontmatterLines = @(),
         [switch]$OmitModel,
-        [switch]$OmitName
+        [switch]$OmitName,
+        [switch]$OmitDescription
     )
 
     $agentsDir = Join-Path $Root 'agents'
@@ -58,7 +64,7 @@ function New-AgentFile {
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('---')
     if (-not $OmitName) { $lines.Add("name: $Name") }
-    $lines.Add("description: $Description")
+    if (-not $OmitDescription) { $lines.Add("description: $Description") }
     if (-not $OmitModel) { $lines.Add("model: $Model") }
     foreach ($extra in $ExtraFrontmatterLines) { $lines.Add($extra) }
     $lines.Add('---')
@@ -78,7 +84,8 @@ function New-SkillFile {
         [string]$License = 'MIT',
         [string]$Body = '# Fixture Skill',
         [string[]]$ExtraFrontmatterLines = @(),
-        [switch]$OmitName
+        [switch]$OmitName,
+        [switch]$OmitDescription
     )
 
     $skillDir = Join-Path $Root "skills\$DirName"
@@ -87,7 +94,7 @@ function New-SkillFile {
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('---')
     if (-not $OmitName) { $lines.Add("name: $Name") }
-    $lines.Add("description: $Description")
+    if (-not $OmitDescription) { $lines.Add("description: $Description") }
     $lines.Add("license: $License")
     foreach ($extra in $ExtraFrontmatterLines) { $lines.Add($extra) }
     $lines.Add('---')
@@ -124,8 +131,8 @@ function New-BaselineFixture {
     $gitCommitReviewBody = @'
 # git-commit-review
 
-Uses git write-tree to build a tree object, then git archive --format=tar
-to materialize an index-only snapshot for review.
+Uses New-GitReviewCandidate and New-GitTreeSnapshot to materialize the
+complete index-only snapshot for review.
 
 If the snapshot cannot be materialized, stop before launching any reviewer.
 

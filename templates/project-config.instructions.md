@@ -1,7 +1,13 @@
+---
+applyTo: "**"
+---
+
 # Project Configuration
 
 This file tells Copilot agents and skills about your project's technology choices.
-Place it at `.github/instructions/project-config.instructions.md` so Copilot loads it automatically.
+Place it at `.github/instructions/project-config.instructions.md`. The scalar
+`applyTo` uses the documented repository-wide instruction syntax; discovery still
+depends on the client's supported instruction locations and active session.
 
 ## Technology Stack
 
@@ -38,6 +44,11 @@ lint:     dotnet format --verify-no-changes
 
 ## Agent Delivery Capabilities
 
+<!-- np-copilot-capabilities-owner: .github/instructions/project-config.instructions.md -->
+
+This is the single capability declaration. Other project contracts reference it
+rather than repeat defaults. If the root project contract already owns verified
+capabilities, keep that owner and replace this section with a reference to it.
 Declare only capabilities that repository evidence supports. Disabled or blank capabilities add no workflow requirement.
 
 | Capability | Enabled | Repository-specific rule |

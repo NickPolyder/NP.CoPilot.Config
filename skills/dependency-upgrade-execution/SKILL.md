@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Execute an approved dependency upgrade plan in risk-ordered batches with verification after each batch, then prepare commit handoff.
-> **Always:** require explicit approval before editing manifests; upgrade patch, minor, then major versions; verify restore, build, and tests after each batch.
-> **Never:** upgrade blindly, start without an approved scope, stack upgrades on a broken build, mix with feature work, or create commits directly.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are executing an approved dependency upgrade plan. This skill edits manifests only after an explicit approval gate and verifies restore, build, and tests after each batch.
@@ -39,7 +35,7 @@ Do **not** use this skill for:
 - Read-only dependency discovery, risk assessment, or reporting — use `dependency-audit-report`.
 - Adding new dependencies — just add them directly.
 - Debugging dependency conflicts during development — investigate directly.
-- Framework upgrades (e.g., .NET 8 → .NET 9) — those are architectural changes requiring the Full tier workflow.
+- Framework upgrades (e.g., .NET 8 → .NET 9) — those require explicit architectural scope and approval.
 - Commit review or commit creation — hand verified changes to `git-commit-review`.
 
 ---
@@ -57,6 +53,9 @@ Before editing manifests or lock files, confirm the user has explicitly chosen a
 > 4. Just the report — I'll handle upgrades manually
 
 Proceed only when the user explicitly approves an upgrade scope. If the user chooses option 4 or does not approve edits, stop without changing manifests.
+Carry the approved report's license evidence, declared policy, required
+obligations, and unresolved decisions into execution. Upgrade approval is not a
+license-policy waiver or permission to remove/replace unrelated dependencies.
 
 ## Phase 3: Upgrade Execution (approval required)
 
@@ -74,7 +73,13 @@ Only enter this phase after explicit user approval to edit dependency manifests.
 2. **Restore** — `dotnet restore` / `npm install`.
 3. **Build** — verify compilation.
 4. **Test** — run full test suite.
-5. **If tests fail:**
+5. **Recheck dependency/license evidence** — record the resulting direct and
+   transitive versions and their version-specific licenses against the approved
+   policy constraints. Follow the evidence/output contract in
+   `dependency-audit-report` without invoking another workflow. Preserve unknown
+   or not-assessed states and stop on unresolved required policy decisions;
+   successful tests do not resolve a license conflict.
+6. **If tests fail:**
    - Identify which upgrade caused the failure.
    - Check migration guides for the breaking package.
    - Apply necessary code changes.
@@ -90,6 +95,7 @@ Only enter this phase after explicit user approval to edit dependency manifests.
 **Skipped:** {N} packages (reason: {breaking changes needing deeper work})
 **Tests:** {passed}/{total} passing
 **Build:** ✅ Clean
+**License/policy evidence:** {assessed versions, remaining conflicts/unknowns, required decisions}
 
 Remaining work (if any):
 - {Package X} requires code migration — see {link to migration guide}
@@ -105,17 +111,22 @@ When responding to a specific CVE or security advisory after approval:
 
 ## Phase 4: Commit Handoff
 
-Do not define or create commits here. After approved upgrade batches build and tests pass, recommend delegating commit review and commit creation to the `git-commit-review` skill. Provide it the package changes, lock file changes, verification results, and any skipped follow-ups.
+Do not define or create commits here. Return package/lock-file changes,
+revision-bound verification, license-policy evidence, and skipped follow-ups.
+When invoked by `dependency-audit`, return to that coordinator; a completed
+upgrade phase does not end its parent. Standalone, finish this skill's state
+before recommending a separate `git-commit-review` workflow with its own gates.
 
 ---
 
 # Coordination
 
-- **Consult `security-engineer`** — for CVE impact assessment and exposure analysis.
-- **Consult `backend-developer`** — for .NET-specific migration patterns when major packages change.
-- **Consult `frontend-developer`** — for Angular/npm ecosystem upgrade patterns.
-- **Consult `devops-engineer`** — if dependency updates affect Docker images or CI pipelines.
-- **Delegate commits to `git-commit-review`** — provide verified package changes, lock file changes, verification results, and skipped follow-ups.
+- Keep small approved batches inline; use `implementer` for substantial bounded
+  package, lockfile, container or pipeline changes. Use `investigator` only for
+  unresolved exposure, license or migration questions that need separate research.
+- **Prepare separate commit handoff** — return verified changes, license-policy
+  evidence, and follow-ups to the caller; `git-commit-review` starts only after
+  the owning workflow completes.
 
 ---
 
@@ -126,14 +137,7 @@ Do not define or create commits here. After approved upgrade batches build and t
 - **Tests must pass after each batch** — don't stack upgrades on a broken build.
 - **Respect lock files** — commit updated lock files alongside package reference changes.
 - **Don't mix dependency upgrades with feature work** — keep dependency changes separate from feature work.
-- **Delegate commits** — hand verified upgrade batches to `git-commit-review`; this skill does not own commit strategy.
+- **Separate delivery** — never invoke a terminal workflow inside this phase or
+  its active coordinator; return the handoff evidence first.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Do not edit manifests or lock files until explicit approval confirms the exact upgrade scope.
-2. Upgrade in risk-ordered batches: patch, minor, major; verify restore, build, and tests after each batch.
-3. Never stack upgrades on a broken build; fix, revert, or mark skipped before continuing.
-4. Delegate commit review and commit creation to `git-commit-review`; do not create commits here.
-> If anything above conflicts with these, **these win**.

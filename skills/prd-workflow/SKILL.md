@@ -8,10 +8,6 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Drive a gated, design-first product workflow for one approved feature by sequencing the atomic `codebase-research`, `feature-design-doc`, `task-breakdown`, and `implementation-runner` skills through explicit approval gates.
-> **Always:** research before design; produce `design.md` and `tasks.md`; require explicit approval before every phase transition.
-> **Never:** skip approval gates.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 This skill is a **thin orchestrator**. It owns the end-to-end design-first flow and the approval gates between phases, but delegates each phase's detailed procedure to a dedicated atomic skill:
@@ -41,7 +37,7 @@ Do **not** use this skill for:
 
 > **Choosing between `prd-workflow` and `feature-planning`:** Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end. Use `feature-planning` when you need a **comprehensive plan document only** — no implementation.
 
-> **Boundary:** This workflow sequences only its four phase skills. For deep test/security work, recommend `test-strategy` or `security-audit`; for commit review and commit creation, delegate to `git-commit-review` after this workflow's implementation is verified.
+> **Boundary:** This workflow sequences only its four phase skills. Return deep test/security needs as recommendations for separate work. Finish this entry workflow's own state before any `git-commit-review`, `test-strategy`, or `security-audit` handoff; a completed phase does not by itself end this workflow or waive another workflow's approval gates.
 
 ---
 
@@ -72,11 +68,13 @@ the design — phases, ordering, dependencies, complexity, and paired test tasks
 
 ## Phase 4: Implementation (delegate to `implementation-runner`)
 
-After approval, run the `implementation-runner` skill to execute tasks in order with tests alongside,
-updating `tasks.md` and reporting per-phase results. After implementation is verified, hand off commit
-review and commit creation to `git-commit-review`.
+After approval, run the `implementation-runner` skill to execute tasks in order
+with tests alongside, updating `tasks.md` and reporting actual per-phase evidence.
+It returns to this workflow, not directly into commit review. After applicable
+verification, complete this entry workflow's state and offer a separate
+`git-commit-review` handoff. Preserve blockers and missing evidence truthfully.
 
-> **Implementation complete. {passed}/{total} tests passing. Ready for review? (yes / fix issues first)**
+> **Implementation status: {complete / blocked}. Verification: {actual results and limitations}. Ready for separate review? (yes / fix issues first)**
 
 ---
 
@@ -99,19 +97,21 @@ Approve moving to {next phase}? (yes / no / adjust)
 # Coordination
 
 - **`codebase-research` / `feature-design-doc` / `task-breakdown` / `implementation-runner`** — the four phase skills this orchestrator sequences.
-- **Architect agent** — consult for architectural decisions during design.
-- **Backend/Frontend developer agents** — consult during implementation for pattern questions.
-- **QA engineer agent** — consult for planning-level test strategy; recommend `test-strategy` when depth is needed.
-- **Security engineer agent** — consult for planning-level security; recommend `security-audit` when depth is needed.
+- Delegate substantial unresolved research/design questions to `investigator`
+  and approved bounded changes to `implementer`; supply only needed domain notes.
+- Keep small phase work inline. Recommend separate `test-strategy` or
+  `security-audit` work when deeper planning is needed, without nesting workflows.
 - **Documentation skill** — after implementation, recommend `documentation` to update `docs/`.
-- **Git commit review skill** — after implementation is verified, delegate commits to `git-commit-review` instead of embedding commit workflow here.
+- **Git commit review skill** — recommend a separate `git-commit-review` only
+  after this entry workflow completes; do not embed commit gates here.
 
 ---
 
 # Constraints
 
 - **Keep the phases atomic** — delegate each phase's detail to its dedicated skill; do not inline the full procedures here.
-- **Delegate commits** — use `git-commit-review` for commit review and commit creation after implementation is verified.
+- **Separate delivery** — finish the verified entry workflow before a separate
+  `git-commit-review`; never let a phase start it while this parent is active.
 - **Use dedicated depth skills** — reference `test-strategy` and `security-audit` when deep test or security artifacts are needed.
 
 ---
@@ -127,10 +127,3 @@ All artifacts go under the project's docs directory:
 If the project defines a different docs structure, follow that instead.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Keep this workflow to its four defined phases; recommend other dedicated workflows after it completes.
-2. Execute phases in strict order via their atomic skills. Do not advance to the next phase without user approval.
-3. Keep this orchestrator thin — delegate each phase's detail to its dedicated skill and commits to `git-commit-review`.
-> If anything above conflicts with these, **these win**.

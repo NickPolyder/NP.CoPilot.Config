@@ -9,13 +9,12 @@ description: >
 
 # Purpose
 
-> **Intent (anchor):** Produce a comprehensive, implementation-ready feature plan document without changing code.
-> **Always:** complete requirements, UX, architecture, implementation, test, security, and deployment planning; use approval gates; assign responsible agents.
-> **Never:** implement the feature.
-
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs. Apply `instructions/workflow.instructions.md` for proportional work and verification.
 
 You are conducting a comprehensive feature planning process.
+The phase labels describe perspectives, not mandatory agents. Use `investigator`
+only for substantial unresolved analysis; proposed approved implementation uses
+`implementer` with a domain focus. Do not implement during this planning workflow.
 
 Your goals are to:
 
@@ -194,23 +193,23 @@ Output:
 ```markdown
 ## Implementation Plan
 
-### Backend ({backend-developer})
+### Backend (implementer, backend focus)
 - {Task 1: e.g., "Create OrderExportService with PDF/CSV generation"}
 - {Task 2: e.g., "Add GET /api/orders/export endpoint"}
 
-### Frontend ({frontend-developer} or {fullstack-developer})
+### Frontend (implementer, frontend focus)
 - {Task 1: e.g., "Create ExportButton component with format selection"}
 - {Task 2: e.g., "Add date range picker for export filtering"}
 
-### Database ({database-engineer})
+### Database (implementer, data focus)
 - {Task 1: e.g., "Add index on Orders(UserId, CreatedAt) for export queries"}
 - {"No database changes needed"}
 
-### Integration ({systems-engineer})
+### Integration (implementer, integration focus)
 - {Task 1: e.g., "Configure message for async PDF generation"}
 - {"No integration changes needed"}
 
-### Infrastructure ({devops-engineer})
+### Infrastructure (implementer, infrastructure focus)
 - {Task 1: e.g., "Add blob storage for generated export files"}
 - {"No infrastructure changes needed"}
 
@@ -246,7 +245,7 @@ Output:
 |---|---|---|
 | Unit | {areas} | {developer agent} |
 | Integration | {areas} | {developer agent} |
-| E2E | {journeys} | `qa-engineer` |
+| E2E | {journeys} | `implementer`, test-only scope |
 
 ### Key Edge Cases
 | Scenario | Expected Behavior | Priority |
@@ -363,9 +362,9 @@ After completing all phases, compile into a single feature plan:
 ## 9. Estimated Effort
 | Area | Agent | Effort |
 |---|---|---|
-| Backend | `backend-developer` | {S/M/L} |
-| Frontend | `frontend-developer` | {S/M/L} |
-| Database | `database-engineer` | {S/M/L} |
+| Backend | `implementer` | {S/M/L} |
+| Frontend | `implementer` | {S/M/L} |
+| Database | `implementer` | {S/M/L} |
 | ... | ... | ... |
 ```
 
@@ -405,17 +404,11 @@ Save the feature plan to `docs/features/{feature-name}-plan.md` or present it to
 
 - Complete all 7 phases — skipping a phase leads to blind spots.
 - Ask clarifying questions in Phase 1 before proceeding — don't assume.
-- Every implementation task must have a responsible agent assigned.
+- Every implementation task must have a responsible owner and domain focus;
+  a small task does not require a separate agent.
 - Security is never "not applicable" — at minimum, confirm existing patterns cover this feature.
 - If a significant architectural decision is needed, recommend the `architecture-decision-record` skill.
 - Present the consolidated plan to the user before considering planning complete.
 - Keep the plan actionable — developers should be able to start working from it.
 
 ---
-
-## Final Rules (Anchor)
-
-1. Do not implement the feature in this planning workflow.
-2. Complete all 7 phases — skipping a phase leads to blind spots.
-3. Present the consolidated plan to the user before considering planning complete.
-> If anything above conflicts with these, **these win**.

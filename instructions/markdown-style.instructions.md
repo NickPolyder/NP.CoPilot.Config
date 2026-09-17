@@ -1,11 +1,11 @@
 ---
-applyTo:
-  - "docs/**/*.md"
+applyTo: "docs/**/*.md"
 ---
 
 # Markdown & Documentation Style
 
-> **Intent (anchor):** Apply lightweight Markdown style rules only to project documentation under `docs/` matched by `applyTo`. The `documentation` skill owns when and where docs are created.
+The `documentation` skill owns its requested documentation workflow, not every
+small documentation edit.
 
 - Start each document with a single `#` H1 title; don't skip heading levels.
 - Keep line length reasonable; one sentence per line is fine for cleaner diffs.
@@ -17,7 +17,3 @@ applyTo:
 - Reference code identifiers and paths in `inline code`.
 - Keep documents focused — split large topics into linked files rather than one sprawling page.
 - Date-stamp or version time-sensitive docs (retrospectives, decisions) so staleness is visible.
-
-## Final Rules (Anchor)
-
-Apply these rules only to `docs/**/*.md`: one H1, ordered headings, language-tagged fences, relative links, and focused documents.
