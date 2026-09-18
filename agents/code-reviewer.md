@@ -3,7 +3,7 @@ name: code-reviewer
 description: >
   Independently reviews immutable inputs for concrete correctness, security,
   integrity and meaningful contract failures. Read/search only; returns findings.
-model: gpt-5.5
+model: gpt-6-astra
 tools:
   - read
   - search

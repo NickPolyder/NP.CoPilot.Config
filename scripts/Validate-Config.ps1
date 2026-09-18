@@ -31,7 +31,9 @@ $repositoryModels = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
         'claude-opus-4.8',
         'claude-sonnet-5',
-        'gpt-5.5'
+        'gpt-5.5',
+        'gpt-5.6-terra',
+        'gpt-6-astra'
     ),
     [System.StringComparer]::Ordinal
 )

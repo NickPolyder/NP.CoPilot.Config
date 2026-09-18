@@ -3,7 +3,7 @@ name: investigator
 description: >
   Read-only research, diagnosis, requirements and design analysis. Returns
   grounded findings or a bounded recommendation without implementing changes.
-model: claude-opus-4.8
+model: gpt-6-astra
 tools:
   - read
   - search

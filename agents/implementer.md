@@ -3,7 +3,7 @@ name: implementer
 description: >
   Makes approved code, test, documentation or configuration changes within a
   bounded assignment, preserving repository conventions and delivery controls.
-model: claude-sonnet-5
+model: gpt-5.6-terra
 ---
 
 # Implementer

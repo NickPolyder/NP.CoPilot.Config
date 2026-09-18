@@ -250,7 +250,7 @@ Test-Case -Name 'Validator_Should_Fail_When_AgentModelIsUnsupported' `
         }
     }
 
-foreach ($supportedModel in @('claude-opus-4.8', 'claude-sonnet-5', 'gpt-5.5')) {
+foreach ($supportedModel in @('claude-opus-4.8', 'claude-sonnet-5', 'gpt-5.5', 'gpt-5.6-terra', 'gpt-6-astra')) {
     Test-Case -Name "Validator_Should_Pass_When_AgentModelIs_$supportedModel" `
         -Arrange {
             $root = New-BaselineFixture
