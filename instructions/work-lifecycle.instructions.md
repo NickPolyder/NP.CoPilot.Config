@@ -1,15 +1,15 @@
 # Ownership and Evidence
 
 One implementer owns each atomic outcome. Split independently shippable work;
-keep tests with the behavior they cover. Preserve user changes and foreign
-artifacts. Record dependencies and blockers when they affect delivery or a
-handoff, not as ceremony for every small task.
+keep tests with behavior and preserve user changes and foreign artifacts.
+Record dependencies and blockers when needed for delivery or handoff.
 
-Validation, review and delivery evidence must identify the revision covered.
-Material changes invalidate affected evidence: repeat the relevant checks and
-review on the new candidate. Use the repository's actual delivery path, never an
-assumed direct push. Verify the originally observed outcome when practical;
-distinguish local evidence from unavailable integration or deployment evidence.
+Evidence identifies its revision, inputs, commands, environment and coverage.
+Reuse successful evidence only while those inputs and required freshness remain
+valid; a phase change alone is not a reason to rerun. Material changes invalidate
+affected checks/review. Commit approval still binds the full candidate identity,
+not merely unchanged files. Verify the observed outcome when practical;
+distinguish local verification, pending live validation and delivery.
 
 ## Repository capabilities
 
@@ -24,12 +24,11 @@ Use declared capabilities, not invented infrastructure:
 | Integration queue | Follow serialization and revalidation requirements. |
 | Deployment evidence | Await required results and verify the observed outcome. |
 
-Absent optional capabilities add no ceremony; actual host protections and
-required story gates still apply. An unavailable required capability is a
-blocker, not permission to claim delivery.
+Absent optional capabilities add no ceremony. Required host/story gates still
+apply; unavailable capabilities block their dependent operations, never justify
+claiming delivery.
 
-Preserve the existing capability owner and verified values. Project-config
-declarations are canonical when present; otherwise preserve the declaring root
-contract. The installer supports project-config or root Copilot owner markers.
-Other root declarations require an explicit preservation/reference or migration
-plan. Never generate competing default-disabled tables or silently reset values.
+Preserve the capability owner and verified values: project-config when present,
+otherwise the declaring root contract. The installer supports project-config or
+root Copilot owner markers; other declarations need an explicit preservation/
+reference or migration plan. Never generate competing defaults or reset values.

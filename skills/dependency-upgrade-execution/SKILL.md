@@ -44,7 +44,10 @@ Do **not** use this skill for:
 
 ## Approval Gate (required)
 
-Before editing manifests or lock files, confirm the user has explicitly chosen an upgrade option from the audit hand-off:
+Before editing manifests or lock files, establish the explicitly authorized
+upgrade scope. A direct request naming the package/version changes, or the
+recorded choice from an audit coordinator, satisfies this gate; do not ask twice.
+If scope is missing, ask which audit option the user wants:
 
 > **Audit complete. How would you like to proceed?**
 > 1. Upgrade all (incremental, safest-first)
@@ -72,7 +75,10 @@ Only enter this phase after explicit user approval to edit dependency manifests.
 1. **Update package references** — modify .csproj / package.json.
 2. **Restore** — `dotnet restore` / `npm install`.
 3. **Build** — verify compilation.
-4. **Test** — run full test suite.
+4. **Test** — run relevant existing tests and all repository-required checks.
+   Use a full suite when package impact warrants it (for example a shared
+   framework or major upgrade), not for every batch by default. Reuse evidence
+   only while its inputs, environment and required freshness remain valid.
 5. **Recheck dependency/license evidence** — record the resulting direct and
    transitive versions and their version-specific licenses against the approved
    policy constraints. Follow the evidence/output contract in
@@ -115,7 +121,9 @@ Do not define or create commits here. Return package/lock-file changes,
 revision-bound verification, license-policy evidence, and skipped follow-ups.
 When invoked by `dependency-audit`, return to that coordinator; a completed
 upgrade phase does not end its parent. Standalone, finish this skill's state
-before recommending a separate `git-commit-review` workflow with its own gates.
+and stop unless committing was requested. A checkpoint handoff requires explicit
+user-directed suspension of this owner and any coordinator, with pending checks
+and resume conditions; it never permits stacking upgrades on failed local checks.
 
 ---
 
@@ -126,7 +134,7 @@ before recommending a separate `git-commit-review` workflow with its own gates.
   unresolved exposure, license or migration questions that need separate research.
 - **Prepare separate commit handoff** — return verified changes, license-policy
   evidence, and follow-ups to the caller; `git-commit-review` starts only after
-  the owning workflow completes.
+  completion or explicit checkpoint suspension, with its own gates.
 
 ---
 

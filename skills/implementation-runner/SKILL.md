@@ -32,6 +32,7 @@ Use this skill whenever:
 
 Do **not** use this skill for:
 
+- Ordinary changes without an approved task breakdown; implement those directly.
 - Initial research — use `codebase-research`.
 - Writing a design document — use `feature-design-doc`.
 - Creating the task breakdown — use `task-breakdown`.
@@ -54,17 +55,21 @@ Execute tasks in order, producing working code with tests.
    - Revision-bound verification (commands, working directories, pass/fail/skip
      counts or explicit no-runner limits; never invented `0/0` passes).
    - Any deviations from the design.
-4. **Final verification** — run the repository-required final checks, including
-   the full existing test suite when applicable. Follow the shared no-runner
-   contract; missing required checks remain blockers.
+4. **Final verification** — use the smallest checks covering the changed
+   behavior and all repository-required checks. A full suite needs a policy or
+   impact reason, not merely a phase transition. Reuse still-valid successful
+   evidence under the shared evidence policy; report no-runner limits and
+   identify the operation blocked by missing or failed required checks.
 5. **Commit handoff** — return completion and evidence to the invoking workflow
    (such as `prd-workflow`); this phase finishing does not end its parent.
-   Standalone, finish this skill before recommending a separate
-   `git-commit-review`. Never start it inside an active parent.
+   A user-requested checkpoint needs explicit suspension of this owner and any
+   parent under the coordination policy. Preserve pending live checks and
+   incomplete tasks; never start `git-commit-review` inside an active parent.
 
-After implementation, ask:
-
-> **Implementation status: {complete / blocked}. Verification: {actual results and limitations}. Ready for separate review? (yes / fix issues first)**
+Standalone, return the requested implementation outcome and stop; do not prompt
+for another phase. When invoked by a coordinator, return evidence and
+complete/blocked/paused status to that owner. A separate commit handoff follows
+only when requested, with its own approval gates.
 
 ---
 
@@ -89,7 +94,7 @@ If the project defines a different docs or source structure, follow that instead
   questions; independent assessment uses `code-reviewer` with immutable inputs.
 - **Documentation skill** — after implementation is complete, recommend using the `documentation` skill to update `docs/` with the implemented feature's documentation.
 - **Git commit review skill** — return a verification handoff to the caller;
-  recommend `git-commit-review` only as a separate workflow after the owner completes.
+  `git-commit-review` is separate, after completion or explicit checkpoint suspension.
 
 ---
 
@@ -101,7 +106,7 @@ If the project defines a different docs or source structure, follow that instead
   and run the smallest relevant checks, escalating as required. Follow the
   shared no-runner rules; missing required verification is a blocker.
 - **Status must stay current** — mark tasks complete in `tasks.md` only after implementation and verification for that task are done.
-- **Separate delivery** — prepare a `git-commit-review` handoff after verification;
-  never invoke it inside this phase or an active parent.
+- **Separate delivery** — return verified or explicitly pending checkpoint
+  evidence; never invoke a terminal workflow inside this phase or an active parent.
 
 ---

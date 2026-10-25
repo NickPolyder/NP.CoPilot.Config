@@ -45,6 +45,8 @@ Do **not** use this skill for:
 
 **Approval gate:** stop until the user explicitly approves which tests to generate (`all critical`, `critical + high`, selected items, or `report only`).
 
+An explicit request to fill identified gaps, or a coordinator's recorded
+selection, satisfies this gate; do not repeat the same approval question.
 Do not generate or edit tests until the approved gap list is clear. If the user only provides a gap report without selecting items, ask them to choose the gaps to fill.
 
 ## Phase 2: Test Generation

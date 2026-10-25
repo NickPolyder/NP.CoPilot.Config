@@ -374,6 +374,20 @@ Cross-cutting policy has one canonical owner:
 | Delivery path, protected branches, commit approvals | `instructions/git-conventions.instructions.md` |
 | Session continuity | `instructions/session-awareness.instructions.md` |
 
+For daily work, a clear request authorizes its necessary edits and local checks;
+standalone skills stop at the requested outcome. Required project gates,
+approval-controlled wording and remote/destructive actions retain their own
+controls. Validation follows the affected behavior, and still-valid evidence
+can be reused rather than rerunning checks merely at phase boundaries.
+
+Commit review presents the exact candidate and message for one combined
+confirmation. An explicitly requested **checkpoint commit for live testing**
+retains snapshot integrity, local checks and review, while recording eligible
+post-commit validation as pending. It does not authorize a push/deployment or
+claim completion. An active owning workflow must be explicitly suspended before
+this separate handoff. Review findings never authorize unapproved wording edits.
+See [`git-commit-review`](skills/git-commit-review/SKILL.md) for the full contract.
+
 Repositories opt into issue tracking, isolated worktrees, protected branches,
 integration queues, and deployment evidence through one authoritative
 `Agent Delivery Capabilities` declaration. Preserve an existing project-config

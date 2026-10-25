@@ -1,9 +1,8 @@
 ---
 name: codebase-research
 description: >
-  Investigates an existing codebase to produce a grounded research summary —
-  structure, patterns, conventions, relevant code, and constraints — before
-  any design work. Read-only.
+  Produces a grounded codebase research summary when requested or needed by an
+  active planning workflow. Read-only; ordinary lookups stay direct.
 ---
 
 # Purpose
@@ -25,13 +24,14 @@ Your goals are to:
 
 Use this skill whenever:
 
-- A feature idea needs research before design decisions are made.
-- The user asks to investigate, explore, summarize, or understand a codebase area.
+- A feature idea needs substantial research before design decisions are made.
+- The user requests a codebase-area investigation or research summary.
 - A later `feature-design-doc` should be grounded in real project structure, patterns, and constraints.
 - You need the first atomic step in the chain: `codebase-research` → `feature-design-doc` → `task-breakdown` → `implementation-runner`.
 
 Do **not** use this skill for:
 
+- A simple lookup or explanation answerable with a few direct reads.
 - Design work — use `feature-design-doc`.
 - Task generation — use `task-breakdown`.
 - Implementation — use `implementation-runner`.
@@ -51,9 +51,9 @@ Before designing anything, understand what exists.
 
 **Output:** Brief research summary (what exists, what's relevant, what constrains us).
 
-Present the summary and ask:
-
-> **Research complete. Approve moving to design? (yes / no / adjust scope)**
+Standalone, return the requested summary and stop; do not prompt for another
+phase. When invoked by a coordinator, return the summary to that owner, which
+handles its next approval gate. Research completion does not authorize design.
 
 ---
 
@@ -67,7 +67,7 @@ Include:
 - **Existing patterns** — frameworks, architecture, naming conventions, and test approach.
 - **Relevant code** — modules, services, components, tests, and extension points related to the feature area.
 - **Constraints** — dependencies, tech debt, abstractions to reuse, project instructions, and known risks.
-- **Next step** — recommend `feature-design-doc` when the research is approved.
+- **Next step** — include only when requested or needed by the active owner.
 
 No files should be edited or created by this skill.
 
@@ -78,7 +78,7 @@ No files should be edited or created by this skill.
 - Use `investigator` only for a substantial independent research question. Supply
   its bounded scope and relevant architecture, framework, tests or security
   notes; the caller supplies any necessary command output.
-- **Next step** — after approval, recommend `feature-design-doc`.
+- A requested design handoff may use `feature-design-doc` after this skill ends.
 
 ---
 
@@ -86,7 +86,7 @@ No files should be edited or created by this skill.
 
 - **Read-only only** — do not create, edit, move, or delete files.
 - **No design decisions yet** — document what exists and what constrains the work; leave solution design to `feature-design-doc`.
-- **Keep the approval gate** — present the research summary and ask before moving to design.
+- **Stay bounded** — standalone research ends with its answer; a coordinator owns any transition approval.
 - **Respect configuration precedence** — resolve conflicting guidance using the canonical policy in `instructions/coordination.instructions.md`.
 
 ---

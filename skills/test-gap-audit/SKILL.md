@@ -147,10 +147,12 @@ Present findings:
 
 **Recommendation:** Write {N} critical tests and {M} high-priority tests before the next release.
 
-Generate tests now? (all critical / critical + high / let me pick / report only)
 ```
 
-Stop here. For approved test generation, recommend the atomic `test-gap-fill` skill and pass it the selected gaps.
+Standalone, return the requested gap report and stop; do not prompt for test
+generation. When invoked by a coordinator, return the report to that owner,
+which handles the approval gate. A requested generation handoff may use
+`test-gap-fill` with the selected gaps after this skill ends.
 
 ---
 
@@ -161,7 +163,7 @@ The final output includes:
 1. **Gap report** — markdown summary of all findings with risk ratings.
 2. **Test recommendations** — concrete suggested tests for each prioritized gap.
 3. **Quality issues** — weak assertions, smells, or brittle tests that reduce confidence.
-4. **Generation hand-off** — "Generate tests now?" options and a recommendation to use `test-gap-fill` for approved gaps.
+4. **Generation hand-off** — selected gaps only when requested or needed by the active coordinator.
 
 ---
 
@@ -176,7 +178,7 @@ The final output includes:
 # Constraints
 
 - **Read-only only** — never create, edit, or delete tests, production code, fixtures, or project files.
-- **End at the hand-off** — produce the report and recommend `test-gap-fill` for approved generation.
+- **Stay bounded** — produce the report; do not automatically start or prompt for generation.
 - **Don't audit trivial code as a priority** — getters, DTOs, and auto-generated code rarely justify focused gap analysis.
 - **Be honest about coverage limits** — static analysis can't find all gaps. Note areas where runtime profiling or mutation testing would give better insight.
 

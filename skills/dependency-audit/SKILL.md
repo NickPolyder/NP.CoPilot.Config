@@ -51,7 +51,8 @@ policy, including current packages, transitives, conflicts, unknowns, and
 not-assessed scopes. Its prioritized plan does not imply that an upgrade resolves
 every license finding. It is **read-only** and never edits manifests or lock files.
 
-At the end it asks how to proceed:
+This coordinator owns the transition question; the audit returns its report and
+the execution child reuses the approved scope without asking again:
 
 > **Audit complete. How would you like to proceed?**
 > 1. Upgrade all (incremental, safest-first)
@@ -68,9 +69,10 @@ changes, not automatic acceptance of unresolved license obligations or policy co
 Only after explicit approval, run the `dependency-upgrade-execution` skill with the approved
 scope and license-policy constraints. It upgrades in risk-ordered batches
 (patch → minor → major), restores/builds/tests after each batch, and returns its
-evidence to this coordinator. Complete this coordinator's state before offering
-a separate `git-commit-review` handoff; neither phase completion nor upgrade
-approval starts a terminal workflow inside this coordinator.
+evidence to this coordinator. Complete this coordinator's state before a
+requested `git-commit-review` handoff, except explicit user-directed checkpoint
+suspension under the coordination policy. Neither phase completion nor upgrade
+approval starts a terminal workflow inside an active coordinator.
 
 ---
 
@@ -82,7 +84,8 @@ approval starts a terminal workflow inside this coordinator.
   license or migration questions. The approved execution phase may use
   `implementer` for bounded package, lockfile, container or pipeline changes.
 - **Recommend commit handoff** to `git-commit-review` only after this coordinator
-  is complete and upgrades are verified; preserve its independent approval gates.
+  completes or is explicitly suspended for a checkpoint; preserve pending
+  validation and independent commit approval gates.
 
 ---
 
@@ -93,6 +96,7 @@ approval starts a terminal workflow inside this coordinator.
 - **Keep the steps atomic** — do not blend audit and upgrade logic here; delegate to the two skills.
 - **Don't mix dependency upgrades with feature work** — keep dependency changes separate.
 - **Separate delivery** — return verification and unresolved license decisions;
-  after this coordinator completes, recommend `git-commit-review`, never nest it.
+  a requested commit handoff follows completion or explicit checkpoint
+  suspension, never nesting.
 
 ---

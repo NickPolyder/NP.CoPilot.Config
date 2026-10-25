@@ -171,20 +171,12 @@ When responding to a specific CVE or security advisory:
 
 ## Audit Completion and Handoff
 
-After the version, vulnerability, and license sections are complete (including
-explicit evidence gaps), ask:
-
-> **Audit complete. How would you like to proceed?**
-> 1. Upgrade all (incremental, safest-first)
-> 2. Critical + High only
-> 3. Let me pick which ones
-> 4. Just the report — I'll handle upgrades manually
-
-If the user chooses an upgrade option, return the audit table, selected scope,
-risk categories, fix versions, migration notes, license evidence/policy
-constraints, and unresolved decisions. In a `dependency-audit` phase, return to
-that coordinator for its approval gate. Standalone, finish this report phase and
-recommend `dependency-upgrade-execution` as a separate approved action.
+Standalone, return the requested report and stop; do not prompt for upgrades.
+Include the audit table, recommended scope, risk categories, fix versions,
+migration notes, license evidence/policy constraints and unresolved decisions.
+In a `dependency-audit` phase, return those inputs to the coordinator for its
+approval gate. A requested upgrade handoff may use
+`dependency-upgrade-execution` as a separate authorized action.
 
 Do not edit dependency manifests or lock files in this skill.
 

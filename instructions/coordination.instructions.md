@@ -2,22 +2,19 @@
 
 ## Authority
 
-Project contracts own repository mission, tooling, ownership, required evidence,
-approvals and delivery controls. Global guidance supplies defaults; local
-preferences may refine style but cannot waive those controls. Respect current
-user restrictions and higher-priority runtime instructions. Resolve material
-conflicts explicitly.
+Project contracts own mission, tooling, ownership, evidence, approvals and
+delivery controls. Global guidance supplies defaults; local preferences cannot
+waive project controls. Respect user restrictions and higher-priority runtime
+instructions; resolve material conflicts explicitly.
 
-This is a policy for loaded guidance, not a guarantee of discovery precedence.
-Do not infer an active definition, model, or plugin from a filename or symlink.
-Preserve assigned model IDs and approved overrides unless the user requests a
-change; choose task-appropriate models only within that authorization.
+Loaded guidance does not guarantee discovery precedence. Filenames/symlinks do
+not prove active definitions, models or plugins. Preserve assigned model IDs and
+approved overrides unless the user requests change.
 
 ## Work assignment
 
-Do small or continuous work directly. Delegate only a substantial independent
-assignment that benefits from separate context, or a required review. Domain
-keywords alone are not reasons to spawn agents.
+Do small/continuous work directly. Delegate substantial independent assignments
+benefiting from separate context, or required reviews, not domain keywords.
 
 | Role | Assignment |
 |---|---|
@@ -25,37 +22,41 @@ keywords alone are not reasons to spawn agents.
 | `implementer` | Approved code, tests, documentation or configuration changes. |
 | `code-reviewer` | Independent read/search-only assessment of immutable inputs. |
 
-Domain expertise is an assignment focus, not another agent chain. The caller
-selects only relevant sections of `skills/domain-guidance.md` from the verified
-configuration source and supplies them with the task. Keep separate ownership
-for independently shippable work. A test-only assignment does not authorize
-production edits. A required domain review remains required even though its
-reviewer uses the same role card as the core reviewer.
+The caller supplies relevant `skills/domain-guidance.md` sections from the
+verified source. Domain focus is not another agent chain. Preserve separate
+ownership for independently shippable work and required domain reviews;
+test-only assignments never authorize production edits.
 
-Agents are terminal: use tools, never spawn agents or invoke skills. Return
-additional-domain needs to the caller. Do not bounce the same unresolved task
-between agents or duplicate a delegated investigation.
+Agents are terminal: tools only, never skills or agents. Return additional needs
+to the caller; do not bounce unresolved tasks or duplicate delegated research.
 
 ## Workflow ownership
 
-Only one entry workflow or coordinator owns the work at a time:
+Only one entry, coordinator or terminal workflow is active at a time:
 
 - Entry workflows: `prd-workflow`, `feature-planning`.
 - Thin coordinators: `dependency-audit`, `test-gap-analysis`.
 - Terminal review workflows: `git-commit-review`, `full-code-review`.
 - Other skills are bounded atomic tasks or documented phases.
 
-An owner may sequence only its documented phases. Atomic skills never invoke
-entry workflows or coordinators; composition must stay acyclic. A separate
-terminal workflow starts only after the owning workflow finishes its state,
-including its parent. Never mark blocked work complete to force a handoff.
-`full-code-review` remains explicit-user-only.
+Owners sequence only documented phases; atomic skills never invoke entry
+workflows/coordinators. Standalone skills stop at the requested outcome, without
+automatic next-phase prompts. Requested coordinators retain their gates; the
+owner asks once, not again in each child.
+
+A separate terminal workflow requires the owner and any parent to finish, or
+explicit user-directed suspension for a checkpoint commit. Suspension records
+pending work and resume conditions, releases active ownership, and never marks
+blocked work complete. Resume after the terminal workflow ends, refreshing
+affected evidence and approvals. Composition stays acyclic; `full-code-review`
+remains explicit-user-only.
+An explicit checkpoint request supplies suspension direction; do not ask twice.
 
 ## Handoffs
 
-Provide the outcome, bounded scope, readable artifacts, covered revision,
-existing evidence, locked decisions and stopping condition. Review intake must
-identify immutable base/candidate context, not merely a moving branch name.
+Provide outcome, scope, readable artifacts, revision, evidence, locked decisions
+and stopping condition. Review intake requires immutable base/candidate context,
+not a moving branch name.
 
-Return the result, changed artifacts, actual evidence or missing inputs, and
-complete/blocked/advisory status. Keep additional recommendations separate.
+Return changed artifacts, evidence/gaps and complete/blocked/paused/advisory
+status. Keep recommendations separate.

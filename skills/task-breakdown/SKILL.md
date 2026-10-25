@@ -25,12 +25,13 @@ Your goals are to:
 Use this skill whenever:
 
 - A feature design has been approved and needs implementation tasks.
-- The user asks for a `tasks.md`, task list, work breakdown, estimates, or dependency ordering.
-- Implementation should be planned before code changes begin.
+- The user asks for a persisted task breakdown with estimates and dependency ordering.
+- A substantial design needs an implementation plan before code changes begin.
 - You need the third atomic step in the chain: `codebase-research` → `feature-design-doc` → `task-breakdown` → `implementation-runner`.
 
 Do **not** use this skill for:
 
+- A short in-session checklist for ordinary work; keep that direct.
 - Codebase research — use `codebase-research`.
 - Writing or revising the feature design — use `feature-design-doc`.
 - Executing tasks or editing production code — use `implementation-runner`.
@@ -50,9 +51,9 @@ Break the design into implementable tasks.
    - **Ordering** — tasks within a phase are ordered by dependency. Independent tasks are marked as parallelizable.
    - **Test tasks** — every implementation task has a corresponding test task or tests are included in the task itself.
 
-Present the task breakdown and ask:
-
-> **Tasks generated ({N} tasks across {M} phases). Approve moving to implementation? (yes / no / adjust)**
+Standalone, return the requested task breakdown and stop; do not prompt for
+another phase. When invoked by a coordinator, return the tasks to that owner,
+which handles its next approval gate. Task generation does not authorize implementation.
 
 ---
 
@@ -79,7 +80,7 @@ The `tasks.md` must include:
 - Use `investigator` only when substantial uncertainty about boundaries,
   sequencing, tests or security needs independent research. Proposed future
   changes belong to bounded `implementer` assignments after approval.
-- **Next step** — after approval, recommend `implementation-runner`.
+- A requested execution handoff may use `implementation-runner` after this skill ends.
 
 ---
 
@@ -87,7 +88,7 @@ The `tasks.md` must include:
 
 - **Tasks only** — do not implement code, create migrations, or change production files as part of task generation.
 - **Design is the source of truth** — do not silently change scope; put mismatches or unresolved issues in the task breakdown for approval.
-- **Keep the approval gate** — present the generated tasks and ask before moving to implementation.
+- **Stay bounded** — standalone task generation ends with its deliverable; a coordinator owns any transition approval.
 - **Tests travel with work** — every implementation task must include or depend on test work.
 
 ---

@@ -1,25 +1,29 @@
 # Execution and Stopping
 
-For ordinary work, understand the relevant code, follow existing patterns, make
-the smallest complete change, self-review, and verify the requested outcome.
-No tier label, planning document, specialist chain, or retrospective is required
-merely because a task touches several files.
+For ordinary work, understand the code, follow existing patterns, make the
+smallest complete change, self-review and verify. A clear request authorizes
+necessary edits and local checks within its scope; do not ask again per phase.
+Ask for material ambiguity, scope expansion or consequential actions. Required
+project gates still apply.
 
-Expand the process only for a concrete reason: unresolved requirements,
-independent ownership, architectural uncertainty, irreversible effects, or a
-required project/skill gate. Keep a useful plan in the session unless the user,
-project, or active workflow requires a durable artifact. Clarify material
-ambiguity; decide routine implementation details within the agreed scope.
+Review findings are not editing authority. For approval-controlled prose, present
+exact replacement wording and obtain approval before applying or staging it.
+Otherwise, use existing scoped edit authorization. Optional polish is not a
+completion gate.
 
-Discover verification commands and working directories from the target
-repository. Run the smallest existing checks covering the change. Documentation
-needs only applicable documentation/configuration checks, not unrelated builds.
-If no applicable runner exists, report that and the coverage limit. Missing or
-failed required evidence blocks completion; it is not a passing or inapplicable
-result. Do not add tooling solely to satisfy generic process wording.
+Expand process for concrete uncertainty, independent ownership, risk or required
+gates, not file count. Keep plans in-session unless durable artifacts are
+requested or required. Do not add tools, agents or reports merely for ceremony.
 
-Fix regressions caused by the change. Once the agreed outcome and required gates
-are satisfied, stop. Report worthwhile unrelated discoveries separately rather
-than opening another workstream. Repeat review or investigation only for changed
-evidence, an unresolved finding, or an explicit requirement. A user stop request
-ends further dispatch and implementation; preserve a truthful checkpoint.
+Use the target repository's commands and working directories. Run the smallest
+checks covering the change; documentation needs only applicable documentation/
+configuration checks. Run a full suite only when required or affected behavior
+warrants it. Report no-runner limits. Missing or failed required evidence blocks
+the operation requiring it, not independent authorized work. Distinguish failed,
+pending and inapplicable checks; name the blocked action and unblock condition.
+Never present absent evidence as passed.
+
+Fix caused regressions; stop when the requested outcome and its gates are met.
+Keep unrelated discoveries separate. Repeat investigation/review only for changed
+evidence, unresolved findings or explicit requirements. A user stop ends dispatch
+and implementation; preserve a truthful checkpoint.

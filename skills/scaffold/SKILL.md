@@ -69,7 +69,10 @@ Examples are conditional on repository evidence, not language-triggered defaults
 
 ## Phase 2: Confirm Scope
 
-Present what will be scaffolded and ask for approval:
+Reuse a clear user request as scope approval; do not ask again merely to create
+the requested component. Ask only for unresolved scope, new architectural
+choices, existing-file conflicts or a repository-required gate. When needed,
+present this bounded preview:
 
 ```
 ### Scaffold: {Component Name}

@@ -20,12 +20,42 @@ Never mark a blocked workflow complete merely to start another workflow.
 ## When to use this skill
 
 Use this skill when a logical change is ready to commit.
+Do not start it merely because implementation finished; commit creation must be
+within the user's requested scope.
 
 Do not use it for:
 
 - A user-requested full review, release candidate, major architectural change, security audit, or schema redesign; recommend `full-code-review`.
 - A trivial change when the user explicitly chooses to skip review.
 - An empty index.
+
+## Commit purpose and pending validation
+
+Use the normal reviewed-commit path by default. An explicitly requested
+**checkpoint commit** uses the same snapshot, local-check, review and approval
+gates; it only permits identified post-commit/live checks to remain pending.
+Do not ask users to select a mode for ordinary commits.
+
+Before using this exception:
+
+- Establish why each deferred check needs a committed revision or live
+  environment, and confirm repository policy permits deferral at the commit
+  boundary. Required pre-commit checks cannot be deferred.
+- Record each check as **Pending - post-commit/live validation**, with its
+  command/procedure, reason, target environment, responsible owner, trigger and
+  the merge/release/acceptance gate it must satisfy. Bind the follow-up to the
+  resulting commit SHA; changed content needs refreshed evidence.
+- Never defer failed checks on the current candidate or missing required local
+  commands/inputs. Failures from earlier revisions remain recorded; a changed
+  fix may need a pending live retest. Do not claim resolution until it passes.
+- If another workflow owns the work, return to its owner. Only explicit
+  user-directed suspension of the owner and any parent permits this separate
+  checkpoint workflow; preserve unfinished tasks and resume conditions.
+  The checkpoint request supplies the suspension direction; do not ask twice.
+
+Checkpoint approval never authorizes push or deployment. Merge, release and
+completion still require their own evidence and repository controls. Do not
+infer that a test branch is safe: a push may itself trigger deployment.
 
 ## 1. Split atomic candidates and stage one
 
@@ -36,6 +66,10 @@ Inspect the worktree and divide it into logical, atomic commit candidates before
 - Do not compensate for a large mixed diff by adding reviewers.
 - Stage exactly one candidate with partial staging where necessary.
 - Confirm the index contains no unrelated files or hunks.
+
+Preserve unrelated staged and unstaged work; do not reset or restage it to
+simplify the candidate. Ask before changing an index arrangement that cannot
+safely isolate the authorized hunks.
 
 If a candidate is not self-contained, split it before continuing.
 Do not review unstaged changes or a mixture of candidates.
@@ -71,10 +105,16 @@ Unstaged changes must not affect validation or reviewer conclusions.
 
 ## 3. Direct validation preflight
 
-Before dispatching a reviewer, run the repository's applicable import, restore, build, type-check, lint, and targeted-test commands against the index-only snapshot.
+Before dispatching a reviewer, establish the applicable local validation
+evidence against the index-only snapshot. Run missing or invalidated checks;
+reuse evidence only under the rules below. An approved checkpoint's explicitly
+pending live checks are coverage limits, not failed local preflight.
 
 - Derive commands from repository documentation and manifests; do not invent a new toolchain.
 - Prefer the narrowest checks that exercise the staged behavior.
+- Documentation-only candidates need applicable documentation/configuration
+  checks, not unrelated builds. Review consequential policy, command and
+  contract changes even when their files are Markdown.
 - Run imports or compilation before tests so direct failures are surfaced first.
 - Run the commands from the snapshot or point them at snapshot paths, never at the working tree.
 - Discover repository-declared validation capabilities from the captured documentation and manifests. The presence of Copilot configuration alone does **not** imply that the target has `scripts\Validate-Config.ps1`. Do not require another project to copy this repository's validator.
@@ -85,6 +125,20 @@ Before dispatching a reviewer, run the repository's applicable import, restore, 
 If the snapshot cannot be materialized, imports/build/type checks fail, or targeted tests fail, stop.
 Report the concrete failure and fix it before launching any reviewer.
 One proven clean-index failure is more valuable than speculative reviewer feedback.
+
+### Reusing validation evidence
+
+Reuse only successful snapshot-backed evidence for the same full candidate
+tuple, tracked input manifests, command/arguments, working-directory semantics,
+toolchain, dependencies, relevant environment and required freshness. Keep the
+original result and integrity gates readable; record **Reused - passed**, its
+source and coverage, rather than claiming another execution. If any dependency
+or freshness cannot be established, rerun the affected check.
+
+Worktree-only results, tree equality without the full tuple, and restored bytes
+after invalidation are not reusable evidence. Reuse does not skip current
+snapshot/candidate integrity gates, satisfy a requirement for a fresh run, or
+prove missing build outputs exist in a new snapshot.
 
 ## 4. Select reviewers and escalate risk
 
@@ -141,6 +195,10 @@ Each reviewer must:
 - Treat Medium and Low findings as non-blocking; record them only when they are concrete and valuable.
 - Avoid style, formatting, and speculative concerns.
 
+Required or user-requested review remains required for documentation. Assess
+accuracy and meaningful contracts, not preferred phrasing; stylistic suggestions
+must not become blockers or mandatory fix cycles.
+
 Do not add replacement reviewers to extend the timebox.
 If review coverage is incomplete when the timebox expires, report that limitation and let the user decide whether to continue this workflow. A requested `full-code-review` is a separate handoff only after this owning workflow has genuinely ended or been explicitly aborted; a blocked workflow is not complete.
 Before accepting reviewer output, recheck both snapshots' integrity (base with `-Exact`) and the current candidate tuple; changed inputs require a newly identified intake.
@@ -156,7 +214,7 @@ For each finding, identify its status:
 | Status | Meaning |
 |---|---|
 | **Commit blocker** | Unresolved Critical or High finding; cannot commit. |
-| **Accepted risk** | User explicitly accepts a concrete Critical or High finding and directs the commit to continue. |
+| **Accepted risk** | User explicitly accepts a concrete Critical or High finding and directs the commit to continue where repository policy permits; this never waives required checks or delivery controls. |
 | **Delayed follow-up** | Concrete Medium or Low finding recorded for later work. |
 | **Explicitly dropped** | Concrete finding rejected with its rationale. |
 
@@ -164,6 +222,13 @@ Present blockers first, then accepted risks, delayed follow-ups, and dropped fin
 Never silently discard a concrete finding.
 
 ## 7. Fix and scope re-review
+
+Use existing scoped edit authorization for necessary fixes; a finding alone does
+not expand it. For approval-controlled prose, present the exact proposed
+replacement and obtain approval before applying or staging the wording change.
+If the user declines, leave the text unchanged and disposition the finding:
+optional polish may be dropped; a genuine blocker remains unless explicitly
+accepted where policy permits. Commit approval is not advance wording approval.
 
 After a fix, stage only the approved fix hunks and confirm the candidate still contains no unrelated changes.
 Record the new tree ID through `New-GitReviewCandidate`, rematerialize the snapshot using section 2, and bind affected validation and re-review to that new candidate and its full base/parent/ref tuple.
@@ -185,25 +250,31 @@ The cycle count never resets during a candidate's workflow.
 
 ## 8. Final validation gate
 
-Once no unaccepted Critical or High finding remains and a suite applies, run the repository's full existing test suite once against the final staged snapshot.
-Do not run the full suite after every review or minor fix.
+Once no unaccepted Critical or High finding remains, establish the checks
+required for this commit boundary against the final staged snapshot.
+Run a full suite only when repository policy requires it or affected behavior
+warrants that scope. Otherwise use focused checks. Reuse still-valid evidence
+under section 3 rather than repeating a suite merely because the phase changed.
+Record the selected scope and coverage limits; do not run unrelated builds for
+documentation or repeat full suites after every review or minor fix.
 
 If no applicable suite exists, record **Not run - no applicable suite** and the coverage limitation, never a 0/0 pass.
-Missing declared required checks remain blockers; this not-run case does not waive required validation.
+Missing declared pre-commit checks remain blockers; this not-run case does not waive required validation.
+Only the explicitly approved checkpoint exception permits post-commit/live
+validation to remain pending; it is never a passing or inapplicable result.
 
-Use `Invoke-GitSnapshotCheck` for each final-suite command. After final validation and before final acceptance, require `Assert-GitSnapshotIntegrity -Snapshot $snapshot` and `Assert-GitCandidateCurrent -Candidate $candidate` to pass again. Ordinary untracked outputs may remain, but tracked paths/types/modes/bytes must still match the captured tree.
+Use `Invoke-GitSnapshotCheck` for each newly executed final-check command. After final validation and before final acceptance, require `Assert-GitSnapshotIntegrity -Snapshot $snapshot` and `Assert-GitCandidateCurrent -Candidate $candidate` to pass again. Ordinary untracked outputs may remain, but tracked paths/types/modes/bytes must still match the captured tree.
 Also require `Assert-GitSnapshotIntegrity -Snapshot $baseSnapshot -Exact` so accepted review evidence still refers to the same immutable base context.
-If the full suite or an integrity gate fails, invalidate the affected evidence and return to the relevant fix and targeted re-review scope. Restoring inputs is not a substitute for rerunning checks.
+If a final check or an integrity gate fails, invalidate the affected evidence and return to the relevant fix and targeted re-review scope. Restoring inputs is not a substitute for rerunning checks.
 
-## 9. User verification and commit
+## 9. Combined user verification and commit approval
 
 Before committing:
 
-1. Present the staged candidate summary, validation results, final blocker state, accepted risks, and delayed follow-ups, plus the exact approval tuple: repository/index source, base identity, ordered parent list, unborn/detached/symbolic ref state, destination ref, and candidate tree.
-2. Require the user to manually verify the changes.
-3. After confirmation, use `ask_user` to obtain approval for the proposed conventional commit message **and that exact tuple**. Evidence and approvals do not transfer to a different base, parent list, ref state, destination, or tree.
-4. Immediately before committing, require `Assert-GitCandidateCurrent -Candidate $candidate` and `Assert-GitSnapshotIntegrity -Snapshot $snapshot` to pass. A same-tree HEAD advance, branch switch, unborn-to-born transition, detached/symbolic transition, or changed merge parent list invalidates approval. Stop and refresh the snapshot, affected checks, review, and approvals; tree equality alone is insufficient.
-5. Create the commit only after approval, check its native exit status, and obtain its exact object ID with checked Git discovery. Verify the resulting commit tree, ordered parent list, destination ref, and ref state using `Assert-GitCandidateCommit -Candidate $candidate -CommitId <new-commit-id>`. An unborn candidate must produce a parentless commit at its approved branch; a detached candidate must remain detached. If a hook or concurrent operation changed the result, report the mismatch and stop delivery rather than claiming the commit was reviewed or amending it automatically. These pre/post gates detect mismatches, not an atomic lock against concurrent Git writers.
+1. Present the staged diff/summary and proposed message together with validation results (including reused and pending evidence), final blocker state, accepted risks and follow-ups, plus the exact approval tuple: repository/index source, base identity, ordered parent list, unborn/detached/symbolic ref state, destination ref, and candidate tree. For a checkpoint, identify its purpose and pending acceptance gates.
+2. Use one confirmation for user verification and commit permission: use `ask_user` to obtain approval for the proposed conventional commit message **and that exact tuple**. Do not ask a separate preliminary verification question. Existing explicit approval of this presented candidate/message satisfies the gate; a generic earlier request to commit, silence or unavailable approval tooling does not. Evidence and approvals do not transfer to a different base, parent list, ref state, destination, or tree.
+3. Immediately before committing, require `Assert-GitCandidateCurrent -Candidate $candidate` and `Assert-GitSnapshotIntegrity -Snapshot $snapshot` to pass. A same-tree HEAD advance, branch switch, unborn-to-born transition, detached/symbolic transition, or changed merge parent list invalidates approval. Stop and refresh the snapshot, affected checks, review, and approvals; tree equality alone is insufficient.
+4. Create the commit only after approval, check its native exit status, and obtain its exact object ID with checked Git discovery. Verify the resulting commit tree, ordered parent list, destination ref, and ref state using `Assert-GitCandidateCommit -Candidate $candidate -CommitId <new-commit-id>`. An unborn candidate must produce a parentless commit at its approved branch; a detached candidate must remain detached. If a hook or concurrent operation changed the result, report the mismatch and stop delivery rather than claiming the commit was reviewed or amending it automatically. These pre/post gates detect mismatches, not an atomic lock against concurrent Git writers.
 
 The commit message must use imperative mood, keep its subject to 72 characters or fewer, and include the required trailers:
 
@@ -215,9 +286,15 @@ Copilot-Session: <current session ID>
 Never amend a commit without explicit user approval.
 Never commit secrets.
 
-## 10. Persist one final report
+## 10. Record one compact outcome
 
-After consolidating reviewer findings and recording their dispositions, write one concise final report for the candidate at:
+This workflow owns consolidation and persistence, not the reviewers. Keep one
+durable outcome record in the configured session provider or an existing
+repository-required review record, not duplicate timelines. Routine clean
+commits need a compact record, not a new planning document or detailed report.
+
+Write a Markdown report only when requested, repository-required, or no durable
+provider is available. Unless the repository specifies another location, use:
 
 ```text
 .copilot/reports/reviews/{yyyy}/{MM}/commit-review-{dd}-{hhmmss}.md
@@ -225,17 +302,21 @@ After consolidating reviewer findings and recording their dispositions, write on
 
 Include:
 
-- Candidate summary, complete approval tuple (including base, ordered parents, ref state, destination, and tree), and resulting commit SHA, or `ABORTED`.
-- Snapshot preflight, tracked-integrity gates, final-suite outcomes (including explicit not-run/coverage limitations), and post-commit tree/parent/ref verification.
-- Intake identities, readable base/candidate context and manifests, locked requirements, caller validation evidence, and any missing-evidence limitation.
+- Candidate summary, complete approval tuple (including base, ordered parents, ref state, destination, and tree), resulting commit SHA or `ABORTED`/`PAUSED`, and normal/checkpoint purpose.
+- Snapshot preflight, tracked-integrity gates, executed/reused final-check outcomes (including explicit not-run/coverage limitations), and post-commit tree/parent/ref verification.
+- Intake identities and manifests, locked requirements, evidence references and missing-evidence limitations. Temporary snapshots are cleaned up; do not present their deleted paths as durable readable evidence.
 - Reviewers used, selection rationale, and cycle count: exactly one core, zero or one ordinary relevant specialist, required signal-driven expertise, and a second specialist only for directly interacting distinct high-risk domains.
 - Deduplicated findings grouped by the four decision statuses.
 - User approvals and the final outcome.
 - Any timebox limitation.
+- For checkpoints, accepted risks, blockers or unfinished handoffs: concrete
+  pending checks, owner, trigger, acceptance gate and resume conditions.
 
 Do not create a large intermediate report.
-Persist an intermediate blocker record only when a Critical or High finding exists and the workflow is paused or handed off.
-If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
+Update the same outcome when paused or handed off; append-only providers may
+store a linked update rather than duplicating the timeline. A failed save must
+be reported as unavailable persistence, not success or a reason to repeat a commit.
+If using the fallback path and `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 
 ## Related skills and agents
 

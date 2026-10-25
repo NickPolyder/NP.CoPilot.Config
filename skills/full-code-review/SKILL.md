@@ -128,6 +128,8 @@ Medium and Low findings are visible and actionable, but they do not block unless
 If the user requests fixes, confine re-review to modified files, previous finding locations, and directly affected contracts unless the user requests another whole-target pass.
 Run affected direct checks after each fix.
 Only a separately authorized implementation step may change reviewed code; reviewers remain read-only, and report publication is the review workflow's only repository write.
+Approval-controlled prose still requires exact replacement wording to be approved
+before applying or staging it; requesting review is not permission to rewrite.
 Capture a new candidate and refresh the input bundle after fixes; repeat affected
 validation/review and retain earlier evidence only for the identity it covers.
 
@@ -160,7 +162,7 @@ If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 
 | Skill | Invocation and scope | Review depth | Commit behavior |
 |---|---|---|---|
-| `git-commit-review` | Default pre-commit workflow for one staged atomic candidate | Exactly one core reviewer; zero or one relevant specialist ordinarily, required domain expertise on escalation signals, and a second specialist only for directly interacting high-risk domains; Critical and High focus | Requires user verification and approved message, then creates the commit |
+| `git-commit-review` | Default pre-commit workflow for one staged atomic candidate, including explicitly authorized checkpoints | Exactly one core reviewer; zero or one relevant specialist ordinarily, required domain expertise on escalation signals, and a second specialist only for directly interacting high-risk domains; Critical and High focus | One explicit approval covers the presented candidate and message; pending live validation is not completion |
 | `full-code-review` | Explicit user request for a release candidate, major redesign, security audit, schema redesign, or exhaustive analysis | Three core hats, up to three specialists, all severities, whole-target analysis | Does not create a commit |
 
 `git-commit-review` never invokes this skill automatically.

@@ -43,7 +43,8 @@ Do **not** use this skill for:
 
 Produce a design document that a developer (including a junior) could implement from.
 
-1. **Ask 2-3 clarifying questions** — scope, constraints, preferences. Keep questions informed by the research.
+1. **Resolve material gaps** — ask only questions needed about scope, constraints
+   or preferences. Reuse supplied research and decisions; no question quota.
 2. **Generate `docs/features/{feature-name}/design.md`** with these sections:
 
    - **Overview** — what and why, in 2-3 sentences.
@@ -57,9 +58,9 @@ Produce a design document that a developer (including a junior) could implement 
    - **Security Considerations** — planning summary of authentication, authorization, and input validation; recommend `security-audit` for STRIDE/OWASP depth.
    - **Open Questions** — anything unresolved.
 
-Present the design and ask:
-
-> **Design complete. Approve moving to task generation? (yes / no / revise)**
+Standalone, return the requested design and stop; do not prompt for another
+phase. When invoked by a coordinator, return the design to that owner, which
+handles its next approval gate. Design completion does not authorize task generation.
 
 ---
 
@@ -92,7 +93,7 @@ The design must include:
   with only the relevant domain notes. Keep ordinary synthesis inline.
 - Recommend separate `test-strategy` or `security-audit` work when the required
   depth exceeds this phase; do not nest another workflow.
-- **Next step** — after approval, recommend `task-breakdown`.
+- A requested task-generation handoff may use `task-breakdown` after this skill ends.
 
 ---
 
@@ -100,7 +101,7 @@ The design must include:
 
 - **Design only** — do not generate `tasks.md`, implement code, or define commit strategy.
 - **Research-grounded** — if research is missing or insufficient, ask for it or recommend `codebase-research` before writing the design.
-- **Keep the approval gate** — present the design and ask before moving to task generation.
+- **Stay bounded** — standalone design ends with its deliverable; a coordinator owns any transition approval.
 - **Use dedicated depth skills** — reference `test-strategy` and `security-audit` when deep test or security artifacts are needed.
 
 ---

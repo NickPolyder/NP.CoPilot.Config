@@ -87,7 +87,9 @@ Break the refactoring into **atomic, independently verifiable steps**:
    verification alternative; no failing required check may be waived silently.
 3. Order steps to minimize risk — prefer steps that reduce scope (extract → move → delete) over steps that expand scope.
 
-Present the plan:
+Reuse a clear, bounded refactoring request as approval for its routine steps.
+For material restructuring decisions or scope not already authorized, present
+the plan and obtain approval:
 
 ```
 ### Refactoring Plan
@@ -127,16 +129,16 @@ After all steps complete:
 **Accepted residual risk:** {specific gap and approval, or none}
 **Files modified:** {list}
 
-Ready for a separate commit review? (yes / review changes first)
 ```
 
 ## Phase 4: Commit Review Recommendation
 
-When this refactoring workflow has completed its state, recommend a separate
-`git-commit-review` workflow. Provide executed steps, modified files, revision-bound
-verification, coverage limits, accepted residual risks, and follow-ups. Do not
-equate passing a weak suite with proof of unchanged behavior or embed commit
-creation/approval inside this skill.
+Standalone, return the refactoring outcome and stop. If committing was requested,
+hand off separately after completing this workflow, or after explicit
+user-directed checkpoint suspension under the coordination policy. Provide
+executed steps, changed files, revision-bound evidence, pending checks, coverage
+limits, accepted risks and follow-ups. Never equate a weak suite with proof of
+unchanged behavior or embed commit approval here.
 
 ---
 

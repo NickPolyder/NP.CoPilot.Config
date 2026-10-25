@@ -50,7 +50,8 @@ Run the `test-gap-audit` skill. It selects scope, discovers branch/state/integra
 test-quality smells, prioritizes findings by risk, and presents the gap report. It is **read-only** —
 it never writes or edits tests or production code.
 
-At the end it asks:
+This coordinator owns the transition question; the audit returns its report and
+the fill child reuses the selected scope without asking again:
 
 > Generate tests now? (all critical / critical + high / let me pick / report only)
 

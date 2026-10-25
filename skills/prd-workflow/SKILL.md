@@ -37,13 +37,15 @@ Do **not** use this skill for:
 
 > **Choosing between `prd-workflow` and `feature-planning`:** Use `prd-workflow` when you intend to **plan AND implement** a feature end-to-end. Use `feature-planning` when you need a **comprehensive plan document only** — no implementation.
 
-> **Boundary:** This workflow sequences only its four phase skills. Return deep test/security needs as recommendations for separate work. Finish this entry workflow's own state before any `git-commit-review`, `test-strategy`, or `security-audit` handoff; a completed phase does not by itself end this workflow or waive another workflow's approval gates.
+> **Boundary:** This workflow sequences only its four phase skills. Return deep test/security needs as recommendations for separate work. Finish this entry workflow's own state before a terminal handoff, except explicit user-directed suspension for a checkpoint commit under the coordination policy. A completed phase does not end this workflow or waive another workflow's approval gates. Other test/security work remains a separate handoff after completion.
 
 ---
 
 # Workflow
 
 Execute these phases in strict order, delegating each to its atomic skill. **Do not advance to the next phase without user approval.**
+This explicitly requested coordinator owns each transition prompt; child skills
+return their outcome without asking the same approval again.
 
 ## Phase 1: Codebase Research (delegate to `codebase-research`)
 
@@ -71,10 +73,13 @@ the design — phases, ordering, dependencies, complexity, and paired test tasks
 After approval, run the `implementation-runner` skill to execute tasks in order
 with tests alongside, updating `tasks.md` and reporting actual per-phase evidence.
 It returns to this workflow, not directly into commit review. After applicable
-verification, complete this entry workflow's state and offer a separate
-`git-commit-review` handoff. Preserve blockers and missing evidence truthfully.
+verification, complete this entry workflow's state. If committing was requested,
+hand off separately to `git-commit-review`. If a commit is needed for live
+validation, explicitly suspend this workflow first, recording pending checks and
+resume conditions. Preserve blockers and incomplete task status truthfully.
 
-> **Implementation status: {complete / blocked}. Verification: {actual results and limitations}. Ready for separate review? (yes / fix issues first)**
+Return implementation status (complete/blocked/paused), actual verification and
+remaining gates. Do not add a new review/commit prompt when delivery was not requested.
 
 ---
 
@@ -103,15 +108,15 @@ Approve moving to {next phase}? (yes / no / adjust)
   `security-audit` work when deeper planning is needed, without nesting workflows.
 - **Documentation skill** — after implementation, recommend `documentation` to update `docs/`.
 - **Git commit review skill** — recommend a separate `git-commit-review` only
-  after this entry workflow completes; do not embed commit gates here.
+  after completion or explicit checkpoint suspension; do not embed commit gates here.
 
 ---
 
 # Constraints
 
 - **Keep the phases atomic** — delegate each phase's detail to its dedicated skill; do not inline the full procedures here.
-- **Separate delivery** — finish the verified entry workflow before a separate
-  `git-commit-review`; never let a phase start it while this parent is active.
+- **Separate delivery** — finish or explicitly suspend for an authorized
+  checkpoint before `git-commit-review`; never let a phase start it while this parent is active.
 - **Use dedicated depth skills** — reference `test-strategy` and `security-audit` when deep test or security artifacts are needed.
 
 ---

@@ -4,12 +4,17 @@
 
 .DESCRIPTION
     Checks selected required and forbidden wording in the Markdown review
-    contracts. These structural checks do not prove workflow execution or
+    contracts, shared policy owners, and affected daily-work skills.
+    These structural checks do not prove workflow execution or
     general semantic consistency. The script has no external dependencies and
     makes no changes, so it is safe to run repeatedly.
 
 .PARAMETER SkillRoot
     Path to the skills directory. Defaults to this repository's skills directory.
+
+.PARAMETER InstructionRoot
+    Path to the shared policy owners. Defaults to the instructions directory
+    beside SkillRoot; custom fixtures must supply those contracts too.
 
 .EXAMPLE
     .\scripts\Validate-GitCommitReviewSkills.ps1
@@ -17,7 +22,9 @@
 
 [CmdletBinding()]
 param(
-    [string]$SkillRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'skills')
+    [string]$SkillRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'skills'),
+
+    [string]$InstructionRoot = (Join-Path $SkillRoot '..\instructions')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,7 +70,7 @@ function Assert-Pattern {
     Write-Fail -Description $Description -Pattern $expected
 }
 
-function Get-SkillContent {
+function Get-PolicyContent {
     param(
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$Description
@@ -84,7 +91,7 @@ $fullPath = Join-Path (Join-Path $SkillRoot 'full-code-review') 'SKILL.md'
 Write-Host ''
 Write-Host '🔍 Validating Git review skill policy invariants...' -ForegroundColor Cyan
 
-$lightweight = Get-SkillContent -Path $lightweightPath -Description 'Lightweight skill exists'
+$lightweight = Get-PolicyContent -Path $lightweightPath -Description 'Lightweight skill exists'
 if ($null -ne $lightweight) {
     Write-Host '  Lightweight reviewer selection and escalation' -ForegroundColor Yellow
     Assert-Pattern -Content $lightweight -Pattern 'exactly one core reviewer:\s*`?code-reviewer`?' -Description 'Uses exactly one core code-reviewer'
@@ -115,7 +122,7 @@ if ($null -ne $lightweight) {
     Assert-Pattern -Content $lightweight -Pattern 'snapshot cannot be materialized.*stop.*before launching any reviewer' -Description 'Blocks reviewers when clean-index preflight fails'
     Assert-Pattern -Content $lightweight -Pattern 'initial review is cycle one.*cycle two.*cycle three.*explicit approval' -Description 'Requires approval for every review cycle after two'
     Assert-Pattern -Content $lightweight -Pattern '(files modified|modified files).*previous finding locations.*directly affected contracts' -Description 'Scopes re-review to changed files, findings, and contracts'
-    Assert-Pattern -Content $lightweight -Pattern 'full existing test suite once' -Description 'Runs the full test suite once at the final gate'
+    Assert-Pattern -Content $lightweight -Pattern 'Run a full suite only when repository policy requires it or affected behavior\s+warrants that scope' -Description 'Makes full-suite scope depend on policy or impact'
     Assert-Pattern -Content $lightweight -Pattern 'Before dispatch, this active caller must supply the complete reviewer intake:.*?\| Repository and scope \|[^\r\n]*\r?\n\| Resolved identities \|[^\r\n]*\r?\n\| Complete diff and frozen context \|[^\r\n]*\r?\n\| Locked requirements \|[^\r\n]*\r?\n\| Validation evidence \|' -Description 'Supplies complete immutable reviewer intake'
     Assert-Pattern -Content $lightweight -Pattern 'Missing or unreadable required intake means \*\*Incomplete - missing evidence\*\*.*Never substitute current files for missing immutable review evidence' -Description 'Rejects incomplete intake and current-file substitution'
     Assert-Pattern -Content $lightweight -Pattern '`code-reviewer` has `read` and `search` only; it returns bounded findings and evidence gaps to this active caller, without artifacts or workflow restart' -Description 'Keeps reviewer work bounded to the active caller'
@@ -123,13 +130,30 @@ if ($null -ne $lightweight) {
     Assert-Pattern -Content $lightweight -Pattern '## Related skills and agents.*After this owning workflow ends, use `full-code-review` only by separate explicit user invocation.*After this owning workflow ends, use `security-audit` only as a separate authorized workflow' -Description 'Keeps related terminal workflows as separate handoffs'
     Assert-Pattern -Content $lightweight -Pattern 'Never mark a blocked workflow complete merely to start another workflow' -Description 'Preserves blocked workflow status across recommendations'
     Assert-Pattern -Content $lightweight -Pattern 'If no applicable suite exists, record \*\*Not run - no applicable suite\*\* and the coverage limitation, never a 0/0 pass' -Description 'Reports absent suites as not-run coverage limits'
-    Assert-Pattern -Content $lightweight -Pattern 'Missing declared required checks remain blockers; this not-run case does not waive required validation' -Description 'Keeps missing required checks blocking'
+    Assert-Pattern -Content $lightweight -Pattern 'Missing declared pre-commit checks remain blockers; this not-run case does not waive required validation' -Description 'Keeps missing required checks blocking'
     Assert-Pattern -Content $lightweight -Pattern 'Reviewers used, selection rationale, and cycle count: exactly one core, zero or one ordinary relevant specialist, required signal-driven expertise, and a second specialist only for directly interacting distinct high-risk domains' -Description 'Summarizes consistent signal-driven reviewer counts'
     Assert-Pattern -Content $lightweight -Pattern 'Each specialist uses a separate `code-reviewer` assignment with a domain focus and the same immutable intake and read/search-only boundary' -Description 'Preserves independent read-only domain assignments'
     Assert-Pattern -Content $lightweight -Pattern 'three[- ]hat' -Description 'Does not retain the deprecated three-hat workflow' -Absent
+
+    Write-Host '  Daily commit boundaries and evidence' -ForegroundColor Yellow
+    Assert-Pattern -Content $lightweight -Pattern 'An explicitly requested\s+\*\*checkpoint commit\*\* uses the same snapshot, local-check, review and approval\s+gates' -Description 'Keeps checkpoints explicit and locally reviewed'
+    Assert-Pattern -Content $lightweight -Pattern 'Required pre-commit checks cannot be deferred' -Description 'Preserves repository pre-commit gates'
+    Assert-Pattern -Content $lightweight -Pattern 'Never defer failed checks on the current candidate or missing required local\s+commands/inputs' -Description 'Rejects failed-local-check checkpoint bypasses'
+    Assert-Pattern -Content $lightweight -Pattern 'Failures from earlier revisions remain recorded; a changed\s+fix may need a pending live retest' -Description 'Keeps earlier live failures visible while allowing fix checkpoints'
+    Assert-Pattern -Content $lightweight -Pattern 'The checkpoint request supplies the suspension direction; do not ask twice' -Description 'Avoids a duplicate checkpoint suspension prompt'
+    Assert-Pattern -Content $lightweight -Pattern 'Pending - post-commit/live validation.*?responsible owner, trigger.*?acceptance gate.*?resulting commit SHA' -Description 'Binds pending validation follow-up to the commit'
+    Assert-Pattern -Content $lightweight -Pattern 'Checkpoint approval never authorizes push or deployment' -Description 'Separates checkpoints from remote authorization'
+    Assert-Pattern -Content $lightweight -Pattern 'Preserve unrelated staged and unstaged work; do not reset or restage it' -Description 'Preserves unrelated index and worktree changes'
+    Assert-Pattern -Content $lightweight -Pattern 'Documentation-only candidates need applicable documentation/configuration\s+checks, not unrelated builds' -Description 'Limits documentation checks to applicable behavior'
+    Assert-Pattern -Content $lightweight -Pattern 'Reuse only successful snapshot-backed evidence for the same full candidate\s+tuple.*?required freshness.*?Reused - passed' -Description 'Constrains reused evidence to the exact validation context'
+    Assert-Pattern -Content $lightweight -Pattern 'Worktree-only results, tree equality without the full tuple, and restored bytes\s+after invalidation are not reusable evidence' -Description 'Rejects weaker evidence reuse substitutes'
+    Assert-Pattern -Content $lightweight -Pattern 'For approval-controlled prose, present the exact proposed\s+replacement and obtain approval before applying or staging the wording change' -Description 'Requires approval before editing protected wording'
+    Assert-Pattern -Content $lightweight -Pattern 'Use one confirmation for user verification and commit permission' -Description 'Combines candidate verification and commit approval'
+    Assert-Pattern -Content $lightweight -Pattern 'Keep one\s+durable outcome record.*?not duplicate timelines' -Description 'Keeps one durable review outcome'
+    Assert-Pattern -Content $lightweight -Pattern 'Write a Markdown report only when requested, repository-required, or no durable\s+provider is available' -Description 'Avoids mandatory duplicate Markdown reports'
 }
 
-$full = Get-SkillContent -Path $fullPath -Description 'Full review skill exists'
+$full = Get-PolicyContent -Path $fullPath -Description 'Full review skill exists'
 if ($null -ne $full) {
     Write-Host '  Exhaustive review contract' -ForegroundColor Yellow
     Assert-Pattern -Content $full -Pattern 'only when the user explicitly requests' -Description 'Requires explicit user invocation'
@@ -138,6 +162,35 @@ if ($null -ne $full) {
     Assert-Pattern -Content $full -Pattern 'up to three specialists' -Description 'Limits exhaustive review to three specialists'
     Assert-Pattern -Content $full -Pattern 'Critical, High, Medium, or Low' -Description 'Includes every severity level'
     Assert-Pattern -Content $full -Pattern 'full-review-' -Description 'Persists a detailed full-review report'
+}
+
+Write-Host '  Shared daily-work policy owners' -ForegroundColor Yellow
+$workflow = Get-PolicyContent -Path (Join-Path $InstructionRoot 'workflow.instructions.md') -Description 'Workflow policy exists'
+if ($null -ne $workflow) {
+    Assert-Pattern -Content $workflow -Pattern 'A clear request authorizes\s+necessary edits and local checks within its scope; do not ask again per phase' -Description 'Honors clear task-scoped authorization'
+    Assert-Pattern -Content $workflow -Pattern 'exact replacement wording and obtain approval before applying or staging it' -Description 'Protects approval-controlled prose in the shared policy'
+    Assert-Pattern -Content $workflow -Pattern 'blocks\s+the operation requiring it, not independent authorized work' -Description 'Scopes blockers to dependent operations'
+}
+$delivery = Get-PolicyContent -Path (Join-Path $InstructionRoot 'git-conventions.instructions.md') -Description 'Delivery policy exists'
+if ($null -ne $delivery) {
+    Assert-Pattern -Content $delivery -Pattern 'obtain one explicit approval\s+covering changes and message' -Description 'Keeps shared commit approval singular and explicit'
+}
+$lifecycle = Get-PolicyContent -Path (Join-Path $InstructionRoot 'work-lifecycle.instructions.md') -Description 'Evidence policy exists'
+if ($null -ne $lifecycle) {
+    Assert-Pattern -Content $lifecycle -Pattern 'Reuse successful evidence only while those inputs and required freshness remain\s+valid' -Description 'Preserves evidence freshness across phases'
+}
+$coordination = Get-PolicyContent -Path (Join-Path $InstructionRoot 'coordination.instructions.md') -Description 'Coordination policy exists'
+if ($null -ne $coordination) {
+    Assert-Pattern -Content $coordination -Pattern 'owner and any parent to finish, or\s+explicit user-directed suspension for a checkpoint commit.*?releases active ownership, and never marks\s+blocked work complete' -Description 'Suspends parents without completing blocked work'
+    Assert-Pattern -Content $coordination -Pattern 'Requested coordinators retain their gates; the\s+owner asks once, not again in each child' -Description 'Assigns transition approval to one owner'
+}
+
+Write-Host '  Standalone skill boundaries' -ForegroundColor Yellow
+foreach ($name in @('codebase-research', 'feature-design-doc', 'task-breakdown', 'implementation-runner', 'dependency-audit-report', 'test-gap-audit')) {
+    $content = Get-PolicyContent -Path (Join-Path $SkillRoot "$name\SKILL.md") -Description "$name skill exists"
+    if ($null -ne $content) {
+        Assert-Pattern -Content $content -Pattern 'Standalone, return.*?\band stop; do not prompt' -Description "$name ends at the standalone outcome"
+    }
 }
 
 Write-Host ''

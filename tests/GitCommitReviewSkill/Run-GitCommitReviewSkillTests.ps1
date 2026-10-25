@@ -11,13 +11,23 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'New-GitCommitReviewSkillFixture.ps1')
 $passed = 0
 $failed = 0
-$cases = @(@{ Name = 'Unmodified positive control' }) + @(Get-ReviewPolicyMutations)
+$cases = @(
+    @{ Name = 'Unmodified positive control' },
+    @{ Name = 'Relative skill root positive control'; RelativeSkillRoot = $true },
+    @{ Name = 'Explicit instruction root positive control'; AlternateInstructionRoot = $true }
+) + @(Get-ReviewPolicyMutations)
 Write-Host "`n🔍 Running review-policy wording regressions..." -ForegroundColor Cyan
 foreach ($case in $cases) {
     try {
         $root = New-BaselineSkillFixture
         if ($case.ContainsKey('Find')) { Set-MutatedSkillContent -Root $root -Mutation $case }
-        $result = Invoke-Validator -Root $root
+        $arguments = @{ Root = $root }
+        if ($case.ContainsKey('RelativeSkillRoot')) { $arguments.RelativeSkillRoot = $true }
+        if ($case.ContainsKey('AlternateInstructionRoot')) {
+            $arguments.InstructionRoot = Join-Path $root 'shared-policies'
+            Move-Item -LiteralPath (Join-Path $root 'instructions') -Destination $arguments.InstructionRoot
+        }
+        $result = Invoke-Validator @arguments
         if ($case.ContainsKey('Find')) {
             if ($result.ExitCode -ne 1 -or $result.Output -notmatch [regex]::Escape("❌ $($case.Description)") -or
                 $result.Output -notmatch '❌ 1 of \d+ policy invariants failed\.') {
