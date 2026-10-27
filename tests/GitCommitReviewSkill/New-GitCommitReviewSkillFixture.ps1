@@ -37,6 +37,30 @@ function Remove-FixtureRoot {
 function Get-ReviewPolicyMutations {
     @(
         @{
+            Name = 'UndisclosedFidelityException'
+            Find = 'risks before obtaining explicit user acceptance.'
+            Replace = 'risks after continuing without acceptance.'
+            Description = 'Permits disclosed candidate-specific fidelity exceptions'
+        },
+        @{
+            Name = 'ExceptionReportedAsPass'
+            Find = 'report the waived guarantee as **Accepted exception**, never passed.'
+            Replace = 'report the waived guarantee as passed.'
+            Description = 'Carries exceptions through later gates without claiming a pass'
+        },
+        @{
+            Name = 'ExceptionWaivesRequiredChecks'
+            Find = 'Preserve immutable tree bytes, candidate identity, required checks, and delivery controls.'
+            Replace = 'Allow the exception to waive required checks and delivery controls.'
+            Description = 'Preserves non-excepted guarantees and helper capability limits'
+        },
+        @{
+            Name = 'StaleExceptionAcceptance'
+            Find = 'refresh acceptance when either or the risks change.'
+            Replace = 'reuse acceptance even when the candidate or risks change.'
+            Description = 'Requires explicit refreshed exception acceptance and final commit approval'
+        },
+        @{
             Name = 'SnapshotCompleteness'
             Find = 'git ls-tree -r -z --full-tree'
             Replace = 'git ls-tree -z --full-tree'

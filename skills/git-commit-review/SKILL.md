@@ -96,7 +96,7 @@ Assert-GitCandidateCurrent -Candidate $candidate
 
 4. Verify snapshot paths, file types, modes, and bytes against the captured tree with the helper's `git ls-tree -r -z --full-tree` manifest and raw `git cat-file blob` output. It includes unchanged tracked files, excludes deletions, and ignores archive/checkout transformations (`export-ignore`, `export-subst`, smudge filters, EOL conversion, and ident substitution). It never uses archive success as proof of completeness. Its initial `-Exact` gate rejects extra paths as well as missing or altered inputs.
 5. Use changed paths only for review scope, not snapshot completeness. `$candidate.DiffBytes` is the binary-capable base-to-tree diff; `$candidate.ChangedPaths` comes from NUL-delimited, rename-disabled discovery so both rename sides, deletions, and type changes are in scope. `Assert-GitCandidateCurrent` rechecks the full tuple, not just the index tree, before accepting these as one candidate.
-6. Follow the supported raw-tree/filesystem contract in `scripts\README.md`. Symlinks, submodules, LFS pointers, unrepresentable names/modes, and in-progress history rewrites fail closed. Windows cannot faithfully represent Git executable mode 100755; use a capable POSIX environment for such candidates. If validation needs transformed checkout inputs, stop rather than silently substituting bytes.
+6. Follow the raw-tree/filesystem contract in `scripts\README.md`. Unsupported inputs fail closed by default; prefer POSIX for Git mode 100755. For a platform/filesystem fidelity limitation, section 6 permits a candidate-specific exception using an identified helper override or snapshot procedure. Disclose affected paths/modes, bypass, lost guarantees, remaining checks, and risks before obtaining explicit user acceptance. Carry the exception through later gates, reviewer intake, final approval, and the outcome; report the waived guarantee as **Accepted exception**, never passed. Preserve immutable tree bytes, candidate identity, required checks, and delivery controls. No worktree substitution, silent checkout transformations, or unrelated bypasses. Stop if the remaining guarantees cannot be preserved; approval alone does not enable an unsupported helper.
 7. `$baseSnapshot` supplies readable context at the captured base tree, including deleted files and old rename paths; an unborn base has an empty manifest. Both snapshots expose `Tree`, `Role`, `Path`, and `Manifest` (paths, modes, and blob IDs). Base context is read-only review evidence, never a substitute validation target.
 8. Keep the candidate and both snapshots for all checks and review. In a `finally` block at workflow termination, call `Remove-GitReviewCandidate -Candidate $candidate` to remove only its owned snapshots, index copies, and isolated child state.
 
@@ -215,11 +215,11 @@ For each finding, identify its status:
 |---|---|
 | **Commit blocker** | Unresolved Critical or High finding; cannot commit. |
 | **Accepted risk** | User explicitly accepts a concrete Critical or High finding and directs the commit to continue where repository policy permits; this never waives required checks or delivery controls. |
+| **Accepted exception** | User explicitly accepts a disclosed section 2.6 fidelity limitation and directs its bypass for the exact candidate; other gates remain required. |
 | **Delayed follow-up** | Concrete Medium or Low finding recorded for later work. |
 | **Explicitly dropped** | Concrete finding rejected with its rationale. |
 
-Present blockers first, then accepted risks, delayed follow-ups, and dropped findings.
-Never silently discard a concrete finding.
+Present blockers first, then accepted risks/exceptions, delayed follow-ups, and dropped findings. Never silently discard a finding or limitation. Offer eligible section 2.6 exceptions through `ask_user`; helper edits, generic commit requests, and silence are not acceptance. Record the full candidate tuple and approved bypass; refresh acceptance when either or the risks change. Include the exception in section 9's combined candidate/message approval, not instead of it.
 
 ## 7. Fix and scope re-review
 
@@ -306,7 +306,7 @@ Include:
 - Snapshot preflight, tracked-integrity gates, executed/reused final-check outcomes (including explicit not-run/coverage limitations), and post-commit tree/parent/ref verification.
 - Intake identities and manifests, locked requirements, evidence references and missing-evidence limitations. Temporary snapshots are cleaned up; do not present their deleted paths as durable readable evidence.
 - Reviewers used, selection rationale, and cycle count: exactly one core, zero or one ordinary relevant specialist, required signal-driven expertise, and a second specialist only for directly interacting distinct high-risk domains.
-- Deduplicated findings grouped by the four decision statuses.
+- Deduplicated findings grouped by the decision statuses.
 - User approvals and the final outcome.
 - Any timebox limitation.
 - For checkpoints, accepted risks, blockers or unfinished handoffs: concrete
