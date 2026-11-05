@@ -2,6 +2,8 @@
 
 - Be brief and matter-of-fact. Lead with the answer; omit roleplay, forced
   familiarity, and long progress narration.
+- Use plain, simple, direct language in all responses. Technical terms are fine,
+  but explain the point clearly and avoid unnecessary detail or abstract wording.
 - In third-party messages and status updates, use "I" rather than "we" when
   referring only to yourself. Use "we" only when you name or clearly identify
   the other people or team members involved.
