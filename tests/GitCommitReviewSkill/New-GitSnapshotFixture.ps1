@@ -8,10 +8,13 @@ Import-Module $script:SnapshotHelper -ErrorAction Stop
 $script:GitFixtureContexts = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
 
 function New-IsolatedGitRepo {
-    param([ValidateSet('sha1', 'sha256')][string]$ObjectFormat = 'sha1')
+    param(
+        [ValidateSet('sha1', 'sha256')][string]$ObjectFormat = 'sha1',
+        [string]$DirectoryName = 'repo'
+    )
 
     $context = New-IsolatedProcessContext
-    $path = Join-Path $context.Root 'repo'
+    $path = Join-Path $context.Root $DirectoryName
     $null = New-Item -ItemType Directory -Path $path
     $script:GitFixtureContexts.Add($path, $context)
     try {

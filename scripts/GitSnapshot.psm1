@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Captures exact Git candidates and validates raw-tree snapshots.
@@ -11,6 +11,7 @@
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'IsolatedProcess.psm1') -ErrorAction Stop
 $script:Utf8 = [Text.UTF8Encoding]::new($false, $true)
+$script:IsWindowsPlatform = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
 
 function Invoke-CandidateGit {
     param(
@@ -18,13 +19,14 @@ function Invoke-CandidateGit {
         [Parameter(Mandatory)][string[]]$Arguments,
         [AllowEmptyCollection()][byte[]]$InputBytes = @(),
         [hashtable]$Environment = @{},
+        [scriptblock]$StandardOutputHandler,
         [switch]$AllowFailure
     )
 
     Invoke-IsolatedProcess -Context $Candidate.Context -FilePath 'git' `
         -ArgumentList (@('--no-pager', '-C', $Candidate.RepositoryRoot) + $Arguments) `
         -WorkingDirectory $Candidate.RepositoryRoot -InputBytes $InputBytes `
-        -Environment $Environment -AllowFailure:$AllowFailure
+        -Environment $Environment -StandardOutputHandler $StandardOutputHandler -AllowFailure:$AllowFailure
 }
 
 function Get-CandidateGitText {
@@ -180,7 +182,11 @@ function New-GitReviewCandidate {
         $candidate.ObjectFormat = Get-CandidateGitText $candidate @('rev-parse', '--show-object-format')
         if ($candidate.ObjectFormat -notin @('sha1', 'sha256')) { throw 'Unsupported Git object format.' }
         $candidate.IndexPath = if ($candidate.ExplicitIndex) {
-            if (-not [IO.Path]::IsPathFullyQualified($IndexPath)) { throw 'IndexPath must be an explicit absolute path.' }
+            $absolute = if ($PSVersionTable.PSVersion.Major -ge 6) {
+                [IO.Path]::IsPathFullyQualified($IndexPath)
+            }
+            else { $IndexPath -match '\A(?:[a-zA-Z]:[\\/]|[\\/]{2}[^\\/]+[\\/][^\\/]+(?:[\\/]|$))' }
+            if (-not $absolute) { throw 'IndexPath must be an explicit absolute path.' }
             [IO.Path]::GetFullPath($IndexPath)
         }
         else {
@@ -236,7 +242,7 @@ function Get-SnapshotPath {
             $part.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0) {
             throw "Unsupported or unsafe Git path: '$GitPath'."
         }
-        if ($IsWindows -and ($part -match '[. ]$' -or $part -match '^(?i:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)')) {
+        if ($script:IsWindowsPlatform -and ($part -match '[. ]$' -or $part -match '^(?i:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)')) {
             throw "Git path cannot be represented faithfully on Windows: '$GitPath'."
         }
     }
@@ -253,7 +259,7 @@ function Get-TreeManifest {
     )
 
     $output = Invoke-CandidateGit $Candidate @('ls-tree', '-r', '-z', '--full-tree', $Tree)
-    $comparer = if ($IsWindows) { [StringComparer]::OrdinalIgnoreCase } else { [StringComparer]::Ordinal }
+    $comparer = if ($script:IsWindowsPlatform) { [StringComparer]::OrdinalIgnoreCase } else { [StringComparer]::Ordinal }
     $paths = [Collections.Generic.HashSet[string]]::new($comparer)
     foreach ($record in @(ConvertFrom-GitNulOutput $output.Bytes)) {
         if ($record -cnotmatch '\A(?<mode>[0-7]{6}) (?<type>blob|commit) (?<oid>[0-9a-f]{40}|[0-9a-f]{64})\t(?<path>[\s\S]+)\z') {
@@ -269,7 +275,7 @@ function Get-TreeManifest {
         switch ($entry.Mode) {
             '100644' { }
             '100755' {
-                if ($IsWindows) {
+                if ($script:IsWindowsPlatform) {
                     throw "Git mode 100755 cannot be faithfully represented on Windows: '$($entry.Path)'. Use a POSIX filesystem."
                 }
             }
@@ -301,6 +307,55 @@ function Get-RawBlobHash {
     }
 }
 
+function Copy-GitBatchBlob {
+    param(
+        [Parameter(Mandatory)][IO.Stream]$Stream,
+        [Parameter(Mandatory)]$Entry,
+        [Parameter(Mandatory)][string]$Destination,
+        [Parameter(Mandatory)][byte[]]$Buffer
+    )
+
+    $header = [Text.StringBuilder]::new()
+    while (($value = $Stream.ReadByte()) -ne 10) {
+        if ($value -lt 0 -or $value -gt 127 -or $header.Length -ge 128) {
+            throw "Invalid or truncated Git batch header for '$($Entry.Path)'."
+        }
+        $null = $header.Append([char]$value)
+    }
+    $size = 0L
+    if ($header.ToString() -cnotmatch '\A(?<oid>[0-9a-f]{40}|[0-9a-f]{64}) blob (?<size>0|[1-9][0-9]*)\z' -or
+        $Matches.oid -cne $Entry.ObjectId -or -not [long]::TryParse($Matches.size, [ref]$size)) {
+        throw "Invalid Git batch response for '$($Entry.Path)': $header"
+    }
+
+    $prefixLength = [int][Math]::Min($size, 200)
+    $offset = 0
+    while ($offset -lt $prefixLength) {
+        $read = $Stream.Read($Buffer, $offset, $prefixLength - $offset)
+        if ($read -eq 0) { throw "Truncated Git batch blob for '$($Entry.Path)'." }
+        $offset += $read
+    }
+    $prefix = [Text.Encoding]::ASCII.GetString($Buffer, 0, $prefixLength)
+    if ($prefix -match '\Aversion https://git-lfs\.github\.com/spec/v1(?:\r?\n|$)') {
+        throw "Unsupported LFS pointer input '$($Entry.Path)'; pointer bytes are not the recorded LFS payload."
+    }
+    $file = [IO.File]::Create($Destination)
+    try {
+        $file.Write($Buffer, 0, $prefixLength)
+        $remaining = $size - $prefixLength
+        while ($remaining -gt 0) {
+            $read = $Stream.Read($Buffer, 0, [int][Math]::Min($remaining, $Buffer.Length))
+            if ($read -eq 0) { throw "Truncated Git batch blob for '$($Entry.Path)'." }
+            $file.Write($Buffer, 0, $read)
+            $remaining -= $read
+        }
+    }
+    finally { $file.Dispose() }
+    if ($Stream.ReadByte() -ne 10) {
+        throw "Invalid or missing Git batch separator for '$($Entry.Path)'."
+    }
+}
+
 function New-GitTreeSnapshot {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Candidate, [switch]$Base)
@@ -323,21 +378,26 @@ function New-GitTreeSnapshot {
     }
     $snapshot.Manifest = @(Get-TreeManifest -Candidate $Candidate -SnapshotPath $path -Tree $tree)
     $null = New-Item -ItemType Directory -Path $path
-    foreach ($entry in $snapshot.Manifest) {
-        $destination = Get-SnapshotPath -Root $path -GitPath $entry.Path
-        $null = [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($destination))
-        $blob = Invoke-CandidateGit $Candidate @('cat-file', 'blob', $entry.ObjectId)
-        $prefix = [Text.Encoding]::ASCII.GetString($blob.Bytes, 0, [Math]::Min($blob.Bytes.Length, 200))
-        if ($prefix -match '\Aversion https://git-lfs\.github\.com/spec/v1(?:\r?\n|$)') {
-            throw "Unsupported LFS pointer input '$($entry.Path)'; pointer bytes are not the recorded LFS payload."
-        }
-        [IO.File]::WriteAllBytes($destination, $blob.Bytes)
-        if (-not $IsWindows) {
-            if (-not ([IO.File].GetMethods().Name -contains 'SetUnixFileMode')) {
-                throw 'POSIX mode fidelity requires PowerShell 7.3 or newer; no chmod approximation is used.'
+    if ($snapshot.Manifest.Count -gt 0) {
+        $requests = [Text.Encoding]::ASCII.GetBytes(($snapshot.Manifest.ObjectId -join "`n") + "`n")
+        $result = Invoke-CandidateGit $Candidate @('cat-file', '--batch') -InputBytes $requests -StandardOutputHandler {
+            param($stream)
+            $buffer = [byte[]]::new(65536)
+            foreach ($entry in $snapshot.Manifest) {
+                $destination = Get-SnapshotPath -Root $path -GitPath $entry.Path
+                $null = [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($destination))
+                Copy-GitBatchBlob -Stream $stream -Entry $entry -Destination $destination -Buffer $buffer
+                if (-not $script:IsWindowsPlatform) {
+                    if (-not ([IO.File].GetMethods().Name -contains 'SetUnixFileMode')) {
+                        throw 'POSIX mode fidelity requires PowerShell 7.3 or newer; no chmod approximation is used.'
+                    }
+                    $mode = if ($entry.Mode -eq '100755') { 493 } else { 420 }
+                    [IO.File]::SetUnixFileMode($destination, [IO.UnixFileMode]$mode)
+                }
             }
-            $mode = if ($entry.Mode -eq '100755') { 493 } else { 420 }
-            [IO.File]::SetUnixFileMode($destination, [IO.UnixFileMode]$mode)
+        }
+        if ($result.Bytes.Length -ne 0) {
+            throw 'Git batch returned unexpected trailing output.'
         }
     }
     Assert-GitSnapshotIntegrity -Snapshot $snapshot -Exact
@@ -371,7 +431,7 @@ function Assert-GitSnapshotIntegrity {
         $pending.Push($Snapshot.Path)
         while ($pending.Count -gt 0) {
             foreach ($item in Get-ChildItem -LiteralPath $pending.Pop() -Force) {
-                $relative = [IO.Path]::GetRelativePath($Snapshot.Path, $item.FullName).Replace('\', '/')
+                $relative = $item.FullName.Substring($Snapshot.Path.TrimEnd('\', '/').Length + 1).Replace('\', '/')
                 if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
                     throw "Snapshot contains a linked path '$relative'; it is not an ordinary build output."
                 }
@@ -386,7 +446,7 @@ function Assert-GitSnapshotIntegrity {
             if (-not $actual.ContainsKey($entry.Path)) { throw "Snapshot is missing tracked input '$($entry.Path)'." }
             $item = $actual[$entry.Path]
             if ($item.PSIsContainer) { throw "Snapshot tracked input '$($entry.Path)' changed file type." }
-            if (-not $IsWindows) {
+            if (-not $script:IsWindowsPlatform) {
                 $expectedMode = if ($entry.Mode -eq '100755') { 493 } else { 420 }
                 if ([int][IO.File]::GetUnixFileMode($item.FullName) -ne $expectedMode) {
                     throw "Snapshot tracked input '$($entry.Path)' changed mode."

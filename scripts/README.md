@@ -39,6 +39,17 @@ Raw blob bytes are copied without PowerShell text pipelines, `git archive`,
 checkout/smudge filters, EOL conversion, or ident substitution. Export attributes
 cannot omit or rewrite inputs. This is a raw-tree contract, not a promise that a
 project requiring transformed checkout inputs can be tested without them.
+Each nonempty snapshot uses one `git cat-file --batch` process, streaming blob
+payloads through a fixed-size buffer rather than starting Git per file or buffering
+the whole tree in memory. Batch headers, identities, sizes and separators are
+checked in addition to the final filesystem integrity checks.
+
+The snapshot/process modules support Windows PowerShell 5.1 and PowerShell 7
+on Windows. Other repository scripts, including the validator and hook driver,
+retain their own PowerShell 7 requirements. The regression harness runs under
+PowerShell 7 and also exercises the helpers in Windows PowerShell 5.1 on Windows;
+its unsigned 5.1 test process uses process-only `-ExecutionPolicy Bypass`, without
+changing machine or user policy.
 
 Windows supports Git mode `100644` only: it cannot establish POSIX executable
 mode fidelity. POSIX supports `100644` and `100755` with exact mode checks using
@@ -114,6 +125,12 @@ replacement objects, global attributes, and interactive prompts are disabled.
 Only explicitly supplied overrides (for example the disposable `GIT_INDEX_FILE`)
 are applied afterward. Native stdout remains available as bytes; every nonzero
 exit is an error unless the caller explicitly requests a result for inspection.
+An optional `-StandardOutputHandler` consumes a known response count directly
+from the binary stream while stdin is written asynchronously. It must not wait
+for EOF, because stdin closes after it returns. Unconsumed stdout is returned in
+the normal byte result. Consumer failures terminate the native child; PowerShell
+7 also terminates its descendants, while Windows PowerShell 5.1 can terminate
+only the direct child with its available process API.
 This process isolation does not prevent arbitrary commands from writing absolute
 paths, contacting networks, or reading repository-local config.
 

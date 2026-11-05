@@ -376,6 +376,147 @@ Test-Case 'Missing blob materialization fails explicitly' {
     Assert-Throws { New-GitTreeSnapshot $candidate } '(failed with exit|missing|invalid object)'
 }
 
+Test-Case 'Batch materialization handles pipe backpressure, duplicate blobs, empty files, and large binary payloads' {
+    $root = New-IsolatedGitRepo
+    $expected = @{}
+    foreach ($index in 1..2048) {
+        $name = "files/$index.txt"
+        Set-RepoFile $root $name "repeated blob`n"
+        $expected[$name] = [Text.Encoding]::UTF8.GetBytes("repeated blob`n")
+    }
+    Set-RepoFile $root 'empty.txt' ''
+    $expected['empty.txt'] = [byte[]]@()
+    $bytes = [byte[]]::new(2MB + 17)
+    [Random]::new(42).NextBytes($bytes)
+    [IO.File]::WriteAllBytes((Join-Path $root 'binary.dat'), $bytes)
+    $expected['binary.dat'] = $bytes
+    $null = Invoke-Git $root @('add', '--all')
+    $candidate = New-TestCandidate $root
+    $snapshot = New-GitTreeSnapshot $candidate
+    Assert-SnapshotFiles $snapshot $expected
+}
+
+$batchOid = 'a' * 40
+foreach ($response in @(
+    @{ Name = 'missing object'; Bytes = "$batchOid missing`n"; Pattern = 'Invalid Git batch response' }
+    @{ Name = 'wrong identity'; Bytes = "$('b' * 40) blob 0`n`n"; Pattern = 'Invalid Git batch response' }
+    @{ Name = 'wrong object type'; Bytes = "$batchOid tree 0`n`n"; Pattern = 'Invalid Git batch response' }
+    @{ Name = 'overflowed length'; Bytes = "$batchOid blob 9223372036854775808`n"; Pattern = 'Invalid Git batch response' }
+    @{ Name = 'truncated header'; Bytes = "$batchOid blob 0"; Pattern = 'truncated Git batch header' }
+    @{ Name = 'truncated prefix'; Bytes = "$batchOid blob 10`nshort"; Pattern = 'Truncated Git batch blob' }
+    @{ Name = 'truncated body'; Bytes = "$batchOid blob 1000`n$('x' * 300)"; Pattern = 'Truncated Git batch blob' }
+    @{ Name = 'missing separator'; Bytes = "$batchOid blob 0`n"; Pattern = 'missing Git batch separator' }
+    @{ Name = 'wrong separator'; Bytes = "$batchOid blob 0`nx"; Pattern = 'missing Git batch separator' }
+)) {
+    Test-Case "Batch parser rejects $($response.Name)" {
+        $root = New-IsolatedGitRepo
+        $stream = [IO.MemoryStream]::new([Text.Encoding]::ASCII.GetBytes($response.Bytes))
+        try {
+            $entry = [pscustomobject]@{ Path = 'blob.dat'; ObjectId = $batchOid }
+            $destination = Join-Path $root 'blob.dat'
+            Assert-Throws {
+                & (Get-Module GitSnapshot) {
+                    param($stream, $entry, $destination)
+                    Copy-GitBatchBlob -Stream $stream -Entry $entry -Destination $destination -Buffer ([byte[]]::new(65536))
+                } $stream $entry $destination
+            } $response.Pattern
+        }
+        finally { $stream.Dispose() }
+    }
+}
+
+Test-Case 'A failed streaming consumer terminates its native child' {
+    $root = New-IsolatedGitRepo
+    $context = $script:GitFixtureContexts[$root]
+    $pidPath = Join-Path $root 'child.pid'
+    $command = '[IO.File]::WriteAllText($env:FIXTURE_PID, [string]$PID); [Console]::WriteLine("ready"); Start-Sleep -Seconds 120'
+    Assert-Throws {
+        Invoke-IsolatedProcess -Context $context -FilePath 'pwsh' -WorkingDirectory $root `
+            -ArgumentList @('-NoProfile', '-Command', $command) -Environment @{ FIXTURE_PID = $pidPath } `
+            -StandardOutputHandler {
+                param($stream)
+                $null = $stream.ReadByte()
+                throw 'Fixture consumer failed'
+            }
+    } 'Fixture consumer failed'
+    $childId = [int][IO.File]::ReadAllText($pidPath)
+    Assert-Throws { [Diagnostics.Process]::GetProcessById($childId) } 'not running|not found|does not exist'
+}
+
+$snapshotRuntimes = @('pwsh')
+if ($IsWindows) { $snapshotRuntimes += 'powershell.exe' }
+foreach ($runtime in $snapshotRuntimes) {
+    Test-Case "Snapshot capture, streaming, checks, and native arguments work under $runtime" {
+        $root = New-IsolatedGitRepo -DirectoryName "repo with spaces $([char]0x03BB)"
+        foreach ($index in 1..2048) { Set-RepoFile $root "files\$index.txt" 'base' }
+        Set-RepoFile $root 'empty.txt' ''
+        $null = Invoke-Git $root @('add', '--all')
+        $null = Invoke-Git $root @('commit', '-q', '-m', 'baseline')
+        $bytes = [byte[]]::new(1MB + 17)
+        [Random]::new(42).NextBytes($bytes)
+        [IO.File]::WriteAllBytes((Join-Path $root 'binary.dat'), $bytes)
+        Set-RepoFile $root 'files\1.txt' 'staged'
+        $null = Invoke-Git $root @('add', '--all')
+        $context = $script:GitFixtureContexts[$root]
+        $command = @'
+$ErrorActionPreference = 'Stop'
+Import-Module $env:FIXTURE_HELPER -ErrorAction Stop
+Import-Module $env:FIXTURE_PROCESS_HELPER -ErrorAction Stop
+$candidate = $null
+$probe = New-IsolatedProcessContext
+try {
+    $values = @('', 'space name', '"quoted"', 'slash\"quote', 'trailing space\', [string][char]0x03BB)
+    foreach ($value in $values) {
+        $null = Invoke-IsolatedProcess -Context $probe -FilePath 'git' -WorkingDirectory $env:FIXTURE_REPO `
+            -ArgumentList @('-C', $env:FIXTURE_REPO, 'config', '--local', 'fixture.argument', $value)
+        $read = Invoke-IsolatedProcess -Context $probe -FilePath 'git' -WorkingDirectory $env:FIXTURE_REPO `
+            -ArgumentList @('-C', $env:FIXTURE_REPO, 'config', '--local', '--get', 'fixture.argument')
+        if ($read.Stdout.TrimEnd("`r", "`n") -cne $value) { throw "Native argument changed: '$value'." }
+    }
+    $index = Join-Path $env:FIXTURE_REPO 'explicit index'
+    [IO.File]::Copy((Join-Path $env:FIXTURE_REPO '.git\index'), $index)
+    $candidate = New-GitReviewCandidate -RepositoryRoot $env:FIXTURE_REPO -IndexPath $index
+    $snapshot = New-GitTreeSnapshot $candidate
+    $base = New-GitTreeSnapshot $candidate -Base
+    if ($snapshot.Manifest.Count -ne 2050 -or $base.Manifest.Count -ne 2049) { throw 'Incomplete snapshot manifest.' }
+    $actual = [IO.File]::ReadAllBytes((Join-Path $snapshot.Path 'binary.dat'))
+    $expected = [IO.File]::ReadAllBytes((Join-Path $env:FIXTURE_REPO 'binary.dat'))
+    if ([Convert]::ToBase64String($actual) -cne [Convert]::ToBase64String($expected)) { throw 'Binary bytes changed.' }
+    if ([IO.File]::ReadAllText((Join-Path $base.Path 'files\1.txt')) -cne 'base') { throw 'Wrong base bytes.' }
+    $null = Invoke-GitSnapshotCheck $snapshot -Name 'runtime check' -FilePath $env:FIXTURE_RUNTIME `
+        -ArgumentList @('-NoProfile', '-Command', 'exit 0')
+    [IO.File]::WriteAllText((Join-Path $snapshot.Path 'files\1.txt'), 'mutation')
+    $rejected = $false
+    try { Assert-GitSnapshotIntegrity $snapshot }
+    catch {
+        if ($_.Exception.Message -notmatch 'changed bytes') { throw }
+        $rejected = $true
+    }
+    if (-not $rejected -or -not $snapshot.Invalidated) { throw 'Integrity mutation was not latched.' }
+    Write-Output "Snapshot verified under PowerShell $($PSVersionTable.PSVersion)."
+}
+finally {
+    if ($candidate) { Remove-GitReviewCandidate $candidate }
+    Remove-IsolatedProcessContext $probe
+}
+'@
+        $executable = (Get-Command $runtime -CommandType Application -ErrorAction Stop).Source
+        $runtimeArguments = @('-NoProfile')
+        if ($runtime -eq 'powershell.exe') { $runtimeArguments += @('-ExecutionPolicy', 'Bypass') }
+        $runtimeArguments += @('-EncodedCommand', [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command)))
+        $result = Invoke-IsolatedProcess -Context $context -FilePath $executable -WorkingDirectory $root `
+            -ArgumentList $runtimeArguments `
+            -Environment @{
+                FIXTURE_HELPER = $script:SnapshotHelper
+                FIXTURE_PROCESS_HELPER = Join-Path $script:SnapshotRepoRoot 'scripts\IsolatedProcess.psm1'
+                FIXTURE_REPO = $root
+                FIXTURE_RUNTIME = $executable
+                PSModulePath = $null
+            } -AllowFailure
+        Assert-True ($result.ExitCode -eq 0) $result.Output
+    }
+}
+
 Test-Case 'Candidate capture leaves source index bytes unchanged' {
     $root = New-StagedFixture
     $index = Join-Path $root '.git\index'

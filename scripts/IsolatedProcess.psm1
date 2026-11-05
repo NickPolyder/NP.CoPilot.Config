@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 
 $ErrorActionPreference = 'Stop'
 $script:OwnedContexts = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
@@ -53,10 +53,11 @@ function Invoke-IsolatedProcess {
     param(
         [Parameter(Mandatory)]$Context,
         [Parameter(Mandatory)][string]$FilePath,
-        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$ArgumentList,
+        [Parameter(Mandatory)][AllowEmptyCollection()][AllowEmptyString()][string[]]$ArgumentList,
         [Parameter(Mandatory)][string]$WorkingDirectory,
         [AllowEmptyCollection()][byte[]]$InputBytes = @(),
         [hashtable]$Environment = @{},
+        [scriptblock]$StandardOutputHandler,
         [switch]$AllowFailure
     )
 
@@ -70,8 +71,18 @@ function Invoke-IsolatedProcess {
     $start.RedirectStandardInput = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
-    foreach ($argument in $ArgumentList) {
-        $start.ArgumentList.Add($argument)
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        foreach ($argument in $ArgumentList) {
+            $start.ArgumentList.Add($argument)
+        }
+    }
+    else {
+        # .NET Framework has no ArgumentList; escape Windows native argv, not shell text.
+        $quotedArguments = foreach ($argument in $ArgumentList) {
+            $escaped = [regex]::Replace($argument, '(\\*)"', '$1$1\"')
+            '"' + [regex]::Replace($escaped, '(\\+)$', '$1$1') + '"'
+        }
+        $start.Arguments = $quotedArguments -join ' '
     }
 
     # -C alone does not override inherited repository, index, or config controls.
@@ -142,13 +153,24 @@ function Invoke-IsolatedProcess {
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $start
     $stdout = [IO.MemoryStream]::new()
+    $started = $false
     try {
-        if (-not $process.Start()) {
+        $started = $process.Start()
+        if (-not $started) {
             throw "Cannot start native process '$FilePath'."
         }
-        $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
         $errorTask = $process.StandardError.ReadToEndAsync()
-        $process.StandardInput.BaseStream.Write($InputBytes, 0, $InputBytes.Length)
+        if ($StandardOutputHandler) {
+            # Consume a known response count, not EOF: stdin closes after this handler.
+            $inputTask = $process.StandardInput.BaseStream.WriteAsync($InputBytes, 0, $InputBytes.Length)
+            $null = & $StandardOutputHandler $process.StandardOutput.BaseStream
+            $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
+            $null = $inputTask.GetAwaiter().GetResult()
+        }
+        else {
+            $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
+            $process.StandardInput.BaseStream.Write($InputBytes, 0, $InputBytes.Length)
+        }
         $process.StandardInput.Close()
         $process.WaitForExit()
         $null = $outputTask.GetAwaiter().GetResult()
@@ -167,6 +189,11 @@ function Invoke-IsolatedProcess {
         $result
     }
     finally {
+        if ($started -and -not $process.HasExited) {
+            if ($PSVersionTable.PSVersion.Major -ge 6) { $process.Kill($true) }
+            else { $process.Kill() }
+            $process.WaitForExit()
+        }
         $stdout.Dispose()
         $process.Dispose()
     }
