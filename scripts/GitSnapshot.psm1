@@ -255,12 +255,21 @@ function Get-TreeManifest {
     param(
         [Parameter(Mandatory)]$Candidate,
         [Parameter(Mandatory)][string]$SnapshotPath,
-        [string]$Tree = $Candidate.Tree
+        [string]$Tree = $Candidate.Tree,
+        [AllowEmptyCollection()][string[]]$Paths
     )
 
     $output = Invoke-CandidateGit $Candidate @('ls-tree', '-r', '-z', '--full-tree', $Tree)
     $comparer = if ($script:IsWindowsPlatform) { [StringComparer]::OrdinalIgnoreCase } else { [StringComparer]::Ordinal }
-    $paths = [Collections.Generic.HashSet[string]]::new($comparer)
+    $materializedPaths = [Collections.Generic.HashSet[string]]::new($comparer)
+    $selected = $null
+    if ($PSBoundParameters.ContainsKey('Paths')) {
+        $selected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        foreach ($requested in $Paths) {
+            $null = Get-SnapshotPath -Root $SnapshotPath -GitPath $requested
+            $null = $selected.Add($requested)
+        }
+    }
     foreach ($record in @(ConvertFrom-GitNulOutput $output.Bytes)) {
         if ($record -cnotmatch '\A(?<mode>[0-7]{6}) (?<type>blob|commit) (?<oid>[0-9a-f]{40}|[0-9a-f]{64})\t(?<path>[\s\S]+)\z') {
             throw 'Git ls-tree returned an unsupported tree entry.'
@@ -270,15 +279,12 @@ function Get-TreeManifest {
             Mode = $Matches.mode
             ObjectId = $Matches.oid
         }
+        if ($null -ne $selected -and -not $selected.Contains($entry.Path)) { continue }
         $null = Get-SnapshotPath -Root $SnapshotPath -GitPath $entry.Path
-        if (-not $paths.Add($entry.Path)) { throw "Filesystem path collision in captured tree: '$($entry.Path)'." }
+        if (-not $materializedPaths.Add($entry.Path)) { throw "Filesystem path collision in captured tree: '$($entry.Path)'." }
         switch ($entry.Mode) {
             '100644' { }
-            '100755' {
-                if ($script:IsWindowsPlatform) {
-                    throw "Git mode 100755 cannot be faithfully represented on Windows: '$($entry.Path)'. Use a POSIX filesystem."
-                }
-            }
+            '100755' { }
             '120000' { throw "Unsupported symbolic-link input '$($entry.Path)'; never replace it with a regular file or follow its target." }
             '160000' { throw "Unsupported submodule input '$($entry.Path)'; recorded gitlink content requires a separately verified materializer." }
             default { throw "Unsupported Git mode '$($entry.Mode)' for '$($entry.Path)'." }
@@ -358,8 +364,16 @@ function Copy-GitBatchBlob {
 
 function New-GitTreeSnapshot {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Candidate, [switch]$Base)
+    param(
+        [Parameter(Mandatory)]$Candidate,
+        [switch]$Base,
+        [AllowEmptyCollection()][string[]]$Paths
+    )
 
+    $partial = $PSBoundParameters.ContainsKey('Paths')
+    if ($partial -and -not $Base) {
+        throw 'Path selection is only supported for read-only base context; candidate validation requires the complete tree.'
+    }
     Assert-GitCandidateCurrent -Candidate $Candidate
     $tree = if ($Base) {
         Get-CandidateGitText $Candidate @('rev-parse', '--verify', "$($Candidate.State.Base)^{tree}")
@@ -372,11 +386,19 @@ function New-GitTreeSnapshot {
         Tree = $tree
         Path = $path
         Manifest = @()
+        IsPartial = $partial
+        ScopePaths = [string[]]@()
+        ModeFidelity = $(if ($script:IsWindowsPlatform) { 'metadata-only' } else { 'exact' })
         Invalidated = $false
         InvalidReason = ''
         Checks = [Collections.Generic.List[object]]::new()
     }
-    $snapshot.Manifest = @(Get-TreeManifest -Candidate $Candidate -SnapshotPath $path -Tree $tree)
+    $manifestArguments = @{ Candidate = $Candidate; SnapshotPath = $path; Tree = $tree }
+    if ($partial) {
+        $snapshot.ScopePaths = [string[]]@($Paths | ForEach-Object { $_.Replace('\', '/') })
+        $manifestArguments.Paths = $snapshot.ScopePaths
+    }
+    $snapshot.Manifest = @(Get-TreeManifest @manifestArguments)
     $null = New-Item -ItemType Directory -Path $path
     if ($snapshot.Manifest.Count -gt 0) {
         $requests = [Text.Encoding]::ASCII.GetBytes(($snapshot.Manifest.ObjectId -join "`n") + "`n")
@@ -471,7 +493,8 @@ function Invoke-GitSnapshotCheck {
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$FilePath,
         [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$ArgumentList,
-        [string[]]$RequiredPaths = @()
+        [string[]]$RequiredPaths = @(),
+        [switch]$RequiresPosix
     )
 
     if ($Snapshot.Role -cne 'candidate' -or $Snapshot.Tree -cne $Snapshot.Candidate.Tree) {
@@ -480,6 +503,9 @@ function Invoke-GitSnapshotCheck {
     Assert-GitSnapshotIntegrity -Snapshot $Snapshot
     Assert-GitCandidateCurrent -Candidate $Snapshot.Candidate
     try {
+        if ($RequiresPosix -and $script:IsWindowsPlatform) {
+            throw "Snapshot check '$Name' requires a POSIX host; Windows snapshots preserve executable modes as metadata only."
+        }
         foreach ($required in $RequiredPaths) {
             $gitPath = $required.Replace('\', '/')
             if ($gitPath -cnotin $Snapshot.Manifest.Path) {
@@ -494,7 +520,17 @@ function Invoke-GitSnapshotCheck {
         if ($result.ExitCode -ne 0) {
             throw "Snapshot check '$Name' failed with exit $($result.ExitCode): $($result.Output)"
         }
-        $Snapshot.Checks.Add([pscustomobject]@{ Name = $Name; Tree = $Snapshot.Candidate.Tree; ExitCode = $result.ExitCode })
+        $Snapshot.Checks.Add([pscustomobject]@{
+            Name = $Name
+            Tree = $Snapshot.Candidate.Tree
+            CandidateState = $Snapshot.Candidate.State
+            FilePath = $FilePath
+            ArgumentList = [string[]]$ArgumentList.Clone()
+            WorkingDirectory = $Snapshot.Path
+            ModeFidelity = $Snapshot.ModeFidelity
+            RequiresPosix = [bool]$RequiresPosix
+            ExitCode = $result.ExitCode
+        })
         $result
     }
     catch {
@@ -502,6 +538,37 @@ function Invoke-GitSnapshotCheck {
         $Snapshot.InvalidReason = $_.Exception.Message
         throw
     }
+}
+
+function Update-GitReviewCandidate {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Candidate, [Parameter(Mandatory)]$Snapshot)
+
+    if (-not [object]::ReferenceEquals($Snapshot.Candidate, $Candidate) -or
+        $Snapshot.Role -cne 'candidate' -or $Snapshot.Tree -cne $Candidate.Tree) {
+        throw 'State refresh requires this candidate''s complete validation snapshot.'
+    }
+    Assert-GitSnapshotIntegrity -Snapshot $Snapshot
+    $capture = @{ RepositoryRoot = $Candidate.RepositoryRoot; AllowEmpty = $true }
+    if ($Candidate.ExplicitIndex) { $capture.IndexPath = $Candidate.IndexPath }
+    $fresh = New-GitReviewCandidate @capture
+    try {
+        if ($fresh.Tree -cne $Candidate.Tree) {
+            throw 'Candidate index tree changed; create a new candidate snapshot and rerun affected checks.'
+        }
+        Assert-GitSnapshotIntegrity -Snapshot $Snapshot
+        Assert-GitCandidateCurrent -Candidate $fresh
+        $previous = $Candidate.State
+        $changed = ($previous.Parents -join "`n") -cne ($fresh.State.Parents -join "`n")
+        foreach ($property in @('Head', 'Base', 'RefState', 'DestinationRef', 'MergeMode')) {
+            if ($previous.$property -cne $fresh.State.$property) { $changed = $true }
+        }
+        $Candidate.State = $fresh.State
+        $Candidate.ChangedPaths = $fresh.ChangedPaths
+        $Candidate.DiffBytes = $fresh.DiffBytes
+        [pscustomobject]@{ PreviousState = $previous; State = $Candidate.State; StateChanged = $changed }
+    }
+    finally { Remove-GitReviewCandidate -Candidate $fresh }
 }
 
 function Assert-GitCandidateCommit {
@@ -527,11 +594,24 @@ function Assert-GitCandidateCommit {
 }
 
 function Remove-GitReviewCandidate {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)]$Candidate)
+    [CmdletBinding(SupportsShouldProcess)]
+    param([Parameter(Mandatory)]$Candidate, [switch]$ReportFailure)
 
-    Remove-IsolatedProcessContext -Context $Candidate.Context
+    $path = $Candidate.Context.Root
+    if (-not $PSCmdlet.ShouldProcess($path, 'Remove owned candidate context')) {
+        if ($ReportFailure) { [pscustomobject]@{ Succeeded = $false; Path = $path; Error = 'Cleanup was not performed.' } }
+        return
+    }
+    try {
+        Remove-IsolatedProcessContext -Context $Candidate.Context
+        if ($ReportFailure) { [pscustomobject]@{ Succeeded = $true; Path = $path; Error = $null } }
+    }
+    catch {
+        if (-not $ReportFailure) { throw }
+        Write-Warning "Candidate cleanup failed for '$path': $($_.Exception.Message)"
+        [pscustomobject]@{ Succeeded = $false; Path = $path; Error = $_.Exception.Message }
+    }
 }
 
 Export-ModuleMember -Function New-GitReviewCandidate, New-GitTreeSnapshot, Assert-GitSnapshotIntegrity,
-    Invoke-GitSnapshotCheck, Assert-GitCandidateCurrent, Assert-GitCandidateCommit, Remove-GitReviewCandidate
+    Invoke-GitSnapshotCheck, Update-GitReviewCandidate, Assert-GitCandidateCurrent, Assert-GitCandidateCommit, Remove-GitReviewCandidate

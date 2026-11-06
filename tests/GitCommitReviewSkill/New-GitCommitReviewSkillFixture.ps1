@@ -212,9 +212,9 @@ function Get-ReviewPolicyMutations {
         },
         @{
             Name = 'SummaryReviewerCount'
-            Find = 'Reviewers used, selection rationale, and cycle count: exactly one core, zero or one ordinary relevant specialist'
-            Replace = 'Reviewers used, selection rationale, and cycle count: exactly one core and one mandatory ordinary specialist'
-            Description = 'Summarizes consistent signal-driven reviewer counts'
+            Find = 'Reviewers used and cycle count: one core by default;'
+            Replace = 'Reviewers used and cycle count: two reviewers by default;'
+            Description = 'Summarizes one default reviewer and authorized exceptions'
         },
         @{
             Name = 'SpecialistRoleBoundary'

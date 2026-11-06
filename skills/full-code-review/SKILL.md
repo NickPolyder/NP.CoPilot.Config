@@ -162,7 +162,7 @@ If `/.copilot/` is not ignored, remind the user to add it to `.gitignore`.
 
 | Skill | Invocation and scope | Review depth | Commit behavior |
 |---|---|---|---|
-| `git-commit-review` | Default pre-commit workflow for one staged atomic candidate, including explicitly authorized checkpoints | Exactly one core reviewer; zero or one relevant specialist ordinarily, required domain expertise on escalation signals, and a second specialist only for directly interacting high-risk domains; Critical and High focus | One explicit approval covers the presented candidate and message; pending live validation is not completion |
+| `git-commit-review` | Default pre-commit workflow for one staged atomic candidate, including explicitly authorized checkpoints | One focused core reviewer by default; extra independent reviewers only when repository-required or user-requested; Critical and High focus within one shared ten-minute review budget | One explicit approval covers the presented candidate and message; pending live validation is not completion |
 | `full-code-review` | Explicit user request for a release candidate, major redesign, security audit, schema redesign, or exhaustive analysis | Three core hats, up to three specialists, all severities, whole-target analysis | Does not create a commit |
 
 `git-commit-review` never invokes this skill automatically.

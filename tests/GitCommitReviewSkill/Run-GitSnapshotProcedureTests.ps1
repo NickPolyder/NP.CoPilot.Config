@@ -127,10 +127,11 @@ Test-Case 'Documented procedure preserves the exact complete staged tree and bin
     }
     Assert-SnapshotFiles $documented.Snapshot $expected
     $expectedBase = @{}
-    foreach ($name in @('unchanged.txt', 'modified.txt', 'deleted.txt', 'old name.txt', 'unstaged.txt')) {
+    foreach ($name in @('modified.txt', 'deleted.txt', 'old name.txt')) {
         $expectedBase[$name] = [Text.Encoding]::UTF8.GetBytes("original:$name`n")
     }
     Assert-SnapshotFiles $documented.BaseSnapshot $expectedBase
+    Assert-True $documented.BaseSnapshot.IsPartial 'The normal procedure copied the full base tree.'
     Assert-True ($documented.BaseSnapshot.Role -ceq 'base' -and $documented.Snapshot.Role -ceq 'candidate') 'Snapshot roles are ambiguous.'
     Assert-True ($documented.BaseSnapshot.Tree -ceq (Invoke-Git $root @('rev-parse', "$($documented.Candidate.State.Base)^{tree}")).Trim()) 'Readable base context has the wrong tree identity.'
     $scope = @($documented.Candidate.ChangedPaths | Sort-Object -CaseSensitive)
@@ -239,6 +240,108 @@ Test-Case 'Ordinary untracked build output is allowed without touching tracked b
     )
     Assert-True ($result.ExitCode -eq 0 -and $snapshot.Checks.Count -eq 1) 'Untracked-output positive control did not pass.'
     Assert-GitSnapshotIntegrity $snapshot
+}
+
+Test-Case 'Staged-only validation catches dependencies supplied only by untracked worktree files' {
+    $root = New-StagedFixture
+    Set-RepoFile $root 'check.ps1' 'if (-not (Test-Path -LiteralPath dependency.txt)) { throw "Missing dependency" }'
+    $null = Invoke-Git $root @('add', '--', 'check.ps1')
+    Set-RepoFile $root 'dependency.txt' 'worktree dependency'
+    $worktree = Invoke-IsolatedProcess -Context $script:GitFixtureContexts[$root] -FilePath 'pwsh' `
+        -ArgumentList @('-NoProfile', '-File', 'check.ps1') -WorkingDirectory $root
+    Assert-True ($worktree.ExitCode -eq 0) 'The worktree positive control did not pass.'
+    $snapshot = New-GitTreeSnapshot (New-TestCandidate $root)
+    Assert-Throws {
+        Invoke-GitSnapshotCheck $snapshot -Name 'dependency check' -FilePath 'pwsh' `
+            -ArgumentList @('-NoProfile', '-File', 'check.ps1') -RequiredPaths @('check.ps1')
+    } 'Missing dependency'
+    $null = Invoke-Git $root @('add', '--', 'dependency.txt')
+    $fixed = New-GitTreeSnapshot (New-TestCandidate $root)
+    $null = Invoke-GitSnapshotCheck $fixed -Name 'dependency check' -FilePath 'pwsh' `
+        -ArgumentList @('-NoProfile', '-File', 'check.ps1') -RequiredPaths @('check.ps1', 'dependency.txt')
+}
+
+Test-Case 'Staged bytes catch a working-file fix hidden from ordinary status checks' {
+    $root = New-StagedFixture
+    Set-RepoFile $root 'check.ps1' 'if ([IO.File]::ReadAllText("candidate.txt") -cne "fixed") { throw "Fix absent from candidate" }'
+    $null = Invoke-Git $root @('add', '--', 'check.ps1')
+    $null = Invoke-Git $root @('update-index', '--assume-unchanged', '--', 'candidate.txt')
+    Set-RepoFile $root 'candidate.txt' 'fixed'
+    Assert-True ([string]::IsNullOrWhiteSpace((Invoke-Git $root @('diff', '--', 'candidate.txt')))) 'The status-metadata counterexample was not established.'
+    $worktree = Invoke-IsolatedProcess -Context $script:GitFixtureContexts[$root] -FilePath 'pwsh' `
+        -ArgumentList @('-NoProfile', '-File', 'check.ps1') -WorkingDirectory $root
+    Assert-True ($worktree.ExitCode -eq 0) 'The worktree positive control did not pass.'
+    $snapshot = New-GitTreeSnapshot (New-TestCandidate $root)
+    Assert-Throws {
+        Invoke-GitSnapshotCheck $snapshot -Name 'fixture fix' -FilePath 'pwsh' `
+            -ArgumentList @('-NoProfile', '-File', 'check.ps1')
+    } 'Fix absent from candidate'
+    $null = Invoke-Git $root @('update-index', '--no-assume-unchanged', '--', 'candidate.txt')
+    $null = Invoke-Git $root @('add', '--', 'candidate.txt')
+    $fixed = New-GitTreeSnapshot (New-TestCandidate $root)
+    $null = Invoke-GitSnapshotCheck $fixed -Name 'fixture fix' -FilePath 'pwsh' `
+        -ArgumentList @('-NoProfile', '-File', 'check.ps1')
+}
+
+Test-Case 'Selected base context includes old changed files without copying unrelated tracked content' {
+    $root = New-StagedFixture
+    Set-RepoFile $root 'unrelated.txt' 'large unrelated context'
+    $null = Invoke-Git $root @('add', '--', 'unrelated.txt')
+    $null = Invoke-Git $root @('commit', '-q', '-m', 'unrelated base context')
+    Set-RepoFile $root 'candidate.txt' 'changed'
+    Set-RepoFile $root 'added.txt' 'new file'
+    $null = Invoke-Git $root @('add', '--all')
+    $candidate = New-TestCandidate $root
+    $base = New-GitTreeSnapshot $candidate -Base -Paths $candidate.ChangedPaths
+    Assert-SnapshotFiles $base @{ 'candidate.txt' = [Text.Encoding]::UTF8.GetBytes('staged') }
+    Assert-True ($base.IsPartial -and $base.ScopePaths -ccontains 'added.txt') 'Selected scope was not recorded, including an absent-at-base addition.'
+    $additional = New-GitTreeSnapshot $candidate -Base -Paths @('unrelated.txt')
+    Assert-SnapshotFiles $additional @{ 'unrelated.txt' = [Text.Encoding]::UTF8.GetBytes('large unrelated context') }
+    Assert-Throws { New-GitTreeSnapshot $candidate -Paths @('candidate.txt') } 'candidate validation requires the complete tree'
+    Assert-Throws { New-GitTreeSnapshot $candidate -Base -Paths @('../outside') } 'Unsupported or unsafe Git path'
+    $empty = New-GitTreeSnapshot $candidate -Base -Paths @()
+    Assert-True ($empty.IsPartial -and $empty.Manifest.Count -eq 0) 'Empty selection copied the full base.'
+}
+
+Test-Case 'Unchanged approval waits retain the snapshot and successful checks without rerunning them' {
+    $candidate = New-TestCandidate (New-StagedFixture)
+    $snapshot = New-GitTreeSnapshot $candidate
+    $path = $snapshot.Path
+    $null = Invoke-GitSnapshotCheck $snapshot -Name 'single execution' -FilePath 'pwsh' `
+        -ArgumentList @('-NoProfile', '-Command', '[IO.File]::AppendAllText("execution-count.txt", "1")')
+    Assert-GitSnapshotIntegrity $snapshot
+    Assert-GitCandidateCurrent $candidate
+    $refresh = Update-GitReviewCandidate -Candidate $candidate -Snapshot $snapshot
+    Assert-True (-not $refresh.StateChanged -and $snapshot.Path -ceq $path -and $snapshot.Checks.Count -eq 1) 'An unchanged candidate lost its snapshot or evidence.'
+    Assert-True ([IO.File]::ReadAllText((Join-Path $path 'execution-count.txt')) -ceq '1') 'Validation was unnecessarily repeated.'
+    Assert-True (@(Get-ChildItem -LiteralPath $candidate.Context.Root -Directory -Filter 'snapshot-*').Count -eq 1) 'Approval retention created another snapshot.'
+}
+
+Test-Case 'State-only refresh retains bytes and original check identity but requires a new approval tuple' {
+    $root = New-StagedFixture
+    $candidate = New-TestCandidate $root
+    $snapshot = New-GitTreeSnapshot $candidate
+    $path = $snapshot.Path
+    $null = Invoke-GitSnapshotCheck $snapshot -Name 'original check' -FilePath 'pwsh' -ArgumentList @('-NoProfile', '-Command', 'exit 0')
+    $oldState = $candidate.State
+    $other = New-FixtureCommit $root (Invoke-Git $root @('rev-parse', 'HEAD^{tree}')).Trim() $candidate.State.Parents
+    $null = Invoke-Git $root @('update-ref', 'HEAD', $other)
+    Assert-Throws { Assert-GitCandidateCurrent $candidate } 'Head changed'
+    $refresh = Update-GitReviewCandidate -Candidate $candidate -Snapshot $snapshot
+    Assert-True ($refresh.StateChanged -and $refresh.PreviousState.Head -ceq $oldState.Head -and $refresh.State.Head -ceq $other) 'State drift was not explicitly exposed.'
+    Assert-True ($snapshot.Path -ceq $path -and $snapshot.Checks[0].CandidateState.Head -ceq $oldState.Head) 'Snapshot was recopied or old evidence relabeled as a new execution.'
+    Assert-GitCandidateCurrent $candidate
+    Set-RepoFile $root 'candidate.txt' 'new candidate'
+    $null = Invoke-Git $root @('add', '--', 'candidate.txt')
+    Assert-Throws { Update-GitReviewCandidate -Candidate $candidate -Snapshot $snapshot } 'index tree changed; create a new candidate snapshot'
+    Assert-True ($candidate.State.Head -ceq $other) 'Failed content refresh altered the retained state.'
+}
+
+Test-Case 'State refresh rejects tampered snapshots rather than transferring evidence' {
+    $candidate = New-TestCandidate (New-StagedFixture)
+    $snapshot = New-GitTreeSnapshot $candidate
+    [IO.File]::WriteAllText((Join-Path $snapshot.Path 'candidate.txt'), 'tampered')
+    Assert-Throws { Update-GitReviewCandidate -Candidate $candidate -Snapshot $snapshot } 'changed bytes'
 }
 
 Test-Case 'Native check failures invalidate evidence even when inputs are unchanged' {
@@ -587,18 +690,65 @@ Test-Case 'NUL discovery preserves a newline name; materialization is exact or e
     }
 }
 
-Test-Case 'Executable Git mode is preserved on POSIX or rejected explicitly on Windows' {
+Test-Case 'Executable Git mode is preserved on POSIX and recorded as metadata on Windows' {
     $root = New-StagedFixture
     $null = Invoke-Git $root @('update-index', '--chmod=+x', '--', 'candidate.txt')
     $candidate = New-TestCandidate $root
-    if ($IsWindows) { Assert-Throws { New-GitTreeSnapshot $candidate } '100755 cannot be faithfully represented on Windows' }
+    $snapshot = New-GitTreeSnapshot $candidate
+    Assert-True ($snapshot.Manifest[0].Mode -ceq '100755') 'The manifest lost executable metadata.'
+    if ($IsWindows) {
+        Assert-True ($snapshot.ModeFidelity -ceq 'metadata-only') 'Windows mode fidelity was overstated.'
+        $null = Invoke-GitSnapshotCheck $snapshot -Name 'ordinary Windows check' -FilePath 'pwsh' `
+            -ArgumentList @('-NoProfile', '-Command', 'exit 0')
+        Assert-Throws {
+            Invoke-GitSnapshotCheck $snapshot -Name 'executable check' -FilePath 'pwsh' `
+                -ArgumentList @('-NoProfile', '-Command', '[IO.File]::WriteAllText("must-not-run.txt", "ran")') -RequiresPosix
+        } 'requires a POSIX host'
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $snapshot.Path 'must-not-run.txt'))) 'A required POSIX check executed on Windows.'
+    }
     else {
-        $snapshot = New-GitTreeSnapshot $candidate
+        Assert-True ($snapshot.ModeFidelity -ceq 'exact') 'POSIX fidelity was not recorded.'
         $path = Join-Path $snapshot.Path 'candidate.txt'
         Assert-True ([int][IO.File]::GetUnixFileMode($path) -eq 493) 'Executable mode was transformed.'
         [IO.File]::SetUnixFileMode($path, [IO.UnixFileMode]420)
         Assert-Throws { Assert-GitSnapshotIntegrity $snapshot } 'changed mode'
     }
+}
+
+Test-Case 'Cleanup failure after a verified commit reports cleanup independently and permits retry' {
+    $root = New-StagedFixture
+    $candidate = New-TestCandidate $root
+    $null = New-GitTreeSnapshot $candidate
+    $commit = New-FixtureCommit $root $candidate.Tree $candidate.State.Parents
+    $null = Invoke-Git $root @('update-ref', 'HEAD', $commit)
+    Assert-GitCandidateCommit $candidate -CommitId $commit
+    $lock = [IO.File]::Open((Join-Path $candidate.Context.Root 'locked.txt'), [IO.FileMode]::Create, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    try {
+        if ($IsWindows) {
+            $warnings = @()
+            $cleanup = Remove-GitReviewCandidate $candidate -ReportFailure -WarningVariable warnings -WarningAction SilentlyContinue
+            Assert-True (-not $cleanup.Succeeded -and $cleanup.Error -and $warnings.Count -gt 0) 'Cleanup failure was hidden or success-shaped.'
+            Assert-True ($cleanup.Path -ceq $candidate.Context.Root) 'Cleanup did not identify its retry scope.'
+            Assert-GitCandidateCommit $candidate -CommitId $commit
+            Assert-True ((Invoke-Git $root @('rev-parse', 'HEAD')).Trim() -ceq $commit) 'Cleanup failure changed the successful commit.'
+        }
+    }
+    finally { $lock.Dispose() }
+    $cleanup = Remove-GitReviewCandidate $candidate -ReportFailure
+    Assert-True ($cleanup.Succeeded -and -not (Test-Path -LiteralPath $cleanup.Path)) 'Retry did not clean the owned context.'
+    $null = $script:TestCandidates.Remove($candidate)
+}
+
+Test-Case 'Cleanup preview and unowned contexts cannot be reported as successful removals' {
+    $candidate = New-TestCandidate (New-StagedFixture)
+    $preview = Remove-GitReviewCandidate $candidate -ReportFailure -WhatIf
+    Assert-True (-not $preview.Succeeded -and (Test-Path -LiteralPath $preview.Path)) 'Cleanup preview removed state or claimed success.'
+    $foreign = New-StagedFixture
+    $fake = [pscustomobject]@{ Context = [pscustomobject]@{ Root = $foreign } }
+    $failure = Remove-GitReviewCandidate $fake -ReportFailure -WarningAction SilentlyContinue
+    Assert-True (-not $failure.Succeeded -and $failure.Error -match 'unowned process context') 'An unowned cleanup was hidden.'
+    Assert-Throws { Remove-GitReviewCandidate $fake } 'unowned process context'
+    Assert-True (Test-Path -LiteralPath $foreign) 'Unowned content was removed.'
 }
 
 Test-Case 'A HEAD-substitution mutant of the documented procedure cannot pass' {

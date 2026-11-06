@@ -10,22 +10,28 @@ resolution, agent execution, human approval, or a deployed MCP service.
 | API | Contract |
 |---|---|
 | `New-GitReviewCandidate -RepositoryRoot <root> [-IndexPath <absolute-path>] [-AllowEmpty]` | Capture the source index via a disposable copy. Return `Tree`, `State` (`Base`, `Head`, ordered `Parents`, `RefState`, `DestinationRef`, `MergeMode`), `ChangedPaths`, and binary `DiffBytes`. Reject empty candidates by default. An explicit missing/corrupt index is an error, not an empty index. |
-| `New-GitTreeSnapshot -Candidate <candidate> [-Base]` | Return `Path`, `Tree`, `Role` (`candidate` or `base`), the tree `Manifest`, and a latched evidence state. Default to the captured candidate tree; `-Base` resolves the captured base's tree, never a moving ref. Materialize complete raw blobs, then check the exact path set, types, modes, and bytes plus the current candidate tuple. |
+| `New-GitTreeSnapshot -Candidate <candidate> [-Base [-Paths <string[]>]]` | Return `Path`, `Tree`, `Role` (`candidate` or `base`), the tree `Manifest`, `ScopePaths`, `IsPartial`, `ModeFidelity`, and a latched evidence state. The candidate snapshot is always complete. `-Base` resolves the captured base tree, never a moving ref; `-Paths` is allowed only with `-Base` and materializes exactly those existing base paths. Omitting `-Paths` explicitly requests complete base context. |
 | `Assert-GitSnapshotIntegrity -Snapshot <snapshot> [-Exact]` | Check all tracked inputs. `-Exact` also rejects additional paths and is required at initial materialization. Later gates permit ordinary untracked build outputs, never links. Any observed failure permanently invalidates this snapshot's evidence. |
-| `Invoke-GitSnapshotCheck -Snapshot <snapshot> -Name <label> -FilePath <executable> -ArgumentList <array> [-RequiredPaths <array>]` | Run one declared check in the candidate snapshot with an isolated child home/Git environment. Reject base context as a validation target. Required paths must be tracked snapshot inputs. Check identity before/after execution and native exit status. A missing command/input, failed command, or drift invalidates evidence. |
+| `Invoke-GitSnapshotCheck -Snapshot <snapshot> -Name <label> -FilePath <executable> -ArgumentList <array> [-RequiredPaths <array>] [-RequiresPosix]` | Run one declared check in the candidate snapshot with an isolated child home/Git environment. Reject base context as a validation target. Required paths must be tracked snapshot inputs. `-RequiresPosix` fails clearly on Windows. Check identity before/after execution and native exit status. A missing command/input, failed command, or drift invalidates evidence. |
 | `Assert-GitCandidateCurrent -Candidate <candidate>` | Pre-review/pre-acceptance/pre-commit guard for the tree **and** complete base/ordered-parent/ref/destination tuple. Does not approve or create a commit. |
+| `Update-GitReviewCandidate -Candidate <candidate> -Snapshot <snapshot>` | Explicitly capture and rebind a same-tree current tuple after state drift without recopying verified snapshot bytes. Return `PreviousState`, `State`, and `StateChanged`. It does not transfer approval or validation/review evidence; a changed index tree fails and requires a new candidate snapshot. |
 | `Assert-GitCandidateCommit -Candidate <candidate> -CommitId <exact-id>` | Verify the resulting commit's tree, ordered parents, current HEAD, destination, and symbolic/detached state (including the intended unborn-to-born transition). Never amend or repair a mismatched result. |
-| `Remove-GitReviewCandidate -Candidate <candidate>` | Remove only that candidate's registered temporary context. Call in `finally`. |
+| `Remove-GitReviewCandidate -Candidate <candidate> [-ReportFailure]` | Remove only that candidate's registered temporary context. Without `-ReportFailure`, cleanup errors throw. With it, cleanup returns `Succeeded`, `Path`, and `Error`, emits a warning on failure, and lets the caller report cleanup separately from an already verified commit. |
 
 `skills\git-commit-review\SKILL.md` contains the executable entry example between
 `tested-snapshot` markers. `Run-GitSnapshotProcedureTests.ps1` executes that example
 and the same helper used by the hook; it is not a separately maintained archive
 recipe. Wording checks remain wording checks.
 
-The example prepares both candidate and base context using the same materializer.
-The base manifest retains deleted/renamed old paths and is empty for an unborn
-base. Both contexts belong to the candidate's owned cleanup scope. Keep base
-context read-only and check it with `-Exact` before dispatch and acceptance.
+The example prepares one complete candidate snapshot and a selected, immutable
+base context using the same materializer. Its normal base selection is
+`$candidate.ChangedPaths`: existing base files include deleted and old-rename
+paths, while candidate-only additions are absent. A caller may explicitly
+request full base context by omitting `-Paths`, or produce another immutable
+base context for more review material; reviewers never substitute current
+worktree files. Both contexts belong to the candidate's owned cleanup scope.
+Keep base context read-only and check it with `-Exact` before dispatch and
+acceptance.
 Caller-prepared reviewer intake includes repository/scope, resolved identities,
 the complete diff, readable contexts/manifests, locked requirements, and exact
 validation commands/working directories/results. Missing required evidence is
@@ -51,9 +57,11 @@ PowerShell 7 and also exercises the helpers in Windows PowerShell 5.1 on Windows
 its unsigned 5.1 test process uses process-only `-ExecutionPolicy Bypass`, without
 changing machine or user policy.
 
-Windows supports Git mode `100644` only: it cannot establish POSIX executable
-mode fidelity. POSIX supports `100644` and `100755` with exact mode checks using
-PowerShell 7.3+ filesystem APIs. Unrepresentable names, symbolic links, gitlinks
+Windows supports regular Git modes `100644` and `100755` as manifest metadata
+with `ModeFidelity='metadata-only'`; it cannot establish POSIX executable-mode
+fidelity. POSIX has `ModeFidelity='exact'` for those modes using PowerShell
+7.3+ filesystem APIs. Checks requiring POSIX executable behavior must request
+`-RequiresPosix` and fail clearly on Windows. Unrepresentable names, symbolic links, gitlinks
 (submodules), and LFS pointer inputs fail closed rather than being silently
 renamed, flattened, followed, downloaded, or counted as complete. Finish
 rebase/cherry-pick/revert/sequencer operations before this workflow. Ordinary and
@@ -84,7 +92,17 @@ waiving failures. Validation evidence reuse is a caller policy, not an automatic
 cache in `GitSnapshot.psm1`; it requires the same captured tuple, immutable inputs,
 command/environment and freshness, with readable successful integrity evidence.
 Worktree-only results do not satisfy it. Reuse never skips current integrity
-gates or a repository requirement for a fresh check.
+gates or a repository requirement for a fresh check. An ordinary approval wait
+does not itself require cleanup, context recreation, or check reruns. If same-tree
+base/ref state drift is observed, explicitly use `Update-GitReviewCandidate`;
+assess base review and command/environment relevance, refresh affected evidence,
+and obtain approval for the refreshed tuple. A changed tree requires a new
+candidate/snapshot. Original check records remain bound to their captured state
+and are never relabeled as refreshed evidence. No approval or evidence transfers
+implicitly. Generated-input probes, including SQLite databases and caches, stay
+outside frozen base context; ordinary generated outputs are allowed only in a
+candidate snapshot and do not authorize a base-context bypass or ignoring all
+base outputs.
 
 ## Daily-work policy scenarios
 
@@ -110,6 +128,8 @@ agent traces when the updated instructions are loaded:
 | Standalone research/design/audit request | Return the requested result and stop. An explicitly requested coordinator owns its own next-phase approval, asked once. |
 | Active workflow awaits live validation | The explicit checkpoint request supplies suspension direction without a duplicate prompt; release active ownership, keep pending tasks incomplete and resume afterward. |
 | Routine clean review finishes | Save one compact outcome in the configured durable provider or required record, not duplicate reports. |
+| Routine commit review | Use one focused core reviewer; extra reviewers need repository or user authority. Share ten minutes across review, consolidation and targeted verification, not ten minutes per pass. Time required checks and approval waits separately. |
+| Review budget expires with incomplete coverage | Pause and identify remaining scope/gates; request a split or specific extra budget. Do not waive required review, restart the clock, or claim a clean result. |
 
 Missing trace evidence is **Not evaluated**, not a behavioral pass. Do not create
 real commits, pushes, deployments or installation changes merely to exercise

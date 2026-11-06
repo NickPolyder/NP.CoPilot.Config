@@ -2,6 +2,8 @@
 
 ## Status: Implemented
 
+**Updated:** 2026-11-06.
+
 The Git review workflow now separates routine commit safety from deliberately exhaustive analysis.
 This preserves high-signal review while avoiding repeated scans of unchanged code.
 
@@ -9,7 +11,7 @@ This preserves high-signal review while avoiding repeated scans of unchanged cod
 
 | Skill | Use when | Reviewers | Scope | Output |
 |---|---|---|---|---|
-| `git-commit-review` | Creating one normal, atomic commit | Exactly one `code-reviewer`; zero or one relevant specialist ordinarily, required expertise on escalation signals; a second specialist only for directly interacting high-risk domains | Staged index snapshot; targeted re-review only | One concise final commit report |
+| `git-commit-review` | Creating one normal, atomic commit | One focused `code-reviewer`; separate specialists only when repository-required or user-requested | Staged index snapshot; one shared ten-minute review budget including targeted fix verification | One compact outcome and one candidate/message approval |
 | `full-code-review` | Explicitly requested release candidate, major architecture change, security audit, schema redesign, or exhaustive analysis | Architect, Principal Developer, Senior Developer, and up to three specialists | Whole requested diff or code area, frozen to immutable identities or a file manifest | Detailed review report |
 
 `full-code-review` is never automatically invoked by `git-commit-review`.
@@ -24,11 +26,19 @@ This preserves high-signal review while avoiding repeated scans of unchanged cod
    separately from changed-path review scope.
 3. Runs import, build, type, and targeted test checks against that snapshot before reviewers start.
 4. Stops immediately when preflight fails.
-5. Reviews Critical and High findings within an approximately ten-minute timebox.
-6. Stages approved fixes, records a new tree ID, rebuilds the snapshot, and repeats affected validation and targeted review only for changed files, prior finding locations, and directly affected contracts.
-7. Requires explicit approval for every cycle after the second.
-8. Runs the full existing test suite once at the final gate, with tracked-input
-   integrity checks around validation commands.
+5. Gives one focused reviewer a shared ten-minute budget for initial review,
+   findings consolidation, and any targeted verification of blocker fixes.
+   The caller records elapsed review time; extra reviewers and fixes do not
+   reset the allowance. Required checks, implementation, and approval waits
+   are timed separately.
+6. Stops when the assigned scope is covered, including a clean first review.
+   Only concrete, reachable Critical or High defects introduced or worsened by
+   the candidate block; incidental minor findings do not trigger fix cycles.
+7. After an authorized blocker fix, captures fresh staged inputs and checks only
+   affected behavior, prior findings, and directly affected contracts.
+   No broad rescan or phase-only rerun is required.
+8. Runs full suites only when required by repository policy or affected behavior;
+   reuses still-valid checks instead of automatically repeating final validation.
 9. Requires manual verification and approval of the conventional commit message
    plus the exact candidate/base/parent/ref tuple before committing.
 10. Rechecks that tuple and snapshot integrity immediately before commit, then
@@ -64,32 +74,30 @@ The caller retains these identities and results when supplying the reviewer's
 immutable intake bundle. This summary describes the required procedure, not a
 claim that every running agent or concurrent Git operation is controlled by it.
 
-## Automatic Escalation
+## Focus and Stopping
 
-The lightweight workflow automatically adds the relevant specialist for the following staged changes:
+Domain risk changes the core reviewer's focus, not the default reviewer count.
+The commit workflow does not audit unchanged subsystems or search for optional
+architecture, coverage, dependency, documentation, or style improvements.
+Additional independent reviewers need a repository requirement or user request,
+non-overlapping scopes, and the same remaining review budget.
 
-| Trigger | Specialist |
-|---|---|
-| Authentication, authorization, cryptography, or secrets | Security |
-| Destructive or irreversible database migration | Database |
-| External production write | Systems Integration |
-| Broad-blast-radius deployment or infrastructure change | DevOps |
-| Safety-critical concurrency or data-integrity change | Systems Integration or Database |
-
-Escalation adds expertise without promoting the review to `full-code-review`.
-Each specialist is a separately scoped `code-reviewer` assignment with relevant
-on-demand domain notes. The three exhaustive hats likewise remain separate
-reviewer assignments. Sharing a card does not remove required expertise,
-independence, immutable intake or the read/search-only boundary.
+At budget exhaustion, stop further review and report
+**Paused - review budget exhausted**, known findings, remaining scope, and gates.
+Ask whether to split the candidate or authorize a specific additional budget.
+Do not silently extend the review, replace reviewers, mark incomplete coverage
+clean, or commit automatically. A tool overrun must be disclosed.
+Permission for a third or later cycle does not itself grant more time.
+Required independent review is never waived to fit the budget.
 
 ### Reviewer-Count Examples
 
 | Candidate | Core reviewers | Specialists |
 |---|---:|---|
-| Ordinary contained change, no escalation signal or distinct specialist need | 1 | 0 |
-| Authentication change | 1 | 1: `code-reviewer` with security focus |
-| Authorization directly interacting with a destructive migration | 1 | 2: separate security- and data-focused `code-reviewer` assignments |
-| Large ordinary diff without an interacting high-risk pair | 1 | 0, or 1 when distinct relevant expertise is justified; never 2 for size alone |
+| Ordinary contained change | 1 | 0 |
+| Authentication change | 1, with security focus | 0 unless independently required or requested |
+| Repository mandates independent migration review | 1 | Required separate data-focused assignment, within the shared budget |
+| Large ordinary diff | 1 | 0 by default; propose splitting if it cannot fit the budget |
 
 The [read/search-only reviewer](../../agents/code-reviewer.md#required-intake)
 requires caller-supplied base/candidate identities, the complete diff, immutable
@@ -107,10 +115,10 @@ proof that an autonomous session executed every step.
 
 | Previous behavior | New behavior |
 |---|---|
-| Always dispatched Architect, Principal Developer, and Senior Developer, plus up to three specialists | Dispatches exactly one `code-reviewer`; zero or one relevant specialist ordinarily, required domain expertise on escalation, and a second only for directly interacting high-risk domains |
+| Always dispatched multiple hats or keyword-triggered specialists | Dispatches one focused `code-reviewer`; separate reviewers only when repository-required or user-requested |
 | Could repeat a whole-diff review after every fix | Re-reviews only modified files, prior finding locations, and directly affected contracts |
 | Created a full report for every cycle | Creates one concise final report, with a blocker record only when a Critical or High issue pauses work |
-| Allowed three cycles before asking to continue | Requires explicit approval for each cycle after the second |
+| Treated each pass or reviewer as another time allowance | Shares ten minutes across initial review, consolidation, and targeted fix verification; pauses incomplete coverage rather than extending silently |
 | Did not require a materialized index snapshot before review | Validates an index-only snapshot before any reviewer is launched |
 | Used normal pre-commit review for deep analysis | Reserves the explicit `full-code-review` skill for exhaustive, multi-hat analysis |
 

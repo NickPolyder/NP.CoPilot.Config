@@ -15,9 +15,10 @@ of affected technologies does not require an agent per technology. The caller
 supplies only the relevant [domain notes](../skills/domain-guidance.md).
 Test-only implementation still cannot edit production code.
 
-Required independent reviews remain independent: commit review keeps one core
-reviewer and its bounded, signal-driven domain assignments. Explicit exhaustive
-review keeps three separately assigned hats and up to three domain specialists.
+Required independent reviews remain independent: commit review uses one focused
+core reviewer by default, with extra reviewers only when repository-required or
+user-requested, all within the shared ten-minute review budget. Explicit
+exhaustive review keeps three separately assigned hats and up to three domain specialists.
 These are distinct assignments of the reviewer role, not retired dispatch names.
 The workflow owns immutable inputs, executed checks, consolidation and reports.
 Missing evidence is not a clean review.

@@ -2,16 +2,38 @@
 name: git-commit-review
 description: >
   Lightweight pre-commit workflow that splits atomic candidates, validates an
-  index-only snapshot, runs direct checks, and performs a targeted review before
-  creating a safe, approved commit.
+  index-only snapshot, reuses valid checks, and gives one focused reviewer a
+  shared ten-minute review budget before creating an approved commit.
 ---
 
 # Purpose
 
 > **Shared policy:** Follow `instructions/coordination.instructions.md` for precedence, invocation, delegation, and handoffs; `instructions/workflow.instructions.md` for proportional verification; and `instructions/git-conventions.instructions.md` for delivery and commit safety.
 
-This is the default pre-commit workflow.
-It is intentionally bounded to approximately ten minutes of reviewer time.
+This is the default pre-commit workflow, not a codebase audit.
+Normal path: stage one candidate, establish required checks once, run one focused
+review, obtain one candidate/message approval, and commit.
+Technical snapshot and approval procedures below protect that path; they are
+not reasons to add analysis, reports, repeated checks, or extra reviewers.
+
+## Review budget
+
+Use one shared ten-minute review budget for initial review, findings
+consolidation, and any targeted re-review of the same candidate's fixes.
+Measure elapsed wall-clock review time, not tokens or a fresh allowance per
+reviewer. Record the start time and remaining budget before reviewer dispatch;
+include the bounded scope and remaining time in each assignment.
+Required validation commands, implementation fixes, and user approval waits
+are separate from review time; report them separately if they cause a delay.
+
+Stop review when the budget is exhausted. Do not start another reviewer,
+replacement, broader investigation, or fix-verification pass to extend it.
+If coverage is incomplete, report **Paused - review budget exhausted**, findings,
+remaining scope, and required gates; ask the user whether to split the candidate
+or authorize a specific additional review budget. No silent extension, automatic
+commit, or claim of a complete review is permitted.
+A tool call that returns late is an overrun: report it and stop further review,
+never reset the clock or describe it as within budget.
 
 Use `full-code-review` only when the user explicitly requests exhaustive analysis.
 Recommendations for `full-code-review` or `security-audit` are separate handoffs after this owning workflow ends, never nested invocations.
@@ -25,9 +47,13 @@ within the user's requested scope.
 
 Do not use it for:
 
-- A user-requested full review, release candidate, major architectural change, security audit, or schema redesign; recommend `full-code-review`.
+- A user-requested exhaustive review or dedicated audit; use the separately requested review workflow instead.
 - A trivial change when the user explicitly chooses to skip review.
 - An empty index.
+
+Risk or change size alone does not promote a normal commit to exhaustive review.
+Keep the focused path when it can cover the candidate; otherwise propose a split
+or pause for the user's direction, preserving required repository gates.
 
 ## Commit purpose and pending validation
 
@@ -87,18 +113,18 @@ Review the index, not the mutable worktree.
 Import-Module $snapshotHelper -ErrorAction Stop
 $candidate = New-GitReviewCandidate -RepositoryRoot $repositoryRoot
 $snapshot = New-GitTreeSnapshot -Candidate $candidate
-$baseSnapshot = New-GitTreeSnapshot -Candidate $candidate -Base
+$baseSnapshot = New-GitTreeSnapshot -Candidate $candidate -Base -Paths $candidate.ChangedPaths
 Assert-GitSnapshotIntegrity -Snapshot $snapshot -Exact
 Assert-GitSnapshotIntegrity -Snapshot $baseSnapshot -Exact
 Assert-GitCandidateCurrent -Candidate $candidate
 ```
 <!-- tested-snapshot:end -->
 
-4. Verify snapshot paths, file types, modes, and bytes against the captured tree with the helper's `git ls-tree -r -z --full-tree` manifest and raw `git cat-file blob` output. It includes unchanged tracked files, excludes deletions, and ignores archive/checkout transformations (`export-ignore`, `export-subst`, smudge filters, EOL conversion, and ident substitution). It never uses archive success as proof of completeness. Its initial `-Exact` gate rejects extra paths as well as missing or altered inputs.
-5. Use changed paths only for review scope, not snapshot completeness. `$candidate.DiffBytes` is the binary-capable base-to-tree diff; `$candidate.ChangedPaths` comes from NUL-delimited, rename-disabled discovery so both rename sides, deletions, and type changes are in scope. `Assert-GitCandidateCurrent` rechecks the full tuple, not just the index tree, before accepting these as one candidate.
-6. Follow the raw-tree/filesystem contract in `scripts\README.md`. Unsupported inputs fail closed by default; prefer POSIX for Git mode 100755. For a platform/filesystem fidelity limitation, section 6 permits a candidate-specific exception using an identified helper override or snapshot procedure. Disclose affected paths/modes, bypass, lost guarantees, remaining checks, and risks before obtaining explicit user acceptance. Carry the exception through later gates, reviewer intake, final approval, and the outcome; report the waived guarantee as **Accepted exception**, never passed. Preserve immutable tree bytes, candidate identity, required checks, and delivery controls. No worktree substitution, silent checkout transformations, or unrelated bypasses. Stop if the remaining guarantees cannot be preserved; approval alone does not enable an unsupported helper.
-7. `$baseSnapshot` supplies readable context at the captured base tree, including deleted files and old rename paths; an unborn base has an empty manifest. Both snapshots expose `Tree`, `Role`, `Path`, and `Manifest` (paths, modes, and blob IDs). Base context is read-only review evidence, never a substitute validation target.
-8. Keep the candidate and both snapshots for all checks and review. In a `finally` block at workflow termination, call `Remove-GitReviewCandidate -Candidate $candidate` to remove only its owned snapshots, index copies, and isolated child state.
+4. Verify candidate snapshot paths, file types, modes, and bytes against its complete captured tree with the helper's `git ls-tree -r -z --full-tree` manifest and raw `git cat-file blob` output. It includes unchanged tracked files, excludes deletions, and ignores archive/checkout transformations (`export-ignore`, `export-subst`, smudge filters, EOL conversion, and ident substitution). It never uses archive success as proof of completeness. Its initial `-Exact` gate rejects extra paths as well as missing or altered inputs.
+5. `$candidate.DiffBytes` is the binary-capable base-to-tree diff; `$candidate.ChangedPaths` comes from NUL-delimited, rename-disabled discovery so both rename sides, deletions, and type changes are in scope. The candidate snapshot is always complete; changed paths select the normal, minimal base context rather than limiting candidate completeness. `Assert-GitCandidateCurrent` rechecks the full tuple, not just the index tree, before accepting these as one candidate.
+6. Follow the raw-tree/filesystem contract in `scripts\README.md`. Regular Git modes `100644` and `100755` are captured in the manifest. On Windows, `ModeFidelity` is `metadata-only`; on POSIX it is `exact`. A check that requires POSIX executable behavior must use `Invoke-GitSnapshotCheck -RequiresPosix` and fails clearly on Windows. Unsupported links, submodules, LFS inputs, and true path collisions remain blockers. No worktree substitution, silent checkout transformations, or unrelated bypasses are permitted.
+7. `$baseSnapshot` supplies immutable, read-only context at the captured base tree. With `-Paths $candidate.ChangedPaths`, it contains exactly existing base paths selected by that list, including deleted files and old rename paths; candidate-only additions are absent. It exposes `ScopePaths` and `IsPartial`. Omit `-Paths` only when full base context is deliberately needed; a reviewer needing more context receives caller-produced immutable base context, never current worktree files. Both snapshots expose `Tree`, `Role`, `Path`, and `Manifest` (paths, modes, and blob IDs). Base context is never a validation target.
+8. Retain the candidate and snapshots through checks, review, and the ordinary `ask_user` approval wait. Do not start a background approval runner, clean up or rematerialize context because of an unchanged wait or tool timeout, or obscure a successful commit with eager cleanup. At actual workflow end or abort, call `Remove-GitReviewCandidate -Candidate $candidate -ReportFailure` and report its structured cleanup result separately.
 
 Never substitute the working tree for this snapshot.
 Unstaged changes must not affect validation or reviewer conclusions.
@@ -120,6 +146,7 @@ pending live checks are coverage limits, not failed local preflight.
 - Discover repository-declared validation capabilities from the captured documentation and manifests. The presence of Copilot configuration alone does **not** imply that the target has `scripts\Validate-Config.ps1`. Do not require another project to copy this repository's validator.
 - **For NP.CoPilot.Config**, the declared required configuration check remains `pwsh -NoProfile -File .\scripts\Validate-Config.ps1 -RepositoryRoot <snapshot-path>`, executed in the snapshot. Run its focused regression suite when the validator or its tests change. In any project, a declared required command or input that is missing must fail explicitly; never fall back to the mutable worktree.
 - Run each potentially writing preflight, restore, build, lint, or test command through `Invoke-GitSnapshotCheck`, with its executable, argument array, name, and snapshot-relative `-RequiredPaths` (if any). It checks tracked input integrity and candidate identity before and after the command, and checks the native exit code. Ordinary untracked files/directories produced by builds are allowed after materialization; linked outputs are not.
+- Run generated-input probes, including SQLite databases and caches, outside the frozen base context. Ordinary generated outputs are allowed only in the candidate snapshot and never justify a base-context bypass or ignoring all base outputs.
 - Before reviewer dispatch, call `Assert-GitSnapshotIntegrity -Snapshot $snapshot`, `Assert-GitSnapshotIntegrity -Snapshot $baseSnapshot -Exact`, and `Assert-GitCandidateCurrent -Candidate $candidate` again. Tracked input mutation invalidates the snapshot's evidence even if the command exits zero. Do not run checks against mutated inputs and then restore bytes to claim evidence for the originals. An observed failure is latched: restoring bytes does not clear it. Restage intended fixes, rematerialize, and rerun affected checks on the new candidate; do not hide mutation with cleanup inside a validation command.
 
 If the snapshot cannot be materialized, imports/build/type checks fail, or targeted tests fail, stop.
@@ -140,39 +167,26 @@ after invalidation are not reusable evidence. Reuse does not skip current
 snapshot/candidate integrity gates, satisfy a requirement for a fresh run, or
 prove missing build outputs exist in a new snapshot.
 
-## 4. Select reviewers and escalate risk
+## 4. Assign one focused reviewer
 
 Start with exactly one core reviewer: `code-reviewer`.
-Select at most one relevant specialist in ordinary review (zero or one); signal-driven expertise is required when a risk signal applies.
-
-| Staged-change signal | Specialist assignment |
-|---|---|
-| Authentication, authorization, cryptography, secrets | `code-reviewer`, security focus |
-| Destructive or irreversible database migration; safety-critical data integrity | `code-reviewer`, data/migration focus |
-| External production writes; integration-side data integrity | `code-reviewer`, integration focus |
-| Deployment or infrastructure change with broad blast radius | `code-reviewer`, infrastructure focus |
-| Safety-critical concurrency | `code-reviewer`, concurrency and affected-domain focus |
-
-These signals automatically add the appropriate specialist; they never invoke `full-code-review`.
+Give that reviewer relevant domain focus rather than adding reviewers for
+technology or risk keywords. Add a separate specialist only when the target
+repository explicitly requires independent domain review or the user requests it.
 Each specialist uses a separate `code-reviewer` assignment with a domain focus and the same immutable intake and read/search-only boundary.
-Supply only the relevant sections of `skills/domain-guidance.md`. Sharing a role
-card does not merge the core and specialist scopes or waive required expertise.
-
-Add a second specialist only when two distinct high-risk domains directly interact in the same candidate, such as authorization plus destructive migration or production writes plus broad deployment changes.
-Do not add a second specialist merely because a large diff touches multiple ordinary domains.
-
-Assign non-overlapping scopes before dispatch:
-
-- `code-reviewer` covers correctness, changed contracts, and high-signal repository-pattern violations.
-- Each specialist covers only its triggered domain.
-
-Reviewers are read-only.
-Concurrent reviewers must never edit the worktree, the index, or the snapshot.
+Assign non-overlapping scopes and use the same remaining review budget.
+Supply only relevant `skills/domain-guidance.md` sections.
+If required coverage cannot fit, pause rather than waive it or silently extend
+the budget. These assignments never invoke `full-code-review`.
 
 ## 5. Run the targeted review
 
-Run the core reviewer and selected specialists against the materialized snapshot and staged diff.
-Timebox the review stage to approximately ten minutes total.
+Review only staged changes and directly affected contracts; inspect surrounding
+code only to establish a concrete trigger or impact. Do not audit unchanged
+subsystems, search the repository for additional problems, or commission a
+separate test-gap, architecture, dependency, or documentation audit.
+If the candidate cannot reasonably fit the remaining budget, propose splitting
+it before dispatch instead of compensating with reviewer fan-out.
 
 Before dispatch, this active caller must supply the complete reviewer intake:
 
@@ -190,17 +204,24 @@ Never substitute current files for missing immutable review evidence.
 
 Each reviewer must:
 
-- Return only concrete findings with file and line references plus a proposed correction.
-- Focus on Critical and High severity concerns.
-- Treat Medium and Low findings as non-blocking; record them only when they are concrete and valuable.
-- Avoid style, formatting, and speculative concerns.
+- Return only concrete findings with file/line, trigger, impact, and correction.
+- Focus on Critical and High defects introduced or worsened by this candidate.
+  A blocker needs a reachable failure, not a hypothetical future concern.
+- Do not search for Medium or Low findings; incidental concrete ones are
+  non-blocking follow-ups, never required polish or another fix cycle.
+- Do not block on unrelated pre-existing defects unless repository policy
+  explicitly requires it. Avoid style, formatting, and speculative concerns.
+- Return promptly when the assigned scope is covered, including when there are
+  no blockers; do not keep looking to fill the budget.
 
 Required or user-requested review remains required for documentation. Assess
 accuracy and meaningful contracts, not preferred phrasing; stylistic suggestions
 must not become blockers or mandatory fix cycles.
 
 Do not add replacement reviewers to extend the timebox.
-If review coverage is incomplete when the timebox expires, report that limitation and let the user decide whether to continue this workflow. A requested `full-code-review` is a separate handoff only after this owning workflow has genuinely ended or been explicitly aborted; a blocked workflow is not complete.
+If review coverage is incomplete, apply the review-budget stopping rule; do not
+treat a timeout as a clean review.
+A requested `full-code-review` is a separate handoff only after this owning workflow has genuinely ended or been explicitly aborted; a blocked workflow is not complete.
 Before accepting reviewer output, recheck both snapshots' integrity (base with `-Exact`) and the current candidate tuple; changed inputs require a newly identified intake.
 
 Reviewers return findings only.
@@ -215,11 +236,10 @@ For each finding, identify its status:
 |---|---|
 | **Commit blocker** | Unresolved Critical or High finding; cannot commit. |
 | **Accepted risk** | User explicitly accepts a concrete Critical or High finding and directs the commit to continue where repository policy permits; this never waives required checks or delivery controls. |
-| **Accepted exception** | User explicitly accepts a disclosed section 2.6 fidelity limitation and directs its bypass for the exact candidate; other gates remain required. |
 | **Delayed follow-up** | Concrete Medium or Low finding recorded for later work. |
 | **Explicitly dropped** | Concrete finding rejected with its rationale. |
 
-Present blockers first, then accepted risks/exceptions, delayed follow-ups, and dropped findings. Never silently discard a finding or limitation. Offer eligible section 2.6 exceptions through `ask_user`; helper edits, generic commit requests, and silence are not acceptance. Record the full candidate tuple and approved bypass; refresh acceptance when either or the risks change. Include the exception in section 9's combined candidate/message approval, not instead of it.
+Present blockers first, then accepted risks, delayed follow-ups, and dropped findings. Never silently discard a finding or limitation.
 
 ## 7. Fix and scope re-review
 
@@ -242,11 +262,20 @@ Re-review only:
 
 Do not rescan unchanged parts of the original diff.
 Retain earlier findings for unchanged content, but refresh evidence for every affected contract.
+Use the original reviewer for one targeted verification of actual blocker fixes;
+do not dispatch another broad review or fix optional follow-ups before committing.
+When the initial review is clean, skip re-review entirely.
+Do not repeat successful checks or review solely because the workflow moved to
+another phase; only changed inputs, affected behavior, or required freshness
+invalidate the corresponding evidence.
 
 The initial review is cycle one.
 One targeted re-review is cycle two.
 Before starting cycle three or any later cycle, use `ask_user` to obtain explicit approval for that individual additional cycle.
 The cycle count never resets during a candidate's workflow.
+Cycle permission does not reset the shared review budget. If it is exhausted,
+continuation also needs an explicit additional time allowance and bounded scope.
+Combine cycle and budget-extension approval in one question when both apply.
 
 ## 8. Final validation gate
 
@@ -272,9 +301,10 @@ If a final check or an integrity gate fails, invalidate the affected evidence an
 Before committing:
 
 1. Present the staged diff/summary and proposed message together with validation results (including reused and pending evidence), final blocker state, accepted risks and follow-ups, plus the exact approval tuple: repository/index source, base identity, ordered parent list, unborn/detached/symbolic ref state, destination ref, and candidate tree. For a checkpoint, identify its purpose and pending acceptance gates.
-2. Use one confirmation for user verification and commit permission: use `ask_user` to obtain approval for the proposed conventional commit message **and that exact tuple**. Do not ask a separate preliminary verification question. Existing explicit approval of this presented candidate/message satisfies the gate; a generic earlier request to commit, silence or unavailable approval tooling does not. Evidence and approvals do not transfer to a different base, parent list, ref state, destination, or tree.
-3. Immediately before committing, require `Assert-GitCandidateCurrent -Candidate $candidate` and `Assert-GitSnapshotIntegrity -Snapshot $snapshot` to pass. A same-tree HEAD advance, branch switch, unborn-to-born transition, detached/symbolic transition, or changed merge parent list invalidates approval. Stop and refresh the snapshot, affected checks, review, and approvals; tree equality alone is insufficient.
+2. Use one confirmation for user verification and commit permission through ordinary `ask_user`: obtain approval for the proposed conventional commit message **and that exact tuple**. Do not ask a separate preliminary verification question or run approval in the background. Existing explicit approval of this presented candidate/message satisfies the gate; a generic earlier request to commit, silence or unavailable approval tooling does not. While waiting, retain the immutable contexts and evidence. Reuse evidence only when its input, command, environment, and freshness requirements remain valid, and report it as reused.
+3. Immediately before committing, require `Assert-GitCandidateCurrent -Candidate $candidate` and `Assert-GitSnapshotIntegrity -Snapshot $snapshot` to pass. A content change requires a new candidate and snapshot. For same-tree state drift, explicitly call `Update-GitReviewCandidate -Candidate $candidate -Snapshot $snapshot`; it retains verified snapshot bytes but does not transfer approval or evidence. Assess whether the base review context and each validation command/environment remain relevant, refresh affected evidence, and obtain approval for the refreshed exact tuple. Keep each original check record bound to its original candidate state; never relabel it as refreshed evidence. Do not automatically rerun every check solely because the base or ref state changed.
 4. Create the commit only after approval, check its native exit status, and obtain its exact object ID with checked Git discovery. Verify the resulting commit tree, ordered parent list, destination ref, and ref state using `Assert-GitCandidateCommit -Candidate $candidate -CommitId <new-commit-id>`. An unborn candidate must produce a parentless commit at its approved branch; a detached candidate must remain detached. If a hook or concurrent operation changed the result, report the mismatch and stop delivery rather than claiming the commit was reviewed or amending it automatically. These pre/post gates detect mismatches, not an atomic lock against concurrent Git writers.
+5. After commit verification reaches a definite outcome, call `Remove-GitReviewCandidate -Candidate $candidate -ReportFailure`. Report cleanup success or failure separately. If cleanup fails after a verified commit, retain and report the exact commit SHA; do not repeat the commit or describe the candidate as failed. Record the cleanup error for follow-up.
 
 The commit message must use imperative mood, keep its subject to 72 characters or fewer, and include the required trailers:
 
@@ -305,10 +335,13 @@ Include:
 - Candidate summary, complete approval tuple (including base, ordered parents, ref state, destination, and tree), resulting commit SHA or `ABORTED`/`PAUSED`, and normal/checkpoint purpose.
 - Snapshot preflight, tracked-integrity gates, executed/reused final-check outcomes (including explicit not-run/coverage limitations), and post-commit tree/parent/ref verification.
 - Intake identities and manifests, locked requirements, evidence references and missing-evidence limitations. Temporary snapshots are cleaned up; do not present their deleted paths as durable readable evidence.
-- Reviewers used, selection rationale, and cycle count: exactly one core, zero or one ordinary relevant specialist, required signal-driven expertise, and a second specialist only for directly interacting distinct high-risk domains.
+- Reviewers used and cycle count: one core by default; identify the repository
+  requirement or user request for any separate specialist.
 - Deduplicated findings grouped by the decision statuses.
-- User approvals and the final outcome.
-- Any timebox limitation.
+- User approvals, commit verification outcome, and cleanup outcome/error. A cleanup failure after a verified commit does not erase its exact SHA or cause a retry.
+- Review time used and any budget overrun or incomplete coverage; distinguish
+  validation time and approval waits. Keep the clean outcome brief, not a
+  second analysis pass or a detailed audit report.
 - For checkpoints, accepted risks, blockers or unfinished handoffs: concrete
   pending checks, owner, trigger, acceptance gate and resume conditions.
 
