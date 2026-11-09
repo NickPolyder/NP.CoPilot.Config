@@ -9,10 +9,10 @@ resolution, agent execution, human approval, or a deployed MCP service.
 
 | API | Contract |
 |---|---|
-| `New-GitReviewCandidate -RepositoryRoot <root> [-IndexPath <absolute-path>] [-AllowEmpty]` | Capture the source index via a disposable copy. Return `Tree`, `State` (`Base`, `Head`, ordered `Parents`, `RefState`, `DestinationRef`, `MergeMode`), `ChangedPaths`, and binary `DiffBytes`. Reject empty candidates by default. An explicit missing/corrupt index is an error, not an empty index. |
+| `New-GitReviewCandidate -RepositoryRoot <root> [-IndexPath <absolute-path>] [-TimeoutSeconds <seconds>] [-AllowEmpty]` | Capture the source index via a disposable copy. Return `Tree`, `State` (`Base`, `Head`, ordered `Parents`, `RefState`, `DestinationRef`, `MergeMode`), `ChangedPaths`, and binary `DiffBytes`. Reject empty candidates by default. An explicit missing/corrupt index is an error, not an empty index. |
 | `New-GitTreeSnapshot -Candidate <candidate> [-Base [-Paths <string[]>]]` | Return `Path`, `Tree`, `Role` (`candidate` or `base`), the tree `Manifest`, `ScopePaths`, `IsPartial`, `ModeFidelity`, and a latched evidence state. The candidate snapshot is always complete. `-Base` resolves the captured base tree, never a moving ref; `-Paths` is allowed only with `-Base` and materializes exactly those existing base paths. Omitting `-Paths` explicitly requests complete base context. |
 | `Assert-GitSnapshotIntegrity -Snapshot <snapshot> [-Exact]` | Check all tracked inputs. `-Exact` also rejects additional paths and is required at initial materialization. Later gates permit ordinary untracked build outputs, never links. Any observed failure permanently invalidates this snapshot's evidence. |
-| `Invoke-GitSnapshotCheck -Snapshot <snapshot> -Name <label> -FilePath <executable> -ArgumentList <array> [-RequiredPaths <array>] [-RequiresPosix]` | Run one declared check in the candidate snapshot with an isolated child home/Git environment. Reject base context as a validation target. Required paths must be tracked snapshot inputs. `-RequiresPosix` fails clearly on Windows. Check identity before/after execution and native exit status. A missing command/input, failed command, or drift invalidates evidence. |
+| `Invoke-GitSnapshotCheck -Snapshot <snapshot> -Name <label> -FilePath <executable> -ArgumentList <array> [-RequiredPaths <array>] [-TimeoutSeconds <seconds>] [-RequiresPosix]` | Run one declared check in the candidate snapshot with an isolated child home/Git environment. Reject base context as a validation target. Required paths must be tracked snapshot inputs. `-RequiresPosix` fails clearly on Windows. Check identity before/after execution and native exit status. A missing command/input, failed command, timeout, or drift invalidates evidence. |
 | `Assert-GitCandidateCurrent -Candidate <candidate>` | Pre-review/pre-acceptance/pre-commit guard for the tree **and** complete base/ordered-parent/ref/destination tuple. Does not approve or create a commit. |
 | `Update-GitReviewCandidate -Candidate <candidate> -Snapshot <snapshot>` | Explicitly capture and rebind a same-tree current tuple after state drift without recopying verified snapshot bytes. Return `PreviousState`, `State`, and `StateChanged`. It does not transfer approval or validation/review evidence; a changed index tree fails and requires a new candidate snapshot. |
 | `Assert-GitCandidateCommit -Candidate <candidate> -CommitId <exact-id>` | Verify the resulting commit's tree, ordered parents, current HEAD, destination, and symbolic/detached state (including the intended unborn-to-born transition). Never amend or repair a mismatched result. |
@@ -151,6 +151,20 @@ for EOF, because stdin closes after it returns. Unconsumed stdout is returned in
 the normal byte result. Consumer failures terminate the native child; PowerShell
 7 also terminates its descendants, while Windows PowerShell 5.1 can terminate
 only the direct child with its available process API.
+`Invoke-IsolatedProcess -TimeoutSeconds` defaults to 300 seconds. One elapsed-time
+deadline covers stdin writes/flushes, stdout reads (including streaming-handler
+reads), stderr collection, and process exit; it is not reset per read or file.
+Timeouts throw even with `-AllowFailure` and terminate the owned child using the
+same platform-specific rules above, with a five-second termination wait.
+`New-GitReviewCandidate -TimeoutSeconds` sets this per-command Git limit for
+capture and subsequent snapshot/integrity operations (default 300).
+`Invoke-GitSnapshotCheck -TimeoutSeconds` independently sets a validation command's
+limit (default 1800) and records it with successful check evidence.
+For example, use `New-GitReviewCandidate -RepositoryRoot $root -TimeoutSeconds 600`
+or `Invoke-GitSnapshotCheck -Snapshot $snapshot -Name build -FilePath dotnet -ArgumentList @('build') -TimeoutSeconds 3600`.
+Limits must be positive whole seconds; there is no unlimited bypass. Handlers
+must use the supplied stream and return after their known response count; arbitrary
+handler computation is not preempted by the I/O deadline.
 This process isolation does not prevent arbitrary commands from writing absolute
 paths, contacting networks, or reading repository-local config.
 

@@ -58,6 +58,7 @@ function Invoke-IsolatedProcess {
         [AllowEmptyCollection()][byte[]]$InputBytes = @(),
         [hashtable]$Environment = @{},
         [scriptblock]$StandardOutputHandler,
+        [ValidateRange(1, 2147483)][int]$TimeoutSeconds = 300,
         [switch]$AllowFailure
     )
 
@@ -150,10 +151,81 @@ function Invoke-IsolatedProcess {
         }
     }
 
+    if (-not ('NPConfig.IsolatedProcessRuntime' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+
+namespace NPConfig {
+    public static class IsolatedProcessRuntime {
+        public sealed class Deadline {
+            private readonly Stopwatch clock = Stopwatch.StartNew();
+            private readonly int milliseconds;
+
+            public Deadline(int seconds) { milliseconds = checked(seconds * 1000); }
+            public int RemainingMilliseconds {
+                get {
+                    long remaining = milliseconds - clock.ElapsedMilliseconds;
+                    if (remaining <= 0) { throw new TimeoutException("Native process deadline expired."); }
+                    return (int)remaining;
+                }
+            }
+            public bool Expired { get { return clock.ElapsedMilliseconds >= milliseconds; } }
+            public void Wait(Task task) {
+                if (!task.Wait(RemainingMilliseconds)) {
+                    throw new TimeoutException("Native process deadline expired.");
+                }
+            }
+        }
+
+        private sealed class DeadlineReadStream : Stream {
+            private readonly Stream input;
+            private readonly Deadline deadline;
+
+            public DeadlineReadStream(Stream input, Deadline deadline) {
+                this.input = input;
+                this.deadline = deadline;
+            }
+            public override int Read(byte[] buffer, int offset, int count) {
+                Task<int> read = input.ReadAsync(buffer, offset, count);
+                deadline.Wait(read);
+                return read.GetAwaiter().GetResult();
+            }
+            public override bool CanRead { get { return true; } }
+            public override bool CanSeek { get { return false; } }
+            public override bool CanWrite { get { return false; } }
+            public override long Length { get { throw new NotSupportedException(); } }
+            public override long Position {
+                get { throw new NotSupportedException(); }
+                set { throw new NotSupportedException(); }
+            }
+            public override void Flush() { }
+            public override long Seek(long offset, SeekOrigin origin) { throw new NotSupportedException(); }
+            public override void SetLength(long value) { throw new NotSupportedException(); }
+            public override void Write(byte[] buffer, int offset, int count) { throw new NotSupportedException(); }
+        }
+
+        public static Deadline CreateDeadline(int seconds) { return new Deadline(seconds); }
+        public static Stream CreateOutputStream(Stream input, Deadline deadline) {
+            return new BufferedStream(new DeadlineReadStream(input, deadline), 65536);
+        }
+        public static async Task WriteAndFlushAsync(Stream stream, byte[] bytes) {
+            await stream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
+            await stream.FlushAsync().ConfigureAwait(false);
+        }
+    }
+}
+'@
+    }
+
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $start
     $stdout = [IO.MemoryStream]::new()
+    $reader = $null
     $started = $false
+    $deadline = [NPConfig.IsolatedProcessRuntime]::CreateDeadline($TimeoutSeconds)
     try {
         $started = $process.Start()
         if (-not $started) {
@@ -161,19 +233,24 @@ function Invoke-IsolatedProcess {
         }
         $errorTask = $process.StandardError.ReadToEndAsync()
         if ($StandardOutputHandler) {
+            $reader = [NPConfig.IsolatedProcessRuntime]::CreateOutputStream($process.StandardOutput.BaseStream, $deadline)
             # Consume a known response count, not EOF: stdin closes after this handler.
-            $inputTask = $process.StandardInput.BaseStream.WriteAsync($InputBytes, 0, $InputBytes.Length)
-            $null = & $StandardOutputHandler $process.StandardOutput.BaseStream
-            $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
-            $null = $inputTask.GetAwaiter().GetResult()
+            # Flush buffered pipe tails concurrently; waiting here can deadlock on stdout backpressure.
+            $inputTask = [NPConfig.IsolatedProcessRuntime]::WriteAndFlushAsync($process.StandardInput.BaseStream, $InputBytes)
+            $null = & $StandardOutputHandler $reader
+            $outputTask = $reader.CopyToAsync($stdout)
         }
         else {
             $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
-            $process.StandardInput.BaseStream.Write($InputBytes, 0, $InputBytes.Length)
+            $inputTask = [NPConfig.IsolatedProcessRuntime]::WriteAndFlushAsync($process.StandardInput.BaseStream, $InputBytes)
         }
+        $deadline.Wait($inputTask)
         $process.StandardInput.Close()
-        $process.WaitForExit()
-        $null = $outputTask.GetAwaiter().GetResult()
+        if (-not $process.WaitForExit($deadline.RemainingMilliseconds)) {
+            throw "Native process '$FilePath' timed out after $TimeoutSeconds seconds."
+        }
+        $deadline.Wait($outputTask)
+        $deadline.Wait($errorTask)
         $stderr = $errorTask.GetAwaiter().GetResult()
         $bytes = $stdout.ToArray()
         $result = [pscustomobject]@{
@@ -188,14 +265,27 @@ function Invoke-IsolatedProcess {
         }
         $result
     }
-    finally {
-        if ($started -and -not $process.HasExited) {
-            if ($PSVersionTable.PSVersion.Major -ge 6) { $process.Kill($true) }
-            else { $process.Kill() }
-            $process.WaitForExit()
+    catch {
+        if ($deadline.Expired) {
+            throw "Native process '$FilePath' timed out after $TimeoutSeconds seconds."
         }
-        $stdout.Dispose()
-        $process.Dispose()
+        throw
+    }
+    finally {
+        try {
+            if ($started -and -not $process.HasExited) {
+                if ($PSVersionTable.PSVersion.Major -ge 6) { $process.Kill($true) }
+                else { $process.Kill() }
+                if (-not $process.WaitForExit(5000)) {
+                    throw "Native process '$FilePath' did not exit within 5 seconds after termination."
+                }
+            }
+        }
+        finally {
+            if ($reader) { $reader.Dispose() }
+            $stdout.Dispose()
+            $process.Dispose()
+        }
     }
 }
 

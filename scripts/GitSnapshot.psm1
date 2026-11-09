@@ -26,7 +26,8 @@ function Invoke-CandidateGit {
     Invoke-IsolatedProcess -Context $Candidate.Context -FilePath 'git' `
         -ArgumentList (@('--no-pager', '-C', $Candidate.RepositoryRoot) + $Arguments) `
         -WorkingDirectory $Candidate.RepositoryRoot -InputBytes $InputBytes `
-        -Environment $Environment -StandardOutputHandler $StandardOutputHandler -AllowFailure:$AllowFailure
+        -Environment $Environment -StandardOutputHandler $StandardOutputHandler `
+        -TimeoutSeconds $Candidate.TimeoutSeconds -AllowFailure:$AllowFailure
 }
 
 function Get-CandidateGitText {
@@ -157,12 +158,14 @@ function New-GitReviewCandidate {
     param(
         [Parameter(Mandatory)][string]$RepositoryRoot,
         [string]$IndexPath,
+        [ValidateRange(1, 2147483)][int]$TimeoutSeconds = 300,
         [switch]$AllowEmpty
     )
 
     $context = New-IsolatedProcessContext
     $candidate = [pscustomobject]@{
         Context = $context
+        TimeoutSeconds = $TimeoutSeconds
         RepositoryRoot = [IO.Path]::GetFullPath($RepositoryRoot)
         GitDirectory = ''
         IndexPath = ''
@@ -494,6 +497,7 @@ function Invoke-GitSnapshotCheck {
         [Parameter(Mandatory)][string]$FilePath,
         [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$ArgumentList,
         [string[]]$RequiredPaths = @(),
+        [ValidateRange(1, 2147483)][int]$TimeoutSeconds = 1800,
         [switch]$RequiresPosix
     )
 
@@ -514,7 +518,7 @@ function Invoke-GitSnapshotCheck {
             $null = Get-SnapshotPath -Root $Snapshot.Path -GitPath $gitPath
         }
         $result = Invoke-IsolatedProcess -Context $Snapshot.Candidate.Context -FilePath $FilePath `
-            -ArgumentList $ArgumentList -WorkingDirectory $Snapshot.Path -AllowFailure
+            -ArgumentList $ArgumentList -WorkingDirectory $Snapshot.Path -TimeoutSeconds $TimeoutSeconds -AllowFailure
         Assert-GitSnapshotIntegrity -Snapshot $Snapshot
         Assert-GitCandidateCurrent -Candidate $Snapshot.Candidate
         if ($result.ExitCode -ne 0) {
@@ -529,6 +533,7 @@ function Invoke-GitSnapshotCheck {
             WorkingDirectory = $Snapshot.Path
             ModeFidelity = $Snapshot.ModeFidelity
             RequiresPosix = [bool]$RequiresPosix
+            TimeoutSeconds = $TimeoutSeconds
             ExitCode = $result.ExitCode
         })
         $result
@@ -549,7 +554,7 @@ function Update-GitReviewCandidate {
         throw 'State refresh requires this candidate''s complete validation snapshot.'
     }
     Assert-GitSnapshotIntegrity -Snapshot $Snapshot
-    $capture = @{ RepositoryRoot = $Candidate.RepositoryRoot; AllowEmpty = $true }
+    $capture = @{ RepositoryRoot = $Candidate.RepositoryRoot; AllowEmpty = $true; TimeoutSeconds = $Candidate.TimeoutSeconds }
     if ($Candidate.ExplicitIndex) { $capture.IndexPath = $Candidate.IndexPath }
     $fresh = New-GitReviewCandidate @capture
     try {

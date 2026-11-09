@@ -549,6 +549,135 @@ Test-Case 'A failed streaming consumer terminates its native child' {
 $snapshotRuntimes = @('pwsh')
 if ($IsWindows) { $snapshotRuntimes += 'powershell.exe' }
 foreach ($runtime in $snapshotRuntimes) {
+    Test-Case "Process deadlines bound reads, input backpressure, and exit waits under $runtime" {
+        $root = New-IsolatedGitRepo
+        $context = $script:GitFixtureContexts[$root]
+        $command = @'
+$ErrorActionPreference = 'Stop'
+Import-Module $env:FIXTURE_PROCESS_HELPER -ErrorAction Stop
+$context = New-IsolatedProcessContext
+try {
+    foreach ($mode in @('read', 'async-read', 'trickle', 'write', 'flush', 'exit')) {
+        $pidPath = Join-Path $env:FIXTURE_REPO "$mode.pid"
+        $arguments = @{
+            Context = $context
+            FilePath = $env:FIXTURE_RUNTIME
+            WorkingDirectory = $env:FIXTURE_REPO
+            ArgumentList = @('-NoProfile', '-Command', '[IO.File]::WriteAllText($env:FIXTURE_PID, [string]$PID); Start-Sleep -Seconds 60')
+            Environment = @{ FIXTURE_PID = $pidPath }
+            TimeoutSeconds = 3
+            AllowFailure = $true
+        }
+        if ($mode -eq 'read') {
+            $arguments.StandardOutputHandler = { param($stream) $null = $stream.ReadByte() }
+        }
+        if ($mode -eq 'async-read') {
+            $arguments.StandardOutputHandler = {
+                param($stream)
+                $null = $stream.ReadAsync([byte[]]::new(1), 0, 1).GetAwaiter().GetResult()
+            }
+        }
+        if ($mode -eq 'trickle') {
+            $arguments.ArgumentList = @('-NoProfile', '-Command', '[IO.File]::WriteAllText($env:FIXTURE_PID, [string]$PID); foreach ($i in 1..120) { [Console]::Write("."); [Threading.Thread]::Sleep(500) }')
+            $arguments.StandardOutputHandler = { param($stream) while ($stream.ReadByte() -ne -1) { } }
+        }
+        if ($mode -in @('write', 'flush')) { $arguments.InputBytes = [byte[]]::new(1MB) }
+        if ($mode -eq 'flush') { $arguments.StandardOutputHandler = { param($stream) } }
+        $clock = [Diagnostics.Stopwatch]::StartNew()
+        $failure = $null
+        try { $null = Invoke-IsolatedProcess @arguments }
+        catch { $failure = $_.Exception.Message }
+        if ($failure -notmatch 'timed out after 3 seconds') { throw "Wrong $mode timeout outcome: $failure" }
+        if ($clock.Elapsed.TotalSeconds -gt 12) { throw "Unbounded $mode timeout cleanup." }
+        $childId = [int][IO.File]::ReadAllText($pidPath)
+        $child = $null
+        try { $child = [Diagnostics.Process]::GetProcessById($childId) }
+        catch [ArgumentException] { }
+        if ($child) {
+            try { if (-not $child.HasExited) { throw "Timed-out $mode child is still running." } }
+            finally { $child.Dispose() }
+        }
+    }
+    $result = Invoke-IsolatedProcess -Context $context -FilePath $env:FIXTURE_RUNTIME -WorkingDirectory $env:FIXTURE_REPO `
+        -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 2; [Console]::Write("completed")') -TimeoutSeconds 10
+    if ($result.Stdout -cne 'completed') { throw 'Explicit longer deadline did not permit completion.' }
+    $result = Invoke-IsolatedProcess -Context $context -FilePath $env:FIXTURE_RUNTIME -WorkingDirectory $env:FIXTURE_REPO `
+        -ArgumentList @('-NoProfile', '-Command', '$bytes = [byte[]]@(1, 0, 255, 42); [Console]::OpenStandardOutput().Write($bytes, 0, $bytes.Length)') `
+        -StandardOutputHandler {
+            param($stream)
+            if ($stream.ReadByte() -ne 1) { throw 'Incorrect response prefix.' }
+        }
+    if ([Convert]::ToBase64String($result.Bytes) -cne [Convert]::ToBase64String([byte[]]@(0, 255, 42))) {
+        throw 'Buffered trailing stdout bytes were lost or changed.'
+    }
+}
+finally { Remove-IsolatedProcessContext $context }
+'@
+        $executable = (Get-Command $runtime -CommandType Application -ErrorAction Stop).Source
+        $runtimeArguments = @('-NoProfile')
+        if ($runtime -eq 'powershell.exe') { $runtimeArguments += @('-ExecutionPolicy', 'Bypass') }
+        $runtimeArguments += @('-EncodedCommand', [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command)))
+        $result = Invoke-IsolatedProcess -Context $context -FilePath $executable -WorkingDirectory $root `
+            -ArgumentList $runtimeArguments -Environment @{
+                FIXTURE_PROCESS_HELPER = Join-Path $script:SnapshotRepoRoot 'scripts\IsolatedProcess.psm1'
+                FIXTURE_REPO = $root
+                FIXTURE_RUNTIME = $executable
+                PSModulePath = $null
+            } -AllowFailure
+        Assert-True ($result.ExitCode -eq 0) $result.Output
+    }
+
+    Test-Case "Streaming requests flush short input and buffered tails under $runtime" {
+        $root = New-IsolatedGitRepo
+        $blob = 'x' * 4097
+        $oid = Add-FixtureIndexBlob $root 'blob.dat' ([Text.Encoding]::ASCII.GetBytes($blob))
+        $context = $script:GitFixtureContexts[$root]
+        $command = @'
+$ErrorActionPreference = 'Stop'
+Import-Module $env:FIXTURE_PROCESS_HELPER -ErrorAction Stop
+$context = New-IsolatedProcessContext
+try {
+    foreach ($count in @(1, 25, 2049)) {
+        $requests = [Text.Encoding]::ASCII.GetBytes(("$($env:FIXTURE_OID)`n" * $count))
+        $expected = [Text.Encoding]::ASCII.GetBytes(("$($env:FIXTURE_OID) blob 4097`n" + ('x' * 4097) + "`n") * $count)
+        $received = [IO.MemoryStream]::new()
+        try {
+            $result = Invoke-IsolatedProcess -Context $context -FilePath 'git' -WorkingDirectory $env:FIXTURE_REPO `
+                -ArgumentList @('cat-file', '--batch') -InputBytes $requests -StandardOutputHandler {
+                    param($stream)
+                    $buffer = [byte[]]::new(65536)
+                    while ($received.Length -lt $expected.Length) {
+                        $read = $stream.ReadAsync($buffer, 0, [int][Math]::Min($buffer.Length, $expected.Length - $received.Length))
+                        if (-not $read.Wait(10000)) { throw "Timed out waiting for $count flushed batch requests." }
+                        $length = $read.GetAwaiter().GetResult()
+                        if ($length -eq 0) { throw 'Truncated batch response.' }
+                        $received.Write($buffer, 0, $length)
+                    }
+                }
+            if ($result.Bytes.Length -ne 0 -or
+                [Convert]::ToBase64String($received.ToArray()) -cne [Convert]::ToBase64String($expected)) {
+                throw "Incorrect batch bytes for $count requests."
+            }
+        }
+        finally { $received.Dispose() }
+    }
+}
+finally { Remove-IsolatedProcessContext $context }
+'@
+        $executable = (Get-Command $runtime -CommandType Application -ErrorAction Stop).Source
+        $runtimeArguments = @('-NoProfile')
+        if ($runtime -eq 'powershell.exe') { $runtimeArguments += @('-ExecutionPolicy', 'Bypass') }
+        $runtimeArguments += @('-EncodedCommand', [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command)))
+        $result = Invoke-IsolatedProcess -Context $context -FilePath $executable -WorkingDirectory $root `
+            -ArgumentList $runtimeArguments -Environment @{
+                FIXTURE_PROCESS_HELPER = Join-Path $script:SnapshotRepoRoot 'scripts\IsolatedProcess.psm1'
+                FIXTURE_REPO = $root
+                FIXTURE_OID = $oid
+                PSModulePath = $null
+            } -AllowFailure
+        Assert-True ($result.ExitCode -eq 0) $result.Output
+    }
+
     Test-Case "Snapshot capture, streaming, checks, and native arguments work under $runtime" {
         $root = New-IsolatedGitRepo -DirectoryName "repo with spaces $([char]0x03BB)"
         foreach ($index in 1..2048) { Set-RepoFile $root "files\$index.txt" 'base' }
@@ -618,6 +747,17 @@ finally {
             } -AllowFailure
         Assert-True ($result.ExitCode -eq 0) $result.Output
     }
+}
+
+Test-Case 'A timed-out validation command invalidates evidence and cannot be accepted as an allowed failure' {
+    $candidate = New-TestCandidate (New-StagedFixture)
+    $snapshot = New-GitTreeSnapshot $candidate
+    Assert-Throws {
+        Invoke-GitSnapshotCheck $snapshot -Name 'stalled validation' -FilePath 'pwsh' `
+            -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 60') -TimeoutSeconds 1
+    } 'timed out after 1 seconds'
+    Assert-True ($snapshot.Invalidated -and $snapshot.Checks.Count -eq 0) 'Timed-out validation produced successful evidence.'
+    Assert-Throws { Assert-GitSnapshotIntegrity $snapshot } 'already invalidated'
 }
 
 Test-Case 'Candidate capture leaves source index bytes unchanged' {
